@@ -99,7 +99,7 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
     try {
       await updateStatusMutation.mutateAsync(status);
       await refetchAssignment();
-      queryClient.invalidateQueries({ queryKey: ['assignments', props.lecture.id] });
+      await queryClient.invalidateQueries({ queryKey: ['assignments'] });
       enqueueSnackbar(success, { variant: 'success' });
     } catch (err) {
       enqueueSnackbar(error, { variant: 'error' });

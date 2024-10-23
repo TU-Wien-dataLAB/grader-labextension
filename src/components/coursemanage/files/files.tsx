@@ -262,7 +262,7 @@ export const Files = (props: IFilesProps) => {
             commitMessage,
             selectedFiles
           );
-          queryClient.invalidateQueries({ queryKey: ['assignments', props.lecture.id] });
+          await queryClient.invalidateQueries({ queryKey: ['assignments'] });
           enqueueSnackbar('Successfully Pushed Assignment', {
             variant: 'success'
           });

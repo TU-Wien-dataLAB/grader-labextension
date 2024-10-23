@@ -116,14 +116,14 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
           .then(response => {
             enqueueSnackbar(
               'Successfully matched ' +
-              response.syncable_users +
-              ' submissions with learning platform',
+                response.syncable_users +
+                ' submissions with learning platform',
               { variant: 'success' }
             );
             enqueueSnackbar(
               'Successfully synced latest submissions with feedback of ' +
-              response.synced_user +
-              ' users',
+                response.synced_user +
+                ' users',
               { variant: 'success' }
             );
           })
@@ -187,7 +187,9 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
         enqueueSnackbar(`Generating feedback for ${numSelected} submissions!`, {
           variant: 'success'
         });
-        queryClient.invalidateQueries({ queryKey: ['submissionsAssignmentStudent']});
+        await queryClient.invalidateQueries({
+          queryKey: ['submissionsAssignmentStudent']
+        });
       } catch (err) {
         console.error(err);
         enqueueSnackbar('Error Generating Feedback', {
@@ -302,7 +304,8 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
             </Tooltip>
             <Tooltip
               title={
-                checkAutogradeStatus() ? 'Generate feedback for all selected submissions'
+                checkAutogradeStatus()
+                  ? 'Generate feedback for all selected submissions'
                   : 'All selected submissions have to be automatically graded!'
               }
             >

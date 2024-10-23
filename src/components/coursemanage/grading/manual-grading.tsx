@@ -207,8 +207,8 @@ export const ManualGrading = () => {
         enqueueSnackbar('Generating feedback for submission!', {
           variant: 'success'
         });
-        queryClient.invalidateQueries({ queryKey: ['submissionsAssignmentStudent']});
-        reload();
+        await queryClient.invalidateQueries({ queryKey: ['submissionsAssignmentStudent']});
+        await reload();
       } catch (err) {
         console.error(err);
         enqueueSnackbar('Error Generating Feedback', {

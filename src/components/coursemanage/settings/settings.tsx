@@ -41,6 +41,7 @@ import { updateMenus } from '../../../menu';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { getLecture } from '../../../services/lectures.service';
 import { useQuery } from '@tanstack/react-query';
+import { queryClient } from '../../../widgets/assignmentmanage';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -70,14 +71,14 @@ export const SettingsComponent = () => {
 
   const { data: lecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
-    queryFn: () => getLecture(lectureId), 
-    enabled: !!lectureId, 
+    queryFn: () => getLecture(lectureId),
+    enabled: !!lectureId
   });
 
   const { data: assignment } = useQuery<Assignment>({
     queryKey: ['assignment', assignmentId],
-    queryFn: () => getAssignment(lectureId, assignmentId), 
-    enabled: !!lecture && !!assignmentId, 
+    queryFn: () => getAssignment(lectureId, assignmentId),
+    enabled: !!lecture && !!assignmentId
   });
 
   const [checked, setChecked] = React.useState(assignment.due_date !== null);
@@ -146,7 +147,7 @@ export const SettingsComponent = () => {
         }
       }
     }
-    if (nErrors == 0) {
+    if (nErrors === 0) {
       // error object has to be empty, otherwise submit is blocked
       return {};
     }
@@ -173,6 +174,7 @@ export const SettingsComponent = () => {
       updateAssignment(lecture.id, updatedAssignment).then(
         async response => {
           await updateMenus(true);
+          await queryClient.invalidateQueries({ queryKey: ['assignments'] });
           enqueueSnackbar('Successfully Updated Assignment', {
             variant: 'success'
           });
