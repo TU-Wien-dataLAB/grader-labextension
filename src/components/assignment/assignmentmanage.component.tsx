@@ -7,7 +7,7 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { Lecture } from '../../model/lecture';
-import { useNavigate, useRouteLoaderData } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   FormControlLabel,
   FormGroup,
@@ -19,6 +19,8 @@ import {
 } from '@mui/material';
 import Box from '@mui/material/Box';
 import { ButtonTr, GraderTable } from '../util/table';
+import { useQuery } from '@tanstack/react-query';
+import { getAllLectures } from '../../services/lectures.service';
 
 interface ILectureTableProps {
   rows: Lecture[];
@@ -45,7 +47,11 @@ const LectureTable = (props: ILectureTableProps) => {
             <TableCell style={{ width: 100 }} component="th" scope="row">
               {row.id}
             </TableCell>
-            <TableCell>{row.name}</TableCell>
+            <TableCell>
+              <Typography variant={'subtitle2'} sx={{ fontSize: 16 }}>
+                {row.name}
+              </Typography>
+            </TableCell>
             <TableCell>{row.code}</TableCell>
           </TableRow>
         );
@@ -59,14 +65,28 @@ const LectureTable = (props: ILectureTableProps) => {
  * @param props Props of the lecture file components
  */
 export const AssignmentManageComponent = () => {
-  const allLectures = useRouteLoaderData('root') as {
-    lectures: Lecture[];
-    completedLectures: Lecture[];
-  };
+  const { data: lectures, isLoading: isLoadingOngoingLectures } = useQuery<Lecture[]>({
+    queryKey: ['lectures'],
+    queryFn: () => getAllLectures(false)
+  });
+
+  const { data: completedLectures, isLoading: isLoadingCompletedLectures } = useQuery<Lecture[]>({
+    queryKey: ['completedLectures'],
+    queryFn: () => getAllLectures(true)
+  });
+  
   const [showComplete, setShowComplete] = useState(false);
+
+  if (isLoadingCompletedLectures || isLoadingOngoingLectures) {
+    return <div>Loading...</div>
+  }
+
 
   return (
     <Stack flexDirection={'column'} sx={{ m: 5, flex: 1, overflow: 'hidden' }}>
+      <Stack direction="row" justifyContent="center">
+        <Typography variant={'h4'}>Assignments</Typography>
+      </Stack>
       <Stack direction={'row'} spacing={2}>
         <Typography variant="h6" sx={{ mb: 1 }}>
           Lectures
@@ -86,7 +106,7 @@ export const AssignmentManageComponent = () => {
 
       <LectureTable
         rows={
-          showComplete ? allLectures.completedLectures : allLectures.lectures
+          showComplete ? completedLectures : lectures
         }
       />
     </Stack>

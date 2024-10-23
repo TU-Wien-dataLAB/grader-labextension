@@ -11,17 +11,10 @@ import ErrorPage from '../util/error';
 import { CourseManageComponent } from './coursemanage.component';
 import { UserPermissions } from '../../services/permission.service';
 import {
-  getAllLectures,
-  getLecture,
-  getUsers
+  getAllLectures
 } from '../../services/lectures.service';
 import { enqueueSnackbar } from 'notistack';
-import {
-  getAllAssignments,
-  getAssignment
-} from '../../services/assignments.service';
 import { LectureComponent } from './lecture';
-import { getAllSubmissions } from '../../services/submissions.service';
 import { AssignmentModalComponent } from './assignment-modal';
 import { OverviewComponent } from './overview/overview';
 import GradingTable, { GradingComponent } from './grading/grading';
@@ -31,6 +24,8 @@ import { FileView } from './files/file-view';
 import { ManualGrading } from './grading/manual-grading';
 import { EditSubmission } from './grading/edit-submission';
 import { CreateSubmission } from './grading/create-submission';
+import { loadAssignment, loadLecture } from '../assignment/routes';
+import { queryClient } from '../../widgets/assignmentmanage';
 
 const shouldReload = (request: Request) =>
   new URL(request.url).searchParams.get('reload') === 'true';
@@ -43,38 +38,6 @@ const loadPermissions = async () => {
       getAllLectures(true)
     ]);
     return { lectures, completedLectures };
-  } catch (error: any) {
-    enqueueSnackbar(error.message, {
-      variant: 'error'
-    });
-    throw new Error('Could not load data!');
-  }
-};
-
-const loadLecture = async (lectureId: number) => {
-  try {
-    const [lecture, assignments, users] = await Promise.all([
-      getLecture(lectureId),
-      getAllAssignments(lectureId),
-      getUsers(lectureId)
-    ]);
-    return { lecture, assignments, users };
-  } catch (error: any) {
-    enqueueSnackbar(error.message, {
-      variant: 'error'
-    });
-    throw new Error('Could not load data!');
-  }
-};
-
-const loadAssignment = async (lectureId: number, assignmentId: number) => {
-  try {
-    const [assignment, allSubmissions, latestSubmissions] = await Promise.all([
-      getAssignment(lectureId, assignmentId),
-      getAllSubmissions(lectureId, assignmentId, 'none', true),
-      getAllSubmissions(lectureId, assignmentId, 'latest', true)
-    ]);
-    return { assignment, allSubmissions, latestSubmissions };
   } catch (error: any) {
     enqueueSnackbar(error.message, {
       variant: 'error'
@@ -115,7 +78,6 @@ export const getRoutes = () => {
       <Route
         id={'root'}
         path={'/*'}
-        loader={loadPermissions}
         handle={{
           crumb: data => 'Lectures',
           link: params => '/'
@@ -125,10 +87,10 @@ export const getRoutes = () => {
         <Route
           id={'lecture'}
           path={'lecture/:lid/*'}
-          loader={({ params }) => loadLecture(+params.lid)}
+          loader={({ params }) => loadLecture(+params.lid, queryClient)}
           handle={{
             // functions in handle have to handle undefined data (error page is displayed afterwards)
-            crumb: data => data?.lecture.name,
+            crumb: data => data?.name,
             link: params => `lecture/${params?.lid}/`
           }}
         >
@@ -137,10 +99,10 @@ export const getRoutes = () => {
             id={'assignment'}
             path={'assignment/:aid/*'}
             element={<AssignmentModalComponent />}
-            loader={({ params }) => loadAssignment(+params.lid, +params.aid)}
+            loader={({ params }) => loadAssignment(+params.lid, +params.aid, queryClient)}
             handle={{
               // functions in handle have to handle undefined data (error page is displayed afterwards)
-              crumb: data => data?.assignment.name,
+              crumb: data => data?.name,
               link: params => `assignment/${params.aid}/`
             }}
           >

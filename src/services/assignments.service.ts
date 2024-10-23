@@ -117,17 +117,28 @@ export function pushAssignment(
   lectureId: number,
   assignmentId: number,
   repoType: string,
-  commitMessage?: string
+  commitMessage?: string,
+  selectedFiles?: string[]
 ): Promise<void> {
   let url = `/lectures/${lectureId}/assignments/${assignmentId}/push/${repoType}`;
-  if (commitMessage) {
+  if (commitMessage && commitMessage !== undefined) {
     const searchParams = new URLSearchParams({
       'commit-message': commitMessage
     });
     url += '?' + searchParams;
   }
+  
+  if (selectedFiles && selectedFiles.length > 0) {
+    selectedFiles.forEach(file => {
+      url += `&selected-files=${encodeURIComponent(file)}`;
+    });
+  }
+
+  console.log("url is here: " + url);
+
   return request<void>(HTTPMethod.PUT, url, null);
 }
+
 
 export function pullAssignment(
   lectureId: number,

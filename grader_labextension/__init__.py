@@ -64,7 +64,7 @@ def setup_handlers(server_app):
                 "GET",
                 f"{handler_config.service_base_url}/config",
                 header=dict(
-                    Authorization="Token " + HandlerConfig.instance().hub_api_token),
+                    Authorization="Token " + HandlerConfig.instance().grader_api_token),
             )
         except HTTPClientError as e:
             log.error("Error: could not get grader config")

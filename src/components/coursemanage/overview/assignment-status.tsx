@@ -22,6 +22,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import { ReleaseDialog } from '../../util/dialog';
 import {
+  getAssignment,
   pushAssignment,
   updateAssignment
 } from '../../../services/assignments.service';
@@ -29,6 +30,8 @@ import { Lecture } from '../../../model/lecture';
 import { enqueueSnackbar } from 'notistack';
 import { DeadlineComponent } from '../../util/deadline';
 import { showDialog } from '../../util/dialog-provider';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { queryClient } from '../../../widgets/assignmentmanage';
 
 /**
  * Props for AssignmentStatusComponent.
@@ -60,7 +63,28 @@ const getActiveStep = (status: Assignment.StatusEnum) => {
  * @param props props of assignment status
  */
 export const AssignmentStatus = (props: IAssignmentStatusProps) => {
-  const [assignment, setAssignment] = React.useState(props.assignment);
+  const { data: assignment = props.assignment, refetch: refetchAssignment } =
+    useQuery({
+      queryKey: ['assignment'],
+      queryFn: () => getAssignment(props.lecture.id, props.assignment.id, true)
+    });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async (status: 'pushed' | 'released' | 'complete') => {
+      const updatedAssignment = { ...props.assignment, status };
+      return updateAssignment(props.lecture.id, updatedAssignment);
+    },
+    onError: (error: any) => {
+      enqueueSnackbar('Error: ' + error.message, { variant: 'error' });
+    },
+    onSuccess: (data: Assignment) => {
+      props.onAssignmentChange(data);
+      enqueueSnackbar('Successfully updated assignment', {
+        variant: 'success'
+      });
+    }
+  });
+
   /**
    * Updates assignment status.
    * @param status assignment status
@@ -73,18 +97,12 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
     error: string
   ) => {
     try {
-      let a = assignment;
-      a.status = status;
-      a = await updateAssignment(props.lecture.id, a);
-      setAssignment(a);
-      props.onAssignmentChange(a);
-      enqueueSnackbar(success, {
-        variant: 'success'
-      });
+      await updateStatusMutation.mutateAsync(status);
+      await refetchAssignment();
+      await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      enqueueSnackbar(success, { variant: 'success' });
     } catch (err) {
-      enqueueSnackbar(error, {
-        variant: 'error'
-      });
+      enqueueSnackbar(error, { variant: 'error' });
     }
   };
   /**
@@ -242,7 +260,7 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
       async () => {
         await updateAssignmentStatus(
           'complete',
-          'Successfully Updated Assignment',
+          'Successfully Completed Assignment',
           'Error Updating Assignment'
         );
       }

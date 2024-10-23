@@ -8,7 +8,6 @@ import { Divider, Grid, Paper, Typography, createTheme } from '@mui/material';
 import * as React from 'react';
 import { Assignment } from '../../../model/assignment';
 import { Lecture } from '../../../model/lecture';
-import { Submission } from '../../../model/submission';
 import GroupIcon from '@mui/icons-material/Group';
 import ChecklistIcon from '@mui/icons-material/Checklist';
 import GradeIcon from '@mui/icons-material/Grade';
@@ -17,9 +16,8 @@ import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
 export interface IOverviewCardProps {
   lecture: Lecture;
   assignment: Assignment;
-  allSubmissions: Submission[];
-  latestSubmissions: Submission[];
-  users: { students: string[]; tutors: string[]; instructors: string[] };
+  latestSubmissions: number;
+  students: number;
 }
 
 export const OverviewCard = (props: IOverviewCardProps) => {
@@ -54,7 +52,7 @@ export const OverviewCard = (props: IOverviewCardProps) => {
           <GroupIcon color="primary" sx={{ fontSize: 80, ml: 1 }} />
           <Typography sx={{ textAlign: 'left', mr: 0.5, ml: 0.5 }}>
             {'Overall number of students in this lecture: ' +
-              props.users?.students.length}
+              props.students}
           </Typography>
         </Paper>
       </Grid>
@@ -73,7 +71,7 @@ export const OverviewCard = (props: IOverviewCardProps) => {
           </Typography>
           <ChecklistIcon color="primary" sx={{ fontSize: 80, ml: 1 }} />
           <Typography sx={{ textAlign: 'left', mr: 0.5, ml: 0.5 }}>
-            {'Total number of submissions: ' + props.allSubmissions.length}
+            {'Number students that have submitted: ' + props.latestSubmissions}
           </Typography>
         </Paper>
       </Grid>

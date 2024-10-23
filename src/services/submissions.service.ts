@@ -8,6 +8,7 @@ import { Assignment } from '../model/assignment';
 import { Lecture } from '../model/lecture';
 import { Submission } from '../model/submission';
 import { request, HTTPMethod } from './request.service';
+import { string } from 'yup';
 
 export function submitAssignment(
   lecture: Lecture,
@@ -111,6 +112,7 @@ export function getAllSubmissions(
   return request<Submission[]>(HTTPMethod.GET, url, null, reload);
 }
 
+
 export function getFeedback(
   lecture: Lecture,
   assignment: Assignment,
@@ -197,4 +199,36 @@ export function ltiSyncSubmissions(
     url,
     null
   );
+}
+
+export function restoreSubmission(
+  lectureId: number,
+  assignmentId: number,
+  commitHash: string
+): Promise<void> {
+  return request<void>(
+    HTTPMethod.GET,
+    `/lectures/${lectureId}/assignments/${assignmentId}/restore/${commitHash}`,
+    null
+  );
+}
+
+export function deleteSubmission(
+  lectureId: number,
+  assignmentId: number,
+  submissionId: number
+): Promise<void> {
+  return request<void>(
+    HTTPMethod.DELETE,
+    `lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}`,
+    null
+  );
+}
+
+export async function getSubmissionCount(
+  lectureId: number,
+  assignmentId: number
+): Promise<{ submission_count: number }> {
+  const url = `/lectures/${lectureId}/assignments/${assignmentId}/submissions/count`;
+  return request<{ submission_count: number }>(HTTPMethod.GET, url, null, false);
 }

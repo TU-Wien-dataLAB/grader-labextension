@@ -3,10 +3,10 @@ import {
   AlertTitle,
   Box,
   Button,
-  IconButton,
+  Card,
+  LinearProgress,
   Stack,
   TextField,
-  Tooltip,
   Typography
 } from '@mui/material';
 import * as React from 'react';
@@ -16,23 +16,23 @@ import { Submission } from '../../../model/submission';
 import { FilesList } from '../../util/file-list';
 import {
   lectureBasePath,
-  makeDir,
   makeDirs
 } from '../../../services/file.service';
-import { Link, useOutletContext, useRouteLoaderData } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { showDialog } from '../../util/dialog-provider';
 import Autocomplete from '@mui/material/Autocomplete';
 import moment from 'moment';
 import { Contents } from '@jupyterlab/services';
 import { GlobalObjects } from '../../../index';
 import { openBrowser } from '../overview/util';
-import ReplayIcon from '@mui/icons-material/Replay';
 import {
-  createSubmissionFiles,
-  pushSubmissionFiles
+  createSubmissionFiles
 } from '../../../services/submissions.service';
 import { enqueueSnackbar } from 'notistack';
 import { GraderLoadingButton } from '../../util/loading-button';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { getLecture, getUsers } from '../../../services/lectures.service';
+import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 
 export const CreateSubmission = () => {
   const { assignment, rows, setRows } = useOutletContext() as {
@@ -43,32 +43,61 @@ export const CreateSubmission = () => {
     manualGradeSubmission: Submission;
     setManualGradeSubmission: React.Dispatch<React.SetStateAction<Submission>>;
   };
-  const { lecture, assignments, users } = useRouteLoaderData('lecture') as {
-    lecture: Lecture;
-    assignments: Assignment[];
-    users: { instructors: string[]; tutors: string[]; students: string[] };
-  };
 
-  const [path, setPath] = React.useState(null);
-  const submissionsLink = `/lecture/${lecture.id}/assignment/${assignment.id}/submissions`;
+  const { lectureId } = extractIdsFromBreadcrumbs();
+
+  const { data: lecture, isLoading: isLoadingLecture } = useQuery<Lecture>({
+    queryKey: ['lecture', lectureId],
+    queryFn: () => getLecture(lectureId, true),
+    enabled: !!lectureId
+  });
+
+  const { data: students = [], isLoading: isLoadingStudents } = useQuery<string[]>({
+    queryKey: ['students', lectureId],
+    queryFn: async () => {
+      const users = await getUsers(lectureId);
+      return users['students'];
+    },
+    enabled: !!lectureId, 
+  });
+  
+  const { data: path, refetch: reloadPath } = useQuery({
+    queryKey: ['path', lectureBasePath, lecture.code, assignment.id],
+    queryFn: () =>
+      makeDirs(`${lectureBasePath}${lecture.code}`, [
+        'create',
+        `${assignment.id}`,
+        userDir
+      ])
+  });
+
   const [userDir, setUserDir] = React.useState<string | null>(null);
-
+  const submissionsLink = `/lecture/${lecture.id}/assignment/${assignment.id}/submissions`;
   const [srcChangedTimestamp, setSrcChangeTimestamp] = React.useState(
     moment().valueOf()
   ); // now
 
+  const createSubmissionMutation = useMutation({
+    mutationFn: async () => {
+      return createSubmissionFiles(lecture, assignment, userDir);
+    },
+    onError: (error: any) => {
+      enqueueSnackbar('Error: ' + error.message, { variant: 'error' });
+    },
+    onSuccess: () => {
+      enqueueSnackbar(`Successfully Created Submission for user: ${userDir}`, {
+        variant: 'success'
+      });
+    }
+  });
+
   React.useEffect(() => {
-    makeDirs(`${lectureBasePath}${lecture.code}`, [
-      'create',
-      `${assignment.id}`,
-      userDir
-    ]).then(p => {
-      setPath(p);
-      openBrowser(p);
+    if (path) {
+      openBrowser(path);
       GlobalObjects.docManager.services.contents.fileChanged.connect(
         (sender: Contents.IManager, change: Contents.IChangedArgs) => {
           const { oldValue, newValue } = change;
-          if (!newValue.path.includes(p)) {
+          if (!newValue.path.includes(path)) {
             return;
           }
 
@@ -79,32 +108,23 @@ export const CreateSubmission = () => {
         },
         this
       );
-    });
-  });
+    }
+  }, [path]);
+
+ 
+  if (isLoadingLecture || isLoadingStudents) {
+    return (
+      <div>
+        <Card>
+          <LinearProgress />
+        </Card>
+      </div>
+    );
+  }
+
 
   const createSubmission = async () => {
-    // TODO: call pus submission and the rest is handled in the labestension server
-    await createSubmissionFiles(lecture, assignment, userDir).then(
-      response => {
-        enqueueSnackbar(
-          `Successfully Created Submission for user: ${userDir}`,
-          {
-            variant: 'success'
-          }
-        );
-      },
-      err => {
-        enqueueSnackbar(err.message, {
-          variant: 'error'
-        });
-      }
-    );
-  };
-
-  const [reloadFilesToggle, setReloadFiles] = React.useState(false);
-
-  const reloadFiles = () => {
-    setReloadFiles(!reloadFilesToggle);
+    createSubmissionMutation.mutate();
   };
 
   return (
@@ -115,24 +135,25 @@ export const CreateSubmission = () => {
           If you want to create a submission for a student manually, make sure
           to follow these steps: <br />
           <br />
-          1. &ensp; By selecting a student for whom you want to create
+          1. &ensp; Choose a student for whom you want to create a
+          submission.
+          <br />
+          2. &ensp; By selecting the student for whom you want to create
           submission, directory 'create/{assignment.id}/student_id' is
           automatically opened in File Browser on your left-hand side.
           <br />
-          2. &ensp; Upload the desired files here. They will automatically
+          3. &ensp; Upload the desired files here. They will automatically
           appear in the Submission Files below.
-          <br />
-          3. &ensp; Choose the student for whom you want to create the
-          submission.
           <br />
           4. &ensp; Push the submission.
         </Alert>
         <Typography sx={{ m: 2, mb: 0 }}>Select a student</Typography>
         <Autocomplete
-          options={users['students']}
+          options={students}
           autoHighlight
           onChange={(event: any, newUserDir: string | null) => {
             setUserDir(newUserDir);
+            reloadPath();
           }}
           sx={{ m: 2 }}
           renderInput={params => (
@@ -141,27 +162,18 @@ export const CreateSubmission = () => {
               label="Select Student"
               inputProps={{
                 ...params.inputProps
-                // autoComplete: 'new-password',
               }}
             />
           )}
         />
-        <Stack
-          direction={'row'}
-          justifyContent={'flex-start'}
-          alignItems={'center'}
-          spacing={2}
-          sx={{ ml: 2 }}
-        >
-          <Typography>Submission Files</Typography>
-          <Tooltip title="Reload Files">
-            <IconButton aria-label="reload" onClick={() => reloadFiles()}>
-              <ReplayIcon />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-
-        <FilesList path={path} sx={{ m: 2 }} />
+        <Typography sx={{ ml: 2 }}>Submission Files</Typography>
+        <FilesList
+          path={path}
+          sx={{ m: 2 }}
+          lecture={lecture}
+          assignment={assignment}
+          checkboxes={false}
+        />
         <Stack direction={'row'} sx={{ ml: 2 }} spacing={2}>
           <GraderLoadingButton
             variant="outlined"

@@ -7,7 +7,6 @@ import {
   Button,
   Checkbox,
   FormControlLabel,
-  IconButton,
   InputLabel,
   MenuItem,
   Stack,
@@ -21,13 +20,14 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import {
   updateAssignment,
-  deleteAssignment
+  deleteAssignment,
+  getAssignment
 } from '../../../services/assignments.service';
 import { enqueueSnackbar } from 'notistack';
 import { Lecture } from '../../../model/lecture';
 import * as yup from 'yup';
 import { SectionTitle } from '../../util/section-title';
-import { useNavigate, useRouteLoaderData } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   getLateSubmissionInfo,
   ILateSubmissionInfo,
@@ -37,8 +37,11 @@ import { FormikValues } from 'formik/dist/types';
 import moment from 'moment';
 import { red } from '@mui/material/colors';
 import { showDialog } from '../../util/dialog-provider';
-import CloseIcon from '@mui/icons-material/Close';
 import { updateMenus } from '../../../menu';
+import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
+import { getLecture } from '../../../services/lectures.service';
+import { useQuery } from '@tanstack/react-query';
+import { queryClient } from '../../../widgets/assignmentmanage';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -61,25 +64,22 @@ const validationSchema = yup.object({
     .min(1, 'Students must be able to at least submit once')
 });
 
-//export interface ISettingsProps {
-//  root: HTMLElement;
-//}
-
 export const SettingsComponent = () => {
   const navigate = useNavigate();
 
-  const { lecture, assignments } = useRouteLoaderData('lecture') as {
-    lecture: Lecture;
-    assignments: Assignment[];
-  };
+  const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
 
-  const { assignment, allSubmissions, latestSubmissions } = useRouteLoaderData(
-    'assignment'
-  ) as {
-    assignment: Assignment;
-    allSubmissions: Submission[];
-    latestSubmissions: Submission[];
-  };
+  const { data: lecture } = useQuery<Lecture>({
+    queryKey: ['lecture', lectureId],
+    queryFn: () => getLecture(lectureId),
+    enabled: !!lectureId
+  });
+
+  const { data: assignment } = useQuery<Assignment>({
+    queryKey: ['assignment', assignmentId],
+    queryFn: () => getAssignment(lectureId, assignmentId),
+    enabled: !!lecture && !!assignmentId
+  });
 
   const [checked, setChecked] = React.useState(assignment.due_date !== null);
   const [checkedLimit, setCheckedLimit] = React.useState(
@@ -147,7 +147,7 @@ export const SettingsComponent = () => {
         }
       }
     }
-    if (nErrors == 0) {
+    if (nErrors === 0) {
       // error object has to be empty, otherwise submit is blocked
       return {};
     }
@@ -174,6 +174,7 @@ export const SettingsComponent = () => {
       updateAssignment(lecture.id, updatedAssignment).then(
         async response => {
           await updateMenus(true);
+          await queryClient.invalidateQueries({ queryKey: ['assignments'] });
           enqueueSnackbar('Successfully Updated Assignment', {
             variant: 'success'
           });

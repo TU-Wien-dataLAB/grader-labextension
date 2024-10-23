@@ -26,7 +26,6 @@ class SubmissionHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/submissions.
     """
 
-    @cache(max_age=15)
     async def get(self, lecture_id: int, assignment_id: int):
         """ Sends a GET-request to the grader service and returns submissions of a assignment
 
@@ -58,7 +57,6 @@ class SubmissionHandler(ExtensionBaseHandler):
     path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/submissions\/("
          r"?P<submission_id>\d*)\/logs\/?")
 class SubmissionLogsHandler(ExtensionBaseHandler):
-    @cache(max_age=15)
     async def get(self, lecture_id: int, assignment_id: int, submission_id: int):
         """Sends a GET-request to the grader service and returns the logs of a submission
 
@@ -177,7 +175,6 @@ class SubmissionObjectHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}.
     """
 
-    @cache(max_age=15)
     async def get(self, lecture_id: int, assignment_id: int, submission_id: int):
         """Sends a GET-request to the grader service and returns a submission
 
@@ -224,6 +221,28 @@ class SubmissionObjectHandler(ExtensionBaseHandler):
             raise HTTPError(e.code, reason=e.response.reason)
         self.write("OK")
 
+    async def delete(self, lecture_id: int, assignment_id: int, submission_id: int):
+        """Sends a DELETE-request to the grader service to "soft"-delete a assignment
+
+        :param lecture_id: id of the lecture
+        :type lecture_id: int
+        :param assignment_id: id of the assignment
+        :type assignment_id: int
+        :param submission_id: id of the submission
+        :type submission_id: int
+        """
+
+        try:
+            await self.request_service.request(
+                method="DELETE",
+                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}",
+                header=self.grader_authentication_header,
+                decode_response=False
+            )
+        except HTTPClientError as e:
+            raise HTTPError(e.code, reason=e.response.reason)
+            
+        self.write("OK")
 
 @register_handler(
     path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/submissions\/lti\/?"
@@ -250,4 +269,34 @@ class LtiSyncHandler(ExtensionBaseHandler):
             self.log.error(e.response.body)
             raise HTTPError(e.code, reason=json.loads(e.response.body).get("message", "Error while syncing grades"))
 
+        self.write(json.dumps(response))
+
+@register_handler(
+    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/submissions\/count\/?"
+)
+class SubmissionCountHandler(ExtensionBaseHandler):
+    """
+        Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/submissions/count.
+    """
+
+    async def get(self, lecture_id: int, assignment_id: int):
+        """ Returns the count of submissions made by the student for an assignment.
+
+        :param lecture_id: id of the lecture
+        :type lecture_id: int
+        :param assignment_id: id of the assignment
+        :type assignment_id: int
+        """
+
+        try:
+            response = await self.request_service.request(
+                method="GET",
+                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/submissions/count",
+                header=self.grader_authentication_header,
+                response_callback=self.set_service_headers
+            )
+            self.log.info(f"{response}")
+        except HTTPClientError as e:
+            self.log.error(e.response)
+            raise HTTPError(e.code, reason=e.response.reason)
         self.write(json.dumps(response))

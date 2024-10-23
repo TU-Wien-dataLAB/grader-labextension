@@ -23,7 +23,6 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments.
     """
 
-    @cache(max_age=30)
     async def get(self, lecture_id: int):
         """Sends a GET request to the grader service and returns assignments of the lecture
 
@@ -137,7 +136,6 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
             raise HTTPError(e.code, reason=e.response.reason)
         self.write(json.dumps(response))
 
-    @cache(max_age=30)
     async def get(self, lecture_id: int, assignment_id: int):
         """Sends a GET-request to the grader service to get a specific assignment
 

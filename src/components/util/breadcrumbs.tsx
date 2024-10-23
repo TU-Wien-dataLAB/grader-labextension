@@ -3,8 +3,6 @@ import Link, { LinkProps } from '@mui/material/Link';
 import {
   Link as RouterLink,
   useMatches,
-  useParams,
-  useLoaderData,
   Outlet,
   useLocation
 } from 'react-router-dom';
@@ -93,4 +91,26 @@ export const RouterBreadcrumbs = () => {
       })}
     </Breadcrumbs>
   );
+};
+
+export const extractIdsFromBreadcrumbs = () => {
+  const matches = useMatches();
+  const links = matches
+  .filter((match: any) => Boolean(match.handle?.link))
+  .map((match: any) => match.handle.link(match.params));
+
+  let lectureId;
+  let assignmentId;
+
+  for (let i = 0; i < links.length; i++) {
+    if (links[i].includes("lecture")) {
+      const lecture = links[i].split("/");
+      lectureId = parseInt(lecture[1], 10);
+    } else if (links[i].includes("assignment")) {
+      const assignment = links[i].split("/");
+      assignmentId = parseInt(assignment[1], 10);
+    }
+  }
+
+  return { lectureId, assignmentId };
 };

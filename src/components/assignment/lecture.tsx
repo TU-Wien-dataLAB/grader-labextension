@@ -4,11 +4,8 @@
 // This source code is licensed under the BSD-style license found in the
 // LICENSE file in the root directory of this source tree.
 import * as React from 'react';
-import moment from 'moment';
 import {
-  useNavigate,
-  useNavigation,
-  useRouteLoaderData
+  useNavigate
 } from 'react-router-dom';
 import {
   Button,
@@ -18,8 +15,7 @@ import {
   Stack,
   TableCell,
   TableRow,
-  Typography,
-  Box
+  Typography
 } from '@mui/material';
 import { red, blue, green, grey } from '@mui/material/colors';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -37,6 +33,7 @@ import { AssignmentDetail } from '../../model/assignmentDetail';
 import { Submission } from '../../model/submission';
 import { Lecture } from '../../model/lecture';
 import {
+  getAllAssignments,
   pullAssignment,
   pushAssignment,
   resetAssignment
@@ -44,6 +41,9 @@ import {
 import { showDialog } from '../util/dialog-provider';
 import EditOffIcon from '@mui/icons-material/EditOff';
 import { getFiles, lectureBasePath } from '../../services/file.service';
+import { useQuery } from '@tanstack/react-query';
+import { getLecture } from '../../services/lectures.service';
+import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 
 /*
  * Buttons for AssignmentTable
@@ -202,7 +202,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                 status={row.status}
                 lecture={props.lecture}
                 assignment={row}
-              />
+                />
             </TableCell>
             <TableCell style={{ width: headerWidth(headers, 'Reset') }}>
               <IconButton
@@ -329,21 +329,31 @@ const transformAssignments = (
  * Renders the lecture card which contains its assignments.
  */
 export const LectureComponent = () => {
-  const { lecture, assignments } = useRouteLoaderData('lecture') as {
-    lecture: Lecture;
-    assignments: AssignmentDetail[];
-  };
+  const { lectureId } = extractIdsFromBreadcrumbs();
 
-  const navigation = useNavigation();
+  const { data: lecture, isLoading: isLoadingLecture } = useQuery<Lecture>({
+    queryKey: ['lecture', lectureId],
+    queryFn: () => getLecture(lectureId, true),
+    enabled: !!lectureId
+  });
 
-  const newAssignmentSubmissions = transformAssignments(assignments);
+  const { data: assignments = [], isLoading: isLoadingAssignments } = useQuery({
+    queryKey: ['assignments', lectureId],
+    queryFn: () => getAllAssignments(lectureId),
+    enabled: !!lecture
+  });
 
-  const [lectureState, setLecture] = React.useState(lecture);
-  const [assignmentsState, setAssignments] = React.useState(
-    newAssignmentSubmissions
-  );
+  const [assignmentsState, setAssignmentsState] = React.useState([]);
 
-  if (navigation.state === 'loading') {
+  React.useEffect(() => {
+    if (assignments.length > 0) {
+      const transformedAssignments = transformAssignments(assignments);
+      setAssignmentsState(transformedAssignments);
+    }
+  }, [assignments]);
+
+
+  if (isLoadingLecture || isLoadingAssignments) {   
     return (
       <div>
         <Card>
@@ -353,15 +363,11 @@ export const LectureComponent = () => {
     );
   }
 
-  /*
-
-   */
-
   return (
     <Stack direction={'column'} sx={{ m: 5, flex: 1, overflow: 'hidden' }}>
       <Typography variant={'h4'} sx={{ mb: 2 }}>
-        {lectureState.name}
-        {lectureState.complete ? (
+        {lecture.name}
+        {lecture.complete ? (
           <Typography
             sx={{
               display: 'inline-block',
@@ -378,7 +384,7 @@ export const LectureComponent = () => {
         <Typography variant={'h6'}>Assignments</Typography>
       </Stack>
 
-      <AssignmentTable lecture={lectureState} rows={assignmentsState} />
+      <AssignmentTable lecture={lecture} rows={assignmentsState} />
     </Stack>
   );
 };

@@ -7,6 +7,7 @@
 import enum
 import logging
 import subprocess
+from pathlib import Path
 from typing import List, Dict, Union, Tuple
 from urllib.parse import urlparse, ParseResultBytes
 
@@ -38,9 +39,13 @@ class RemoteStatus(enum.Enum):
     push_needed = 3
     divergent = 4
 
+class RemoteFileStatus(enum.Enum):
+    up_to_date = 1
+    push_needed = 2
+    divergent = 3
 
 class GitService(Configurable):
-    git_access_token = Unicode(os.environ.get("JUPYTERHUB_API_TOKEN"), allow_none=False).tag(config=True)
+    git_access_token = Unicode(os.environ.get("GRADER_API_TOKEN"), allow_none=False).tag(config=True)
     git_service_url = Unicode(
         f'{os.environ.get("GRADER_HOST_URL", "http://127.0.0.1:4010")}{os.environ.get("GRADER_GIT_BASE_URL", "/services/grader/git")}',
         allow_none=False).tag(config=True)
@@ -145,6 +150,10 @@ class GitService(Configurable):
         self._run_command(f"git reset --hard HEAD~{n}", cwd=self.path)
         self._run_command(f"git gc", cwd=self.path)
 
+    def revert(self, commit_hash: str):
+        self.log.info(f"Reverting to {commit_hash}")
+        self._run_command(f'git revert --no-commit {commit_hash}..HEAD', cwd=self.path)
+        self._run_command(f'git commit -m "reverting to {commit_hash}" --allow-empty', cwd=self.path)
 
     def pull(self, origin: str, branch="main", force=False):
         """Pulls a repository
@@ -186,18 +195,27 @@ class GitService(Configurable):
         """
         return os.path.exists(os.path.join(self.path, ".git"))
 
-    def commit(self, m=str(datetime.now())):
+    def commit(self, m=str(datetime.now()), selected_files: List[str] = None):
         """Commits the staged changes
 
         Args:
-            m (str, optional): the commit message. Defaults to str(datetime.now()).
+            m (str, optional): The commit message. Defaults to str(datetime.now()).
+            selected_files (List[str], optional): List of file paths to be committed. Defaults to None.
         """
         # self.log.info("Adding all files")
         # self._run_command(f'git add -A', cwd=self.path)
         # self.log.info("Committing repository")
         # self._run_command(f'git commit -m "{m}"', cwd=self.path)
-        self.log.info(f"Adding all files and committing in {self.path}")
-        self._run_command(f'sh -c \'git add -A && git commit --allow-empty -m "{m}"\'', cwd=self.path)
+        if selected_files:
+            for file_path in (f for f in selected_files if (Path(self.path) / f).exists()):
+                self.log.info(f"Adding file {file_path} and committing in {self.path}")
+                self._run_command(f'sh -c \'git add "{file_path}"\'', cwd=self.path)
+        else:
+            self.log.info(f"Adding all files and committing in {self.path}")
+            self._run_command(f'sh -c \'git add -A\'', cwd=self.path)
+            
+        self._run_command(f'sh -c \'git commit --allow-empty -m "{m}"\'', cwd=self.path)
+        self.log.info(f"Committed changes in {self.path}")
 
     def set_author(self, author):
         # TODO: maybe ask user to specify their own choices
@@ -231,24 +249,35 @@ class GitService(Configurable):
                     self.log.info(f"Deleted {os.path.join(root, d)} from {self.git_root_dir}")
 
     # Note: dirs_exist_ok was only added in Python 3.8
-    def copy_repo_contents(self, src: str):
+    def copy_repo_contents(self, src: str, selected_files: List[str] = None):
         """copies repo contents from src to the git path
 
         Args:
             src (str): path where the to be copied files reside
         """
-        self.log.info(f"Copying repository contents from {src} to {self.path}")
         ignore = shutil.ignore_patterns(".git", "__pycache__")
-        if sys.version_info.major == 3 and sys.version_info.minor >= 8:
-            shutil.copytree(src, self.path, ignore=ignore, dirs_exist_ok=True)
-        else:
+        if selected_files:
+            self.log.info(f"Copying only selected files from {src} to {self.path}")
             for item in os.listdir(src):
-                s = os.path.join(src, item)
-                d = os.path.join(self.path, item)
-                if os.path.isdir(s):
-                    shutil.copytree(s, d, ignore=ignore)
-                else:
-                    shutil.copy2(s, d)
+                if item in selected_files:
+                    s = os.path.join(src, item)
+                    d = os.path.join(self.path, item)
+                    if os.path.isdir(s):
+                        shutil.copytree(s, d, ignore=ignore)
+                    else:
+                        shutil.copy2(s, d)
+        else:    
+            self.log.info(f"Copying repository contents from {src} to {self.path}")
+            if sys.version_info.major == 3 and sys.version_info.minor >= 8:
+                shutil.copytree(src, self.path, ignore=ignore, dirs_exist_ok=True)
+            else:
+                for item in os.listdir(src):
+                    s = os.path.join(src, item)
+                    d = os.path.join(self.path, item)
+                    if os.path.isdir(s):
+                        shutil.copytree(s, d, ignore=ignore)
+                    else:
+                        shutil.copy2(s, d)
 
     def check_remote_status(self, origin: str, branch: str) -> RemoteStatus:
         untracked, added, modified, deleted = self.git_status(hidden_files=False)
@@ -299,6 +328,20 @@ class GitService(Configurable):
             elif k == "D":
                 deleted.append(v)
         return untracked, added, modified, deleted
+    
+    def check_remote_file_status(self, file_path: str) -> RemoteFileStatus:
+        file_status_list = self._run_command(f"git status --porcelain {file_path}", cwd=self.path, capture_output=True).split(maxsplit=1)
+        # Extract the status character from the list
+        if file_status_list:
+            file_status = file_status_list[0]
+        else:
+            # If the list is empty, the file is up-to-date
+            return RemoteFileStatus.up_to_date
+        # Convert the file status to the corresponding enum value
+        if file_status in {"??", "M", "A", "D"}:
+            return RemoteFileStatus.push_needed
+        else:
+            return RemoteFileStatus.divergent
 
     def local_branch_exists(self, branch: str) -> bool:
         ret_code = self._run_command(f"git rev-parse --quiet --verify {branch}", cwd=self.path, check=False).returncode
