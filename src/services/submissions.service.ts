@@ -8,14 +8,13 @@ import { Assignment } from '../model/assignment';
 import { Lecture } from '../model/lecture';
 import { Submission } from '../model/submission';
 import { request, HTTPMethod } from './request.service';
-import { string } from 'yup';
 
 export function submitAssignment(
   lecture: Lecture,
   assignment: Assignment,
   submit = false
 ) {
-  let url = `/lectures/${lecture.id}/assignments/${assignment.id}/push/assignment`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/push/assignment`;
   if (submit) {
     const searchParams = new URLSearchParams({
       submit: String(submit)
@@ -32,7 +31,7 @@ export async function pullFeedback(
 ) {
   return request<void>(
     HTTPMethod.GET,
-    `/lectures/${lecture.id}/assignments/${assignment.id}/grading/${submission.id}/pull/feedback`,
+    `/api/lectures/${lecture.id}/assignments/${assignment.id}/grading/${submission.id}/pull/feedback`,
     null
   );
 }
@@ -42,7 +41,7 @@ export async function pullSubmissionFiles(
   assignment: Assignment,
   submission: Submission
 ) {
-  let url = `/lectures/${lecture.id}/assignments/${assignment.id}/pull/edit`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/pull/edit`;
 
   const searchParams = new URLSearchParams({
     subid: String(submission.id)
@@ -56,7 +55,7 @@ export async function createSubmissionFiles(
   assignment: Assignment,
   username: string
 ) {
-  let url = `/lectures/${lecture.id}/assignments/${assignment.id}/push/edit`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/push/edit`;
   const searchParams = new URLSearchParams({
     for_user: username
   });
@@ -69,7 +68,7 @@ export async function pushSubmissionFiles(
   assignment: Assignment,
   submission: Submission
 ) {
-  let url = `/lectures/${lecture.id}/assignments/${assignment.id}/push/edit`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/push/edit`;
   const searchParams = new URLSearchParams({
     subid: String(submission.id)
   });
@@ -83,7 +82,7 @@ export function getSubmissions(
   filter = 'none',
   reload = false
 ): Promise<Submission[]> {
-  let url = `/lectures/${lecture.id}/assignments/${assignment.id}/submissions`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/submissions`;
   if (filter) {
     const searchParams = new URLSearchParams({
       filter: filter
@@ -100,7 +99,7 @@ export function getAllSubmissions(
   instructor = true,
   reload = false
 ): Promise<Submission[]> {
-  let url = `/lectures/${lectureId}/assignments/${assignmentId}/submissions`;
+  let url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions`;
 
   if (filter || instructor) {
     const searchParams = new URLSearchParams({
@@ -119,7 +118,7 @@ export function getFeedback(
   latest = false,
   instructor = false
 ): Promise<any> {
-  let url = `/lectures/${lecture.id}/assignments/${assignment.id}/feedback`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/feedback`;
   if (latest || instructor) {
     const searchParams = new URLSearchParams({
       'instructor-version': String(instructor),
@@ -136,7 +135,7 @@ export function getProperties(
   submissionId: number,
   reload = false
 ): Promise<any> {
-  const url = `/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}/properties`;
+  const url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}/properties`;
   return request<any>(HTTPMethod.GET, url, null, reload);
 }
 
@@ -146,7 +145,7 @@ export function getLogs(
   submissionId: number,
   reload = false
 ): Promise<string> {
-  const url = `/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}/logs`;
+  const url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}/logs`;
   return request<string>(HTTPMethod.GET, url, null, reload);
 }
 
@@ -155,7 +154,7 @@ export function createOrOverrideEditRepository(
   assignmentId: number,
   submissionId: number
 ): Promise<Submission> {
-  const url = `/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}/edit`;
+  const url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}/edit`;
   return request<Submission>(HTTPMethod.PUT, url, {});
 }
 
@@ -165,7 +164,7 @@ export function updateProperties(
   submissionId: number,
   properties: any
 ): Promise<Submission> {
-  const url = `/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}/properties`;
+  const url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}/properties`;
   return request<Submission>(HTTPMethod.PUT, url, properties);
 }
 
@@ -175,7 +174,7 @@ export function getSubmission(
   submissionId: number,
   reload: boolean = false
 ): Promise<Submission> {
-  const url = `/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}`;
+  const url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}`;
   return request<Submission>(HTTPMethod.GET, url, null, reload);
 }
 
@@ -185,7 +184,7 @@ export function updateSubmission(
   submissionId: number,
   sub: Submission
 ): Promise<Submission> {
-  const url = `/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}`;
+  const url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}`;
   return request<Submission>(HTTPMethod.PUT, url, sub);
 }
 
@@ -193,7 +192,7 @@ export function ltiSyncSubmissions(
   lectureId: number,
   assignmentId: number
 ): Promise<{ syncable_users: number; synced_user: number }> {
-  const url = `/lectures/${lectureId}/assignments/${assignmentId}/submissions/lti`;
+  const url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/lti`;
   return request<{ syncable_users: number; synced_user: number }>(
     HTTPMethod.PUT,
     url,
@@ -208,7 +207,7 @@ export function restoreSubmission(
 ): Promise<void> {
   return request<void>(
     HTTPMethod.GET,
-    `/lectures/${lectureId}/assignments/${assignmentId}/restore/${commitHash}`,
+    `/api/lectures/${lectureId}/assignments/${assignmentId}/restore/${commitHash}`,
     null
   );
 }
@@ -220,7 +219,7 @@ export function deleteSubmission(
 ): Promise<void> {
   return request<void>(
     HTTPMethod.DELETE,
-    `lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}`,
+    `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/${submissionId}`,
     null
   );
 }
@@ -229,6 +228,6 @@ export async function getSubmissionCount(
   lectureId: number,
   assignmentId: number
 ): Promise<{ submission_count: number }> {
-  const url = `/lectures/${lectureId}/assignments/${assignmentId}/submissions/count`;
+  const url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/count`;
   return request<{ submission_count: number }>(HTTPMethod.GET, url, null, false);
 }

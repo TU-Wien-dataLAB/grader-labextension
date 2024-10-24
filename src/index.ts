@@ -59,11 +59,10 @@ import { HintWidget } from './components/notebook/student-plugin/hint-widget';
 import { DeadlineWidget } from './components/notebook/student-plugin/deadline-widget';
 import { lectureSubPaths } from './services/file.service';
 import IModel = Contents.IModel;
-import { Assignment } from './model/assignment';
-import { Lecture } from './model/lecture';
-import { getAllLectures } from './services/lectures.service';
-import { getLabel, updateMenus } from './menu';
+import { updateMenus } from './menu';
 import { loadString } from './services/storage.service';
+import { HTTPError } from './services/request.service';
+import { ErrorRounded } from '@mui/icons-material';
 
 export namespace AssignmentsCommandIDs {
   export const create = 'assignments:create';
@@ -89,34 +88,6 @@ namespace ShowHintIDs {
   export const show = 'notebookplugin:show-hint';
 }
 
-namespace GradingCommandIDs {
-  export const create = 'grading:create';
-
-  export const open = 'grading:open';
-}
-
-namespace ManualGradeCommandIDs {
-  export const create = 'manualgrade:create';
-
-  export const open = 'manualgrade:open';
-}
-
-namespace CreateSubmissionCommandsID {
-  export const create = 'create:create';
-
-  export const open = 'create:open';
-}
-
-namespace FeedbackCommandIDs {
-  export const create = 'feedback:create';
-
-  export const open = 'feedback:open';
-}
-
-namespace DeadlineCommandIDs {
-  export const open = 'deadline:open';
-}
-
 export class GlobalObjects {
   static commands: CommandRegistry;
   static docRegistry: DocumentRegistry;
@@ -128,6 +99,123 @@ export class GlobalObjects {
   static assignmentMenu: Menu;
   static courseManageMenu: Menu;
 }
+
+const createCourseManagementOpenCommand = (app: JupyterFrontEnd, launcher: ILauncher, courseManageTracker: WidgetTracker<MainAreaWidget<CourseManageView>>) => {
+  const command = CourseManageCommandIDs.open;
+  app.commands.addCommand(command, {
+    label: args =>
+      args['label'] ? (args['label'] as string) : 'Course Management',
+    execute: async args => {
+      let gradingWidget = courseManageTracker.currentWidget;
+      if (!gradingWidget) {
+        gradingWidget = await app.commands.execute(
+          CourseManageCommandIDs.create
+        );
+      }
+
+      let path = args?.path as string;
+      if (args?.path === undefined) {
+        const savedPath = loadString('course-manage-react-router-path');
+        if (savedPath !== null && savedPath !== '') {
+          path = savedPath;
+        } else {
+          path = '/';
+        }
+      }
+      await gradingWidget.content.router.navigate(path);
+
+      if (!gradingWidget.isAttached) {
+        // Attach the widget to the main work area if it's not there
+        app.shell.add(gradingWidget, 'main');
+      }
+      // Activate the widget
+      app.shell.activateById(gradingWidget.id);
+    },
+    icon: args => (args['path'] ? undefined : checkIcon)
+  });
+  // Add the command to the launcher
+  console.log('Add course management launcher');
+  launcher.add({
+    command: command,
+    category: 'Assignments',
+    rank: 0
+  });
+}
+
+//Creation of in-cell widget for create assignment
+const connectTrackerSignals = (tracker: INotebookTracker) => {
+  tracker.currentChanged.connect(async () => {
+    const notebookPanel = tracker.currentWidget;
+    //Notebook not yet loaded
+    if (notebookPanel === null) {
+      return;
+    }
+    const notebook: Notebook = tracker.currentWidget.content;
+    const mode = false;
+
+    notebookPanel.context.ready.then(() => {
+      //Creation of widget switch
+      const switcher: NotebookModeSwitch = new NotebookModeSwitch(
+        mode,
+        notebookPanel,
+        notebook
+      );
+
+      tracker.currentWidget.toolbar.insertItem(10, 'Mode', switcher);
+
+      //Creation of deadline widget
+      const deadlineWidget = new DeadlineWidget(
+        tracker.currentWidget.context.path
+      );
+      tracker.currentWidget.toolbar.insertItem(
+        11,
+        'Deadline',
+        deadlineWidget
+        );
+      });
+    }, this);
+
+  tracker.activeCellChanged.connect(() => {
+    const notebookPanel: NotebookPanel = tracker.currentWidget;
+    //Notebook not yet loaded
+    if (notebookPanel === null) {
+      return;
+    }
+    const notebook: Notebook = tracker.currentWidget.content;
+    const contentsModel: Omit<IModel, 'content'> =
+      notebookPanel.context.contentsModel;
+    if (contentsModel === null) {
+      return;
+    }
+    const notebookPaths: string[] = contentsModel.path.split('/');
+
+    if (notebookPaths[lectureSubPaths + 1] === 'manualgrade') {
+      return;
+    }
+
+    let switcher: any = null;
+    (notebookPanel.toolbar.layout as PanelLayout).widgets.map(w => {
+      if (w instanceof NotebookModeSwitch) {
+        switcher = w;
+      }
+    });
+
+    const cell: Cell = notebook.activeCell;
+
+    //check if in creationmode and new cell was inserted
+    if (
+      switcher.mode &&
+      (cell.layout as PanelLayout).widgets.every(w => {
+        return !(w instanceof CreationWidget);
+      })
+    ) {
+      (cell.layout as PanelLayout).insertWidget(
+        0,
+        new CreationWidget(cell)
+      );
+    }
+  }, this);
+};
 
 /**
  * Initialization data for the grading extension.
@@ -204,81 +292,6 @@ const extension: JupyterFrontEndPlugin<void> = {
       name: () => 'grader-coursemanage'
     });
 
-    //Creation of in-cell widget for create assignment
-    const connectTrackerSignals = (tracker: INotebookTracker) => {
-      tracker.currentChanged.connect(async () => {
-        const notebookPanel = tracker.currentWidget;
-        //Notebook not yet loaded
-        if (notebookPanel === null) {
-          return;
-        }
-        const notebook: Notebook = tracker.currentWidget.content;
-        const mode = false;
-
-        notebookPanel.context.ready.then(() => {
-          //Creation of widget switch
-          const switcher: NotebookModeSwitch = new NotebookModeSwitch(
-            mode,
-            notebookPanel,
-            notebook
-          );
-
-          tracker.currentWidget.toolbar.insertItem(10, 'Mode', switcher);
-
-          //Creation of deadline widget
-          const deadlineWidget = new DeadlineWidget(
-            tracker.currentWidget.context.path
-          );
-          tracker.currentWidget.toolbar.insertItem(
-            11,
-            'Deadline',
-            deadlineWidget
-          );
-        });
-      }, this);
-
-      tracker.activeCellChanged.connect(() => {
-        const notebookPanel: NotebookPanel = tracker.currentWidget;
-        //Notebook not yet loaded
-        if (notebookPanel === null) {
-          return;
-        }
-        const notebook: Notebook = tracker.currentWidget.content;
-        const contentsModel: Omit<IModel, 'content'> =
-          notebookPanel.context.contentsModel;
-        if (contentsModel === null) {
-          return;
-        }
-        const notebookPaths: string[] = contentsModel.path.split('/');
-
-        if (notebookPaths[lectureSubPaths + 1] === 'manualgrade') {
-          return;
-        }
-
-        let switcher: any = null;
-        (notebookPanel.toolbar.layout as PanelLayout).widgets.map(w => {
-          if (w instanceof NotebookModeSwitch) {
-            switcher = w;
-          }
-        });
-
-        const cell: Cell = notebook.activeCell;
-
-        //check if in creationmode and new cell was inserted
-        if (
-          switcher.mode &&
-          (cell.layout as PanelLayout).widgets.every(w => {
-            return !(w instanceof CreationWidget);
-          })
-        ) {
-          (cell.layout as PanelLayout).insertWidget(
-            0,
-            new CreationWidget(cell)
-          );
-        }
-      }, this);
-    };
-
     /* ##### Course Manage View Widget ##### */
     let command: string = CourseManageCommandIDs.create;
     app.commands.addCommand(command, {
@@ -339,47 +352,7 @@ const extension: JupyterFrontEndPlugin<void> = {
           cmMenu.title.label = 'Course Management';
           mainMenu.addMenu(cmMenu, false, { rank: 210 });
 
-          command = CourseManageCommandIDs.open;
-          app.commands.addCommand(command, {
-            label: args =>
-              args['label'] ? (args['label'] as string) : 'Course Management',
-            execute: async args => {
-              let gradingWidget = courseManageTracker.currentWidget;
-              if (!gradingWidget) {
-                gradingWidget = await app.commands.execute(
-                  CourseManageCommandIDs.create
-                );
-              }
-
-              let path = args?.path as string;
-              if (args?.path === undefined) {
-                const savedPath = loadString('course-manage-react-router-path');
-                if (savedPath !== null && savedPath !== '') {
-                  console.log(`Restoring path: ${savedPath}`);
-                  path = savedPath;
-                } else {
-                  path = '/';
-                }
-              }
-              await gradingWidget.content.router.navigate(path);
-
-              if (!gradingWidget.isAttached) {
-                // Attach the widget to the main work area if it's not there
-                app.shell.add(gradingWidget, 'main');
-              }
-              // Activate the widget
-              app.shell.activateById(gradingWidget.id);
-            },
-            icon: args => (args['path'] ? undefined : checkIcon)
-          });
-
-          // Add the command to the launcher
-          console.log('Add course management launcher');
-          launcher.add({
-            command: command,
-            category: 'Assignments',
-            rank: 0
-          });
+          createCourseManagementOpenCommand(app, launcher, courseManageTracker)
         }
 
         // add Menu to JupyterLab main menu
@@ -410,7 +383,6 @@ const extension: JupyterFrontEndPlugin<void> = {
                 'assignment-manage-react-router-path'
               );
               if (savedPath !== null && savedPath !== '') {
-                console.log(`Restoring path: ${savedPath}`);
                 path = savedPath;
               } else {
                 path = '/';
@@ -437,11 +409,12 @@ const extension: JupyterFrontEndPlugin<void> = {
           rank: 0
         });
       })
-      .catch(_ =>
+      .catch((error: Error) => {
         showErrorMessage(
-          'Grader Service Unavailable',
-          'Could not connect to the grader service! Please contact your system administrator!'
-        )
+          'Grader Labextension Disabled',
+          'Please restart your server: ' + error.message 
+          )
+        }  
       );
 
     command = NotebookExecuteIDs.run;

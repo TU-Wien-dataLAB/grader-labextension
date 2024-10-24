@@ -13,10 +13,10 @@ from tornado import httputil
 from tornado.web import HTTPError
 
 from grader_labextension.api.models.error_message import ErrorMessage
-from grader_labextension.services.request import RequestService
+from grader_labextension.services.request import RequestService, RequestServiceError
 from jupyter_server.base.handlers import APIHandler
 import os
-from tornado.httpclient import HTTPClientError, HTTPResponse
+from tornado.httpclient import HTTPResponse
 from traitlets.config.configurable import SingletonConfigurable
 from traitlets.traitlets import Unicode
 
@@ -44,7 +44,7 @@ class HandlerConfig(SingletonConfigurable):
     grader_api_token = Unicode(os.environ.get("GRADER_API_TOKEN"),
                                help="The authorization token to access the grader service api").tag(config=True)
     service_base_url = Unicode(
-        os.environ.get("GRADER_BASE_URL", "/services/grader"),
+        os.environ.get("GRADER_BASE_URL", "/"),
         help="Base URL to use for each request to the grader service",
     ).tag(config=True)
     lectures_base_path = Unicode(
@@ -95,42 +95,23 @@ class ExtensionBaseHandler(APIHandler):
         try:
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
             return lecture
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
     async def get_assignment(self, lecture_id, assignment_id):
         try:
             assignment = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
             )
             return assignment
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
-    def write_error(self, status_code, **kwargs):
-        """APIHandler errors are JSON, not human pages"""
-        self.set_header("Content-Type", "application/json")
-        message = responses.get(status_code, "Unknown HTTP Error")
-        reply: dict = {
-            "message": message,
-        }
-        exc_info = kwargs.get("exc_info")
-        if exc_info:
-            e = exc_info[1]
-            if isinstance(e, HTTPError):
-                reply["message"] = e.log_message or message
-                reply["reason"] = e.reason
-            else:
-                reply["message"] = "Unhandled error"
-                reply["reason"] = None
-                reply["traceback"] = "".join(traceback.format_exception(*exc_info))
-        self.log.warning("wrote error: %r", reply["message"], exc_info=True)
-        self.finish(json.dumps(reply))

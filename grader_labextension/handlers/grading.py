@@ -5,17 +5,17 @@
 # LICENSE file in the root directory of this source tree.
 import shutil
 
-from grader_labextension.services.request import RequestService
+from grader_labextension.services.request import RequestService, RequestServiceError
 from grader_labextension.registry import register_handler
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler
-from tornado.httpclient import HTTPResponse, HTTPClientError
-from tornado.web import HTTPError
+from tornado.httpclient import HTTPResponse
+from tornado.web import HTTPError, authenticated
 from grader_labextension.services.git import GitService
 import os
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/submissions\/save?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/submissions\/save?"
 )
 class ExportGradesHandler(ExtensionBaseHandler):
     """
@@ -39,13 +39,13 @@ class ExportGradesHandler(ExtensionBaseHandler):
         try:
             response: HTTPResponse = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/submissions{query_params}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions{query_params}",
                 header=self.grader_authentication_header,
                 decode_response=False
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
         lecture = await self.get_lecture(lecture_id)
         dir_path = os.path.join(self.root_dir, lecture["code"])
@@ -55,19 +55,20 @@ class ExportGradesHandler(ExtensionBaseHandler):
         with open(file_path, "w") as f:
             f.write(csv_content)
 
-        self.write("OK")
+        self.write({"status": "OK"})
 
 
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/grading\/(?P<sub_id>\d*)\/auto\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/grading\/(?P<sub_id>\d*)\/auto\/?"
 )
 class GradingAutoHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/auto.
     """
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
         """Sends a GET-request to the grader service to autograde a submission
 
@@ -81,23 +82,24 @@ class GradingAutoHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/grading/{sub_id}/auto",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/grading/{sub_id}/auto",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         self.write(response)
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/grading\/(?P<sub_id>\d*)\/manual\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/grading\/(?P<sub_id>\d*)\/manual\/?"
 )
 class GradingManualHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/manual.
     """
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
         """Generates a local git repository and pulls autograded files of a submission in the user directory
 
@@ -112,24 +114,24 @@ class GradingManualHandler(ExtensionBaseHandler):
         try:
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
 
             assignment = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
             )
 
             submission = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{sub_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{sub_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
         git_service = GitService(
             server_root_dir=self.root_dir,
@@ -159,13 +161,14 @@ class GradingManualHandler(ExtensionBaseHandler):
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/grading\/(?P<sub_id>\d*)\/feedback\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/grading\/(?P<sub_id>\d*)\/feedback\/?"
 )
 class GenerateFeedbackHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/feedback.
     """
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
         """Sends a GET-request to the grader service to generate feedback for a graded submission
 
@@ -180,23 +183,24 @@ class GenerateFeedbackHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/grading/{sub_id}/feedback",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/grading/{sub_id}/feedback",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         self.write(response)
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/grading\/(?P<sub_id>\d*)\/pull\/feedback\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/grading\/(?P<sub_id>\d*)\/pull\/feedback\/?"
 )
 class PullFeedbackHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/pull/feedback.
     """
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
         """Generates a local git repository and pulls the feedback files of a submission in the user directory 
 
@@ -210,24 +214,24 @@ class PullFeedbackHandler(ExtensionBaseHandler):
         try:
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
 
             assignment = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
             )
 
             submission = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{sub_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{sub_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
         git_service = GitService(
             server_root_dir=self.root_dir,
@@ -251,4 +255,4 @@ class PullFeedbackHandler(ExtensionBaseHandler):
             git_service.init()
         git_service.set_remote("feedback", sub_id=sub_id)
         git_service.pull("feedback", branch=f"feedback_{submission['commit_hash']}", force=False)
-        self.write("Pulled Feedback")
+        self.write({"status": "Pulled Feedback"})

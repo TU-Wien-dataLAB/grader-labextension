@@ -11,7 +11,7 @@ export function getAllLectures(
   complete: boolean = false,
   reload = false
 ): Promise<Lecture[]> {
-  let url = '/lectures';
+  let url = 'api/lectures';
   if (complete) {
     const searchParams = new URLSearchParams({
       complete: String(complete)
@@ -24,7 +24,7 @@ export function getAllLectures(
 export function updateLecture(lecture: Lecture): Promise<Lecture> {
   return request<Lecture, Lecture>(
     HTTPMethod.PUT,
-    `/lectures/${lecture.id}`,
+    `/api/lectures/${lecture.id}`,
     lecture
   );
 }
@@ -35,14 +35,14 @@ export function getLecture(
 ): Promise<Lecture> {
   return request<Lecture>(
     HTTPMethod.GET,
-    `/lectures/${lectureId}`,
+    `/api/lectures/${lectureId}`,
     null,
     reload
   );
 }
 
 export function deleteLecture(lectureId: number): Promise<void> {
-  return request<void>(HTTPMethod.DELETE, `/lectures/${lectureId}`, null);
+  return request<void>(HTTPMethod.DELETE, `/api/lectures/${lectureId}`, null);
 }
 
 export function getUsers(
@@ -53,5 +53,5 @@ export function getUsers(
     instructors: string[];
     tutors: string[];
     students: string[];
-  }>(HTTPMethod.GET, `/lectures/${lectureId}/users`, null, reload);
+  }>(HTTPMethod.GET, `/api/lectures/${lectureId}/users`, null, reload);
 }

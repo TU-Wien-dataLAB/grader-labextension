@@ -616,7 +616,8 @@ export const CommitDialog = (props: ICommitDialogProps) => {
             lecture={props.lecture}
             assignment={props.assignment}
             checkboxes={true} 
-            onFileSelectChange={handleFileSelectChange} />
+            onFileSelectChange={handleFileSelectChange} 
+            checkStatus={true}/>
           )}
           <TextField
             sx={{ mt: 2, width: '100%' }}

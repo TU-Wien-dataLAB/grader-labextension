@@ -13,7 +13,6 @@ export default function ErrorPage({ id }: { id: string }) {
   const error: any = useRouteError();
   const navigate = useNavigate();
   console.error(error);
-  console.log('Storing path: /');
   storeString(`${id}-react-router-path`, '/');
 
   return (

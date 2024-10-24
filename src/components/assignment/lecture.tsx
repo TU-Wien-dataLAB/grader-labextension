@@ -8,7 +8,6 @@ import {
   useNavigate
 } from 'react-router-dom';
 import {
-  Button,
   IconButton,
   Card,
   LinearProgress,
@@ -73,7 +72,6 @@ const EditButton = (props: IEditProps) => {
     getFiles(
       `${lectureBasePath}${props.lecture.code}/assignments/${props.assignment.id}`
     ).then(files => {
-      console.log(files);
       if (files.length > 0) {
         setAssignmentPulled(true);
       }

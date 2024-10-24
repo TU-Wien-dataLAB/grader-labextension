@@ -17,7 +17,7 @@ export function createManualFeedback(
 ): Promise<any> {
   return request<any>(
     HTTPMethod.GET,
-    `/lectures/${lectid}/assignments/${assignid}/grading/${subid}/manual`,
+    `/api/lectures/${lectid}/assignments/${assignid}/grading/${subid}/manual`,
     null
   );
 }
@@ -27,7 +27,7 @@ export function saveSubmissions(
   assignment: Assignment,
   filter: 'none' | 'latest' | 'best' = 'none'
 ): Promise<any> {
-  let url = `/lectures/${lecture.id}/assignments/${assignment.id}/submissions/save`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/submissions/save`;
   if (filter) {
     const searchParams = new URLSearchParams({
       filter: filter
@@ -44,7 +44,7 @@ export function autogradeSubmission(
 ): Promise<any> {
   return request<Assignment>(
     HTTPMethod.GET,
-    `/lectures/${lecture.id}/assignments/${assignment.id}/grading/${submission.id}/auto`,
+    `/api/lectures/${lecture.id}/assignments/${assignment.id}/grading/${submission.id}/auto`,
     null
   );
 }
@@ -56,7 +56,7 @@ export function generateFeedback(
 ): Promise<Submission> {
   return request<Submission>(
     HTTPMethod.GET,
-    `/lectures/${lecture.id}/assignments/${assignment.id}/grading/${submission.id}/feedback`,
+    `/api/lectures/${lecture.id}/assignments/${assignment.id}/grading/${submission.id}/feedback`,
     null
   );
 }
@@ -70,7 +70,7 @@ export function getStudentSubmissions(
 ): Promise<any> {
   return request<any>(
     HTTPMethod.GET,
-    `/lectures/${lecture.id}/assignements/${assignment.id}/grading`,
+    `/api/lectures/${lecture.id}/assignements/${assignment.id}/grading`,
     null,
     reload
   );
@@ -83,7 +83,7 @@ export function getManualFeedback(
 ): Promise<object> {
   return request<object>(
     HTTPMethod.GET,
-    `/lectures/${lecture.id}/assignments/${assignment.id}/grading/${student.name}/manual`,
+    `/api/lectures/${lecture.id}/assignments/${assignment.id}/grading/${student.name}/manual`,
     null
   );
 }
@@ -96,7 +96,7 @@ export function updateManualFeedback(
 ): Promise<any> {
   return request<any>(
     HTTPMethod.PUT,
-    `/lectures/${lecture.id}/assignements/${assignment.id}/grading/${student.name}/manual`,
+    `/api/lectures/${lecture.id}/assignements/${assignment.id}/grading/${student.name}/manual`,
     manual
   );
 }
@@ -109,7 +109,7 @@ export function deleteManualFeedback(
 ): Promise<any> {
   return request<any>(
     HTTPMethod.DELETE,
-    `/lectures/${lecture.id}/assignments/${assignment.id}/grading/${student.name}/manual`,
+    `/api/lectures/${lecture.id}/assignments/${assignment.id}/grading/${student.name}/manual`,
     manual
   );
 }
@@ -121,7 +121,7 @@ export function getGrade(
 ): Promise<any> {
   return request<any>(
     HTTPMethod.GET,
-    `/lectures/${lecture.id}/assignments/${assignment.id}/grading/${student.name}/score`,
+    `/api/lectures/${lecture.id}/assignments/${assignment.id}/grading/${student.name}/score`,
     null
   );
 }

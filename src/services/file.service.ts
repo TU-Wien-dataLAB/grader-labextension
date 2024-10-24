@@ -14,6 +14,7 @@ import { RepoType } from '../components/util/repo-type';
 import IModel = Contents.IModel;
 import { PageConfig, PathExt } from '@jupyterlab/coreutils';
 import { enqueueSnackbar } from 'notistack';
+import { RemoteFileStatus } from '../model/remoteFileStatus';
 
 // remove slashes at beginning and end of base path if they exist
 export let lectureBasePath = PageConfig.getOption('lectures_base_path').replace(
@@ -83,9 +84,6 @@ export const getFiles = async (path: string): Promise<File[]> => {
     }
     f = items.next();
   }
-
-
-  console.log('getting files from path ' + path);
   return files;
 };
 
@@ -169,10 +167,8 @@ export const makeDir = async (path: string, name: string) => {
 
 export const makeDirs = async (path: string, names: string[]) => {
   let p = path;
-  console.log('path: ' + path);
   for (let i = 0; i < names.length; i++) {
     const n = names[i];
-    console.log('try to create dir: ' + names[i]);
     p = await makeDir(p, n);
   }
   return p;
@@ -193,7 +189,7 @@ export function getGitLog(
   repo: RepoType,
   nCommits: number
 ): Promise<IGitLogObject[]> {
-  let url = `/lectures/${lecture.id}/assignments/${assignment.id}/log/${repo}/`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/log/${repo}/`;
   const searchParams = new URLSearchParams({
     n: String(nCommits)
   });
@@ -206,9 +202,9 @@ export function getRemoteStatus(
   assignment: Assignment,
   repo: RepoType,
   reload = false
-): Promise<string> {
-  const url = `/lectures/${lecture.id}/assignments/${assignment.id}/remote-status/${repo}/`;
-  return request<string>(HTTPMethod.GET, url, null, reload);
+): Promise<RemoteFileStatus> {
+  const url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/remote-status/${repo}/`;
+  return request<RemoteFileStatus>(HTTPMethod.GET, url, null, reload);
 }
 
 export function getRemoteFileStatus(
@@ -217,7 +213,7 @@ export function getRemoteFileStatus(
   repo: RepoType,
   filePath: string,
   reload = false
-): Promise<string> {
-  const url = `/lectures/${lecture.id}/assignments/${assignment.id}/remote-file-status/${repo}/?file=${encodeURIComponent(filePath)}`;
-  return request<string>(HTTPMethod.GET, url, null, reload);
+): Promise<RemoteFileStatus> {
+  const url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/remote-file-status/${repo}/?file=${encodeURIComponent(filePath)}`;
+  return request<RemoteFileStatus>(HTTPMethod.GET, url, null, reload);
 }

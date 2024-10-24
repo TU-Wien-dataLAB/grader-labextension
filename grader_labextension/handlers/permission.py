@@ -7,28 +7,32 @@
 import json
 from grader_labextension.registry import register_handler
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler, cache
-from tornado import web
-from tornado.httpclient import HTTPClientError
+from tornado.web import HTTPError, authenticated
+from grader_labextension.services.request import RequestServiceError
 
 
-@register_handler(path=r"\/permissions\/?")
+@register_handler(path=r"api\/permissions\/?")
 class PermissionBaseHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /permissions.
     """
-    @web.authenticated
+    @authenticated
     @cache(max_age=10)
+    @authenticated
     async def get(self):
         """ Sends a GET-request to the grader service and returns the permissions of a user
         """
         try:
-            response = await self.request_service.request(
+            response = await self.request_service.request_with_retries(
                 "GET",
-                f"{self.service_base_url}/permissions",
+                f"{self.service_base_url}api/permissions",
                 header=self.grader_authentication_header,
                 response_callback=self.set_service_headers
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise web.HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
+        except Exception as e:
+            self.log.error(f'Unexpected Error: {e}')
+            raise HTTPError(e)
         self.write(json.dumps(response))

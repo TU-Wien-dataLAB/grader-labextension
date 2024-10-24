@@ -33,6 +33,7 @@ interface IFileListProps {
   missingFiles?: File[];
   checkboxes: boolean;
   onFileSelectChange?: (filePath: string, isSelected: boolean) => void;
+  checkStatus?: boolean; // check if files in list are up to date with remote git repo
 }
 
 export const FilesList = (props: IFileListProps) => {
@@ -98,6 +99,7 @@ export const FilesList = (props: IFileListProps) => {
             allowFiles={props.assignment?.allow_files}
             checkboxes={props.checkboxes}
             onFileSelectChange={handleFileSelectChange}
+            checkStatus={props.checkStatus}
           />
         );
       } else {
@@ -113,6 +115,7 @@ export const FilesList = (props: IFileListProps) => {
             allowFiles={props.assignment?.allow_files}
             checkboxes={props.checkboxes}
             onFileSelectChange={handleFileSelectChange}
+            checkStatus={props.checkStatus}
           />
         );
       }

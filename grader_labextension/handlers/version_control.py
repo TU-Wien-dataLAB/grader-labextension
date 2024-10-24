@@ -10,19 +10,20 @@ import os
 import shutil
 from http import HTTPStatus
 from urllib.parse import unquote, quote
-from tornado.web import HTTPError
+from tornado.web import HTTPError, authenticated
 
+from grader_labextension.services.request import RequestServiceError
 from grader_service.convert.converters.base import GraderConvertException
 from grader_service.convert.converters.generate_assignment import GenerateAssignment
 from .base_handler import ExtensionBaseHandler, cache
 from ..api.models.submission import Submission
 from ..registry import register_handler
 from ..services.git import GitError, GitService
-from tornado.httpclient import HTTPClientError, HTTPResponse
+from tornado.httpclient import HTTPResponse
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/generate\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/generate\/?"
 )
 class GenerateHandler(ExtensionBaseHandler):
     """
@@ -40,17 +41,17 @@ class GenerateHandler(ExtensionBaseHandler):
         try:
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
             assignment = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         code = lecture["code"]
         a_id = assignment["id"]
 
@@ -91,17 +92,18 @@ class GenerateHandler(ExtensionBaseHandler):
         except OSError as e:
             self.log.error(f"Could delete {gradebook_path}! Error: {e.strerror}")
         self.log.info("GenerateAssignment conversion done")
-        self.write("OK")
+        self.write({"status": "OK"})
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/remote-file-status\/(?P<repo>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/remote-file-status\/(?P<repo>\w*)\/?"
 )
 class GitRemoteFileStatusHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/remote-file-status/{repo}.
     """
 
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
         if repo not in {"assignment", "source", "release"}:
             self.log.error(HTTPStatus.NOT_FOUND)
@@ -129,18 +131,20 @@ class GitRemoteFileStatusHandler(ExtensionBaseHandler):
             self.log.info(f"File {file_path} status: {status}")
         except GitError as e:
             self.log.error(e)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
-        self.write(status.name)
+            raise HTTPError(e.code, reason=e.error)
+        response = json.dumps({"status": status.name})
+        self.write(response)
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/remote-status\/(?P<repo>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/remote-status\/(?P<repo>\w*)\/?"
 )
 class GitRemoteStatusHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/remote_status/{repo}.
     """
 
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
         if repo not in {"assignment", "source", "release"}:
             self.log.error(HTTPStatus.NOT_FOUND)
@@ -166,17 +170,19 @@ class GitRemoteStatusHandler(ExtensionBaseHandler):
             status = git_service.check_remote_status(f"grader_{repo}", "main")
         except GitError as e:
             self.log.error(e)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
-        self.write(status.name)
+            raise HTTPError(e.code, reason=e.error)
+        response = json.dumps({"status": status.name})
+        self.write(response)
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/log\/(?P<repo>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/log\/(?P<repo>\w*)\/?"
 )
 class GitLogHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/log/{repo}.
     """
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
         """
         Sends a GET request to the grader service to get the logs of a given repo.
@@ -195,17 +201,17 @@ class GitLogHandler(ExtensionBaseHandler):
         try:
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
             assignment = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
         git_service = GitService(
             server_root_dir=self.root_dir,
@@ -227,19 +233,20 @@ class GitLogHandler(ExtensionBaseHandler):
                 logs = []
         except GitError as e:
             self.log.error(e)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
+            raise HTTPError(e.code, reason=e.error)
 
         self.write(json.dumps(logs))
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/pull\/(?P<repo>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/pull\/(?P<repo>\w*)\/?"
 )
 class PullHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/pull/{repo}.
     """
 
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
         """Creates a local repository and pulls the specified repo type
 
@@ -262,17 +269,17 @@ class PullHandler(ExtensionBaseHandler):
         try:
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
             assignment = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
         git_service = GitService(
             server_root_dir=self.root_dir,
@@ -289,14 +296,14 @@ class PullHandler(ExtensionBaseHandler):
                 git_service.set_author(author=self.user_name)
             git_service.set_remote(f"grader_{repo}", sub_id=sub_id)
             git_service.pull(f"grader_{repo}", force=True)
-            self.write("OK")
+            self.write({"status": "OK"})
         except GitError as e:
             self.log.error("GitError:\n" + e.error)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=e.error)
+            raise HTTPError(e.code, reason=e.error)
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/push\/(?P<repo>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/push\/(?P<repo>\w*)\/?"
 )
 class PushHandler(ExtensionBaseHandler):
     """
@@ -330,17 +337,17 @@ class PushHandler(ExtensionBaseHandler):
         try:
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
             assignment = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         
         # differentiate between "normal" edit and "create" edit by sub_id -> if it is None we know we are in
         # submission creation mode instead of edit mode
@@ -348,7 +355,7 @@ class PushHandler(ExtensionBaseHandler):
             submission = Submission(commit_hash="0" * 40)
             response: dict = await self.request_service.request(
                 "POST",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/submissions",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions",
                 body=submission.to_dict(),
                 header=self.grader_authentication_header,
             )
@@ -358,7 +365,7 @@ class PushHandler(ExtensionBaseHandler):
             submission.edited = True
             await self.request_service.request(
                 "PUT",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission.id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission.id}",
                 body=submission.to_dict(),
                 header=self.grader_authentication_header,
             )
@@ -419,8 +426,7 @@ class PushHandler(ExtensionBaseHandler):
                 self.log.error(
                     "Converting failed: Error converting notebook!", exc_info=True
                 )
-
-                raise HTTPError(409, reason=str(e))
+                raise HTTPError(HTTPStatus.CONFLICT, reason=str(e))
             try:
                 gradebook_path = os.path.join(git_service.path, "gradebook.json")
                 self.log.info(f"Reading gradebook file: {gradebook_path}")
@@ -429,14 +435,14 @@ class PushHandler(ExtensionBaseHandler):
             except FileNotFoundError:
                 self.log.error(f"Cannot find gradebook file: {gradebook_path}")
                 raise HTTPError(
-                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                    HTTPStatus.NOT_FOUND,
                     reason=f"Cannot find gradebook file: {gradebook_path}",
                 )
 
             self.log.info(f"Setting properties of assignment from {gradebook_path}")
             response: HTTPResponse = await self.request_service.request(
                 "PUT",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/properties",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/properties",
                 header=self.grader_authentication_header,
                 body=gradebook_json,
                 decode_response=False,
@@ -456,7 +462,7 @@ class PushHandler(ExtensionBaseHandler):
                     f"Cannot delete {gradebook_path}! Error: {e.strerror}\nAborting push!"
                 )
                 raise HTTPError(
-                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                    HTTPStatus.CONFLICT,
                     reason=f"Cannot delete {gradebook_path}! Error: {e.strerror}\nAborting push!",
                 )
 
@@ -471,20 +477,20 @@ class PushHandler(ExtensionBaseHandler):
             git_service.set_remote(f"grader_{repo}", sub_id=sub_id)
         except GitError as e:
             self.log.error("GitError:\n" + e.error)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=e.error)
+            raise HTTPError(e.code, reason=e.error)
 
         try:
-            git_service.commit(m=commit_message, selected_files=selected_files)
+            git_service.commit(message=commit_message, selected_files=selected_files)
         except GitError as e:
             self.log.error("GitError:\n" + e.error)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=e.error)
+            raise HTTPError(e.code, reason=e.error)
 
         try:
             git_service.push(f"grader_{repo}", force=True)
         except GitError as e:
             self.log.error("GitError:\n" + e.error)
             git_service.undo_commit()
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e.error))
+            raise HTTPError(e.code, reason=str(e.error))
 
         if submit and repo == "assignment":
             self.log.info(f"Submitting assignment {assignment_id}!")
@@ -493,7 +499,7 @@ class PushHandler(ExtensionBaseHandler):
                 submission = Submission(commit_hash=latest_commit_hash)
                 response = await self.request_service.request(
                     "POST",
-                    f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/submissions",
+                    f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions",
                     body=submission.to_dict(),
                     header=self.grader_authentication_header,
                 )
@@ -502,21 +508,22 @@ class PushHandler(ExtensionBaseHandler):
             except (KeyError, IndexError) as e:
                 self.log.error(e)
                 raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
-            except HTTPClientError as e:
-                self.log.error(e.response)
-                raise HTTPError(e.code, reason=e.response.reason)
+            except RequestServiceError as e:
+                self.log.error(e)
+                raise HTTPError(e.code, reason=e.message)
 
-        self.write("OK")
+        self.write({"status": "OK"})
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/reset\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/reset\/?"
 )
 class ResetHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/reset.
     """
 
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int):
         """
         Sends a GET request to the grader service that resets the user repo.
@@ -528,35 +535,36 @@ class ResetHandler(ExtensionBaseHandler):
         try:
             await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/reset",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/reset",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
-        self.write("OK")
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
+        self.write({"status": "OK"})
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/restore\/(?P<commit_hash>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/restore\/(?P<commit_hash>\w*)\/?"
 )
 class RestoreHandler(ExtensionBaseHandler):
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int, commit_hash: str):
 
         try:
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
             assignment = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
         git_service = GitService(
             server_root_dir=self.root_dir,
@@ -576,10 +584,10 @@ class RestoreHandler(ExtensionBaseHandler):
             git_service.pull("grader_assignment", force=True)
             git_service.revert(commit_hash=commit_hash)
             git_service.push("grader_assignment")
-            self.write("OK")
+            self.write({"status": "OK"})
         except GitError as e:
             self.log.error("GitError:\n" + e.error)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=e.error)
+            raise HTTPError(e.code, reason=e.error)
 
 
 @register_handler(
@@ -590,6 +598,7 @@ class NotebookAccessHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/{notebook_name}.
     """
 
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int, notebook_name: str):
         """
         Sends a GET request to the grader service to access notebook and redirect to it.
@@ -603,15 +612,15 @@ class NotebookAccessHandler(ExtensionBaseHandler):
         try:
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
             assignment = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
+        except RequestServiceError as e:
             self.set_status(e.code)
             self.write_error(e.code)
             return
@@ -631,7 +640,7 @@ class NotebookAccessHandler(ExtensionBaseHandler):
                 git_service.set_author(author=self.user_name)
                 git_service.set_remote(f"grader_release")
                 git_service.pull(f"grader_release", force=True)
-                self.write("OK")
+                self.write({"status": "OK"})
             except GitError as e:
                 self.log.error("GitError:\n" + e.error)
                 self.write_error(400)

@@ -59,7 +59,6 @@ export const updateMenus = async (reload: boolean = false) => {
     });
   });
   aMenu.update();
-  console.log('Updated assignment menu');
 
   if (cmMenu) {
     cmMenu.clearItems();
@@ -91,6 +90,5 @@ export const updateMenus = async (reload: boolean = false) => {
       });
     });
     cmMenu.update();
-    console.log('Updated course manage menu');
   }
 };

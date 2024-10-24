@@ -26,6 +26,7 @@ import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import CheckIcon from '@mui/icons-material/Check';
 import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
 import { UseQueryOptions, useQuery } from '@tanstack/react-query';
+import { RemoteFileStatus } from '../../model/remoteFileStatus';
 
 interface IFileItemProps {
   file: File;
@@ -37,6 +38,7 @@ interface IFileItemProps {
   allowFiles?: boolean;
   checkboxes: boolean;
   onFileSelectChange?: (filePath: string, isSelected: boolean) => void;
+  checkStatus?: boolean; // check if file is up to date with remote git repo
 }
 
 const FileItem = ({
@@ -48,47 +50,54 @@ const FileItem = ({
   allowFiles,
   missingFiles,
   checkboxes,
-  onFileSelectChange
+  onFileSelectChange,
+  checkStatus = false // Default is false if not provided
 }: IFileItemProps) => {
   const inMissing = (filePath: string) => {
-    return missingFiles.some(missingFile => missingFile.path === filePath);
+    return missingFiles?.some(missingFile => missingFile.path === filePath);
   };
 
   const [isSelected, setIsSelected] = React.useState(true);
 
-
-  const fileStatusQueryOptions: UseQueryOptions<'up_to_date' | 'push_needed' | 'divergent', Error> = {
+  const fileStatusQueryOptions: UseQueryOptions<RemoteFileStatus, Error> = {
     queryKey: ['fileStatus', lecture?.id, assignment?.id, file.path],
-    queryFn: () => getRemoteFileStatus(
-      lecture,
-      assignment,
-      RepoType.SOURCE,
-      getRelativePath(file.path, 'source'),
-      true
-    ) as Promise<'up_to_date' | 'push_needed' | 'divergent'>,
-    enabled: !!lecture && !!assignment,
+    queryFn: () =>
+      getRemoteFileStatus(
+        lecture,
+        assignment,
+        RepoType.SOURCE,
+        getRelativePath(file.path, 'source'),
+        true
+      ) as Promise<RemoteFileStatus>,
+    enabled: checkStatus && !!lecture && !!assignment, // Enable only if checkStatus is true
     staleTime: 3000
   };
 
-  const { data: fileRemoteStatus } = useQuery(fileStatusQueryOptions);
+  const fileRemoteStatusResponse = useQuery(fileStatusQueryOptions);
 
+  if (fileRemoteStatusResponse.isError) {
+    console.error(
+      'could not fetch remote status: ' + fileRemoteStatusResponse.error.message
+    );
+  }
 
-  const getFleRemoteStatusText = (
-    status: 'up_to_date' | 'push_needed' | 'divergent'
-  ) => {
-    if (status === 'up_to_date') {
+  const fileRemoteStatus: RemoteFileStatus.StatusEnum | undefined =
+    fileRemoteStatusResponse.data?.status;
+
+  const getFileRemoteStatusText = (status: RemoteFileStatus.StatusEnum) => {
+    if (status === RemoteFileStatus.StatusEnum.UpToDate) {
       return 'The local file is up to date with the file from remote repository.';
-    } else if (status === 'push_needed') {
+    } else if (status === RemoteFileStatus.StatusEnum.PushNeeded) {
       return 'You have made changes to this file locally, a push is needed.';
+    } else if (status === RemoteFileStatus.StatusEnum.NoRemoteRepo) {
+      return 'There is no remote repository yet. Push your assignment to create it.';
     } else {
       return 'The local and remote file are divergent.';
     }
   };
 
-  const getStatusChip = (
-    status: 'up_to_date' | 'push_needed' | 'divergent'
-  ) => {
-    if (status === 'up_to_date') {
+  const getStatusChip = (status: RemoteFileStatus.StatusEnum) => {
+    if (status === RemoteFileStatus.StatusEnum.UpToDate) {
       return (
         <Chip
           sx={{ mb: 1.0 }}
@@ -98,7 +107,7 @@ const FileItem = ({
           icon={<CheckIcon />}
         />
       );
-    } else if (status === 'push_needed') {
+    } else if (status === RemoteFileStatus.StatusEnum.PushNeeded) {
       return (
         <Chip
           sx={{ mb: 1.0 }}
@@ -106,6 +115,16 @@ const FileItem = ({
           color="warning"
           size="small"
           icon={<PublishRoundedIcon />}
+        />
+      );
+    } else if (status === RemoteFileStatus.StatusEnum.NoRemoteRepo) {
+      return (
+        <Chip
+          sx={{ mb: 1.0 }}
+          label={'No Remote Repository'}
+          color="primary"
+          size="small"
+          icon={<CheckIcon />}
         />
       );
     } else {
@@ -125,7 +144,7 @@ const FileItem = ({
     setIsSelected(prevState => {
       const nextState = !prevState;
       // used only with checkboxes -> in source directory
-      onFileSelectChange(getRelativePath(file.path, 'source'), nextState);
+      onFileSelectChange?.(getRelativePath(file.path, 'source'), nextState);
       return nextState;
     });
   };
@@ -153,8 +172,8 @@ const FileItem = ({
           primary={<Typography>{file.name}</Typography>}
           secondary={
             <Stack direction={'row'} spacing={2}>
-              {checkboxes && (
-                <Tooltip title={getFleRemoteStatusText(fileRemoteStatus)}>
+              {checkboxes && checkStatus && fileRemoteStatus && (
+                <Tooltip title={getFileRemoteStatusText(fileRemoteStatus)}>
                   {getStatusChip(fileRemoteStatus)}
                 </Tooltip>
               )}
