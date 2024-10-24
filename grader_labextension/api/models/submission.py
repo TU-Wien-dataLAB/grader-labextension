@@ -1,11 +1,8 @@
-# coding: utf-8
-
-from __future__ import absolute_import
 from datetime import date, datetime  # noqa: F401
 
 from typing import List, Dict  # noqa: F401
 
-from grader_labextension.api.models.base_model_ import Model
+from grader_labextension.api.models.base_model import Model
 from grader_labextension.api import util
 
 
@@ -98,7 +95,7 @@ class Submission(Model):
         return util.deserialize_model(dikt, cls)
 
     @property
-    def id(self):
+    def id(self) -> int:
         """Gets the id of this Submission.
 
 
@@ -108,7 +105,7 @@ class Submission(Model):
         return self._id
 
     @id.setter
-    def id(self, id):
+    def id(self, id: int):
         """Sets the id of this Submission.
 
 
@@ -119,7 +116,7 @@ class Submission(Model):
         self._id = id
 
     @property
-    def submitted_at(self):
+    def submitted_at(self) -> datetime:
         """Gets the submitted_at of this Submission.
 
 
@@ -129,7 +126,7 @@ class Submission(Model):
         return self._submitted_at
 
     @submitted_at.setter
-    def submitted_at(self, submitted_at):
+    def submitted_at(self, submitted_at: datetime):
         """Sets the submitted_at of this Submission.
 
 
@@ -140,7 +137,7 @@ class Submission(Model):
         self._submitted_at = submitted_at
 
     @property
-    def auto_status(self):
+    def auto_status(self) -> str:
         """Gets the auto_status of this Submission.
 
 
@@ -150,7 +147,7 @@ class Submission(Model):
         return self._auto_status
 
     @auto_status.setter
-    def auto_status(self, auto_status):
+    def auto_status(self, auto_status: str):
         """Sets the auto_status of this Submission.
 
 
@@ -167,7 +164,7 @@ class Submission(Model):
         self._auto_status = auto_status
 
     @property
-    def manual_status(self):
+    def manual_status(self) -> str:
         """Gets the manual_status of this Submission.
 
 
@@ -177,7 +174,7 @@ class Submission(Model):
         return self._manual_status
 
     @manual_status.setter
-    def manual_status(self, manual_status):
+    def manual_status(self, manual_status: str):
         """Sets the manual_status of this Submission.
 
 
@@ -194,7 +191,7 @@ class Submission(Model):
         self._manual_status = manual_status
 
     @property
-    def username(self):
+    def username(self) -> str:
         """Gets the username of this Submission.
 
 
@@ -204,7 +201,7 @@ class Submission(Model):
         return self._username
 
     @username.setter
-    def username(self, username):
+    def username(self, username: str):
         """Sets the username of this Submission.
 
 
@@ -215,7 +212,7 @@ class Submission(Model):
         self._username = username
 
     @property
-    def grading_score(self):
+    def grading_score(self) -> float:
         """Gets the grading_score of this Submission.
 
 
@@ -225,7 +222,7 @@ class Submission(Model):
         return self._grading_score
 
     @grading_score.setter
-    def grading_score(self, grading_score):
+    def grading_score(self, grading_score: float):
         """Sets the grading_score of this Submission.
 
 
@@ -236,7 +233,7 @@ class Submission(Model):
         self._grading_score = grading_score
 
     @property
-    def score_scaling(self):
+    def score_scaling(self) -> float:
         """Gets the score_scaling of this Submission.
 
 
@@ -246,7 +243,7 @@ class Submission(Model):
         return self._score_scaling
 
     @score_scaling.setter
-    def score_scaling(self, score_scaling):
+    def score_scaling(self, score_scaling: float):
         """Sets the score_scaling of this Submission.
 
 
@@ -261,7 +258,7 @@ class Submission(Model):
         self._score_scaling = score_scaling
 
     @property
-    def score(self):
+    def score(self) -> float:
         """Gets the score of this Submission.
 
 
@@ -271,7 +268,7 @@ class Submission(Model):
         return self._score
 
     @score.setter
-    def score(self, score):
+    def score(self, score: float):
         """Sets the score of this Submission.
 
 
@@ -282,7 +279,7 @@ class Submission(Model):
         self._score = score
 
     @property
-    def assignid(self):
+    def assignid(self) -> int:
         """Gets the assignid of this Submission.
 
 
@@ -292,7 +289,7 @@ class Submission(Model):
         return self._assignid
 
     @assignid.setter
-    def assignid(self, assignid):
+    def assignid(self, assignid: int):
         """Sets the assignid of this Submission.
 
 
@@ -303,7 +300,7 @@ class Submission(Model):
         self._assignid = assignid
 
     @property
-    def commit_hash(self):
+    def commit_hash(self) -> str:
         """Gets the commit_hash of this Submission.
 
 
@@ -313,7 +310,7 @@ class Submission(Model):
         return self._commit_hash
 
     @commit_hash.setter
-    def commit_hash(self, commit_hash):
+    def commit_hash(self, commit_hash: str):
         """Sets the commit_hash of this Submission.
 
 
@@ -324,7 +321,7 @@ class Submission(Model):
         self._commit_hash = commit_hash
 
     @property
-    def feedback_status(self):
+    def feedback_status(self) -> str:
         """Gets the feedback_status of this Submission.
 
 
@@ -334,7 +331,7 @@ class Submission(Model):
         return self._feedback_status
 
     @feedback_status.setter
-    def feedback_status(self, feedback_status):
+    def feedback_status(self, feedback_status: str):
         """Sets the feedback_status of this Submission.
 
 
@@ -344,14 +341,14 @@ class Submission(Model):
         allowed_values = ["not_generated", "generating", "generated", "generation_failed", "feedback_outdated"]  # noqa: E501
         if feedback_status not in allowed_values:
             raise ValueError(
-                "Invalid value for `auto_status` ({0}), must be one of {1}"
+                "Invalid value for `feedback_status` ({0}), must be one of {1}"
                 .format(feedback_status, allowed_values)
             )
 
         self._feedback_status = feedback_status
 
     @property
-    def edited(self):
+    def edited(self) -> bool:
         """Gets the edited of this Submission.
 
 
@@ -361,7 +358,7 @@ class Submission(Model):
         return self._edited
 
     @edited.setter
-    def edited(self, edited):
+    def edited(self, edited: bool):
         """Sets the edited of this Submission.
 
 

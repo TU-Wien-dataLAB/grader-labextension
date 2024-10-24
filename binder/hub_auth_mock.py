@@ -6,7 +6,7 @@ class MainHandler(tornado.web.RequestHandler):
     def get(self):
         print("Returning dummy user")
         self.set_header("Content-Type", "application/json")
-        dummy_user = '{"kind": "user", "admin": true, "groups": ["lect1:instructor"], "name": "instructor"}'
+        dummy_user = {"kind": "user", "admin": True, "groups": ["lect1:instructor"], "name": "instructor"}
         self.write(dummy_user)
 
 
