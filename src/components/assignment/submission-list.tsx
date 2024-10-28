@@ -131,7 +131,8 @@ export const SubmissionList = (props: ISubmissionListProps) => {
                   startIcon={<DeleteIcon />}
                   size="small"
                   onClick={() => {
-                    const warningMessage = props.subLeft === 0 && props.submissions.length === 1
+                    const warningMessage =
+                      props.subLeft === 0 && props.submissions.length === 1
                         ? '<strong>This is your last submission left. If you delete it, you won’t be able to submit again and you will be graded with 0 points.<strong></strong>'
                         : '';
                     showDialog(
@@ -146,10 +147,10 @@ export const SubmissionList = (props: ISubmissionListProps) => {
                             props.assignment.id,
                             value.id
                           );
-                          queryClient.invalidateQueries({
+                          await queryClient.invalidateQueries({
                             queryKey: ['submissions']
                           });
-                          queryClient.invalidateQueries({
+                          await queryClient.invalidateQueries({
                             queryKey: ['submissionsAssignmentStudent']
                           });
                           enqueueSnackbar('Successfully Deleted Submission', {

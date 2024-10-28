@@ -121,7 +121,7 @@ export const AssignmentComponent = () => {
   } = useQuery<number>({
     queryKey: ['subLeft'],
     queryFn: async () => {
-      refetchSubmissions();
+      await refetchSubmissions();
       const response = await getSubmissionCount(lectureId, assignmentId);
       const remainingSubmissions =
         assignment.max_submissions - response.submission_count;
@@ -150,9 +150,11 @@ export const AssignmentComponent = () => {
           ...gb.getNotebooks().map(n => n + '.ipynb'),
           ...gb.getExtraFiles()
         ]);
+        const active_step = calculateActiveStep(submissions);
+        setActiveStatus(active_step);
       });
     }
-  }, [lecture, assignment]);
+  }, [lecture, assignment, submissions]);
 
   if (
     isLoadingAssignment ||
@@ -188,7 +190,7 @@ export const AssignmentComponent = () => {
           enqueueSnackbar('Successfully Reset Assignment', {
             variant: 'success'
           });
-          refetchFiles();
+          await refetchFiles();
         } catch (e) {
           if (e instanceof Error) {
             enqueueSnackbar('Error Reset Assignment: ' + e.message, {
@@ -212,9 +214,10 @@ export const AssignmentComponent = () => {
       async () => {
         await submitAssignment(lecture, assignment, true).then(
           () => {
-            refetchSubleft();
-            const active_step = calculateActiveStep(submissions);
-            setActiveStatus(active_step);
+            refetchSubleft().then(() => {
+              const active_step = calculateActiveStep(submissions);
+              setActiveStatus(active_step);
+            });
             enqueueSnackbar('Successfully Submitted Assignment', {
               variant: 'success'
             });
@@ -278,8 +281,8 @@ export const AssignmentComponent = () => {
       { period: 'P0D', scaling: undefined }
     ];
     // no late_submission entry found
-    if (late_submission.length == 0) {
-      return false
+    if (late_submission.length === 0) {
+      return false;
     }
 
     const late = moment(assignment.due_date)
@@ -455,7 +458,7 @@ export const AssignmentComponent = () => {
           lecture={lecture}
           assignment={assignment}
           submissions={submissions}
-          subLeft = {subLeft}
+          subLeft={subLeft}
           sx={{ m: 2, mt: 1 }}
         />
       </Box>
