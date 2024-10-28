@@ -33,7 +33,7 @@ class RemoteFileStatus(enum.Enum):
 
 class GitService(Configurable):
     DEFAULT_HOST_URL = "http://127.0.0.1:4010"
-    DEFAULT_GIT_URL_PREFIX = "/git"
+    DEFAULT_GIT_URL_PREFIX = "/services/grader/git"
     _git_version = None
 
     git_access_token = Unicode(os.environ.get("GRADER_API_TOKEN"), allow_none=False).tag(config=True)

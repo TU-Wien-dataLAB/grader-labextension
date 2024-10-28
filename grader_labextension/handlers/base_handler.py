@@ -44,7 +44,7 @@ class HandlerConfig(SingletonConfigurable):
     grader_api_token = Unicode(os.environ.get("GRADER_API_TOKEN"),
                                help="The authorization token to access the grader service api").tag(config=True)
     service_base_url = Unicode(
-        os.environ.get("GRADER_BASE_URL", "/"),
+        os.environ.get("GRADER_BASE_URL", "/services/grader/"),
         help="Base URL to use for each request to the grader service",
     ).tag(config=True)
     lectures_base_path = Unicode(
