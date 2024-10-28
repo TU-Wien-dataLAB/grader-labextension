@@ -282,6 +282,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
         async a => {
           await updateMenus(true);
           props.handleSubmit(a);
+          await queryClient.invalidateQueries({ queryKey: ['assignments'] });
         },
 
         error => {
@@ -290,7 +291,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
           });
         }
       );
-      queryClient.invalidateQueries({ queryKey: ['assignments', props.lecture.id] });
       setOpen(false);
     }
   });

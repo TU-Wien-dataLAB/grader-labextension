@@ -18,16 +18,15 @@ import {
 import * as React from 'react';
 import { Assignment } from '../../model/assignment';
 import { Lecture } from '../../model/lecture';
-import { deleteAssignment, getAllAssignments } from '../../services/assignments.service';
+import {
+  deleteAssignment,
+  getAllAssignments
+} from '../../services/assignments.service';
 import { CreateDialog, EditLectureDialog } from '../util/dialog';
 import { getLecture, updateLecture } from '../../services/lectures.service';
 import { red, grey } from '@mui/material/colors';
 import { enqueueSnackbar } from 'notistack';
-import {
-  useNavigate,
-  useNavigation,
-  useRouteLoaderData
-} from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ButtonTr, GraderTable } from '../util/table';
 import { DeadlineComponent } from '../util/deadline';
 import CloseIcon from '@mui/icons-material/Close';
@@ -163,10 +162,14 @@ export const LectureComponent = () => {
     enabled: !!lectureId
   });
 
-  const { data: assignments = [], isLoading: isLoadingAssignments, refetch: refetchAssignments } = useQuery<AssignmentDetail[]>({
+  const {
+    data: assignments = [],
+    isLoading: isLoadingAssignments,
+    refetch: refetchAssignments
+  } = useQuery<AssignmentDetail[]>({
     queryKey: ['assignments', lecture, lectureId],
     queryFn: () => getAllAssignments(lectureId),
-    enabled: !!lecture 
+    enabled: !!lecture
   });
 
   React.useEffect(() => {
@@ -175,11 +178,9 @@ export const LectureComponent = () => {
     }
   }, [assignments]);
 
-
   const [lectureState, setLecture] = React.useState(lecture);
   const [assignmentsState, setAssignments] = React.useState<Assignment[]>([]);
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
-
 
   if (isLoadingLecture || isLoadingAssignments) {
     return (
@@ -195,19 +196,20 @@ export const LectureComponent = () => {
     setEditDialogOpen(true);
   };
 
-  
-  const handleUpdateLecture = (updatedLecture) => {
+  const handleUpdateLecture = updatedLecture => {
     updateLecture(updatedLecture).then(
-      async (response) => {
+      async response => {
         await updateMenus(true);
         setLecture(response);
         // Invalidate query key "lectures" and "completedLectures", so that we trigger refetch on lectures table and correct lecture name is shown in the table!
-        queryClient.invalidateQueries({ queryKey: ['lectures'] });
-        queryClient.invalidateQueries({ queryKey: ['completedLectures'] });  
+        await queryClient.invalidateQueries({ queryKey: ['lectures'] });
+        await queryClient.invalidateQueries({
+          queryKey: ['completedLectures']
+        });
       },
-      (error) => {
+      error => {
         enqueueSnackbar(error.message, {
-          variant: 'error',
+          variant: 'error'
         });
       }
     );
@@ -236,11 +238,7 @@ export const LectureComponent = () => {
         alignItems="center"
         sx={{ mt: 2, mb: 1 }}
       >
-        <Stack
-          direction="row"
-          alignItems="center"
-          sx={{ mr: 2}}
-          >
+        <Stack direction="row" alignItems="center" sx={{ mr: 2 }}>
           {lecture.code === lecture.name ? (
             <Alert severity="info">
               The name of the lecture is identical to the lecture code. You

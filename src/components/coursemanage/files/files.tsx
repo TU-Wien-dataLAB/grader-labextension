@@ -122,9 +122,10 @@ export const Files = ({ lecture, assignment, onAssignmentChange }: IFilesProps) 
 
   const handlePushAssignment = async (commitMessage: string, selectedFiles: string[]) => {
     try {
+      // Note: has to be in this order (release -> source)
       await pushAssignment(lecture.id, assignment.id, 'release', commitMessage, selectedFiles);
       await pushAssignment(lecture.id, assignment.id, 'source', commitMessage, selectedFiles);
-      queryClient.invalidateQueries({ queryKey: ['assignments', lecture.id] });
+      await queryClient.invalidateQueries({ queryKey: ['assignments'] });
       enqueueSnackbar('Successfully Pushed Assignment', { variant: 'success' });
       refetchRepoStatus();
     } catch (err) {
