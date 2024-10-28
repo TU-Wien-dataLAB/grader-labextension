@@ -150,6 +150,8 @@ export const AssignmentComponent = () => {
           ...gb.getNotebooks().map(n => n + '.ipynb'),
           ...gb.getExtraFiles()
         ]);
+        const active_step = calculateActiveStep(submissions);
+        setActiveStatus(active_step);
       });
     }
   }, [lecture, assignment]);
@@ -278,8 +280,8 @@ export const AssignmentComponent = () => {
       { period: 'P0D', scaling: undefined }
     ];
     // no late_submission entry found
-    if (late_submission.length == 0) {
-      return false
+    if (late_submission.length === 0) {
+      return false;
     }
 
     const late = moment(assignment.due_date)
@@ -455,7 +457,7 @@ export const AssignmentComponent = () => {
           lecture={lecture}
           assignment={assignment}
           submissions={submissions}
-          subLeft = {subLeft}
+          subLeft={subLeft}
           sx={{ m: 2, mt: 1 }}
         />
       </Box>
