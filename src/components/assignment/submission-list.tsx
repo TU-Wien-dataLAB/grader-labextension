@@ -137,7 +137,7 @@ export const SubmissionList = (props: ISubmissionListProps) => {
                         : '';
                     showDialog(
                       'Delete Submission',
-                      'Do you really want to delete this submission? After you delete it, you will not be able to revert the change. This does not effect number of submissions ' +
+                      'Do you really want to delete this submission? After you delete it, you will not be able to revert the change. This does not affect number of submissions ' +
                         'you have left if there is maximum number of submission allowed.<br><br>' +
                         warningMessage,
                       async () => {
