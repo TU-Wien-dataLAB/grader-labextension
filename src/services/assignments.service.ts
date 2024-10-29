@@ -25,6 +25,7 @@ export function getAllAssignments(
   reload = false,
   includeSubmissions = false
 ): Promise<AssignmentDetail[]> {
+
   let url = `/api/lectures/${lectureId}/assignments`;
   if (includeSubmissions) {
     const searchParams = new URLSearchParams({

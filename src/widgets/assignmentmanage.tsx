@@ -51,7 +51,7 @@ export class AssignmentManageView extends ReactWidget {
   render() {
     return (
       <QueryClientProvider client={queryClient}>
-        {/*<ReactQueryDevtools initialIsOpen={false} />*/}
+        <ReactQueryDevtools initialIsOpen={false} />
         <ThemeProvider theme={createTheme({ palette: { mode: this.theme } })}>
           <CssBaseline />
           <SnackbarProvider

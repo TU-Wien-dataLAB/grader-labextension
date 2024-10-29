@@ -41,7 +41,7 @@ import { queryClient } from '../../widgets/assignmentmanage';
 interface IAssignmentTableProps {
   lecture: Lecture;
   rows: Assignment[];
-  setAssignments: React.Dispatch<React.SetStateAction<Assignment[]>>;
+  refreshAssignments: any;
 }
 
 const AssignmentTable = (props: IAssignmentTableProps) => {
@@ -119,9 +119,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                                   variant: 'success'
                                 }
                               );
-                              props.setAssignments(
-                                props.rows.filter(a => a.id !== row.id)
-                              );
+                              props.refreshAssignments();
                             } catch (error: any) {
                               enqueueSnackbar(error.message, {
                                 variant: 'error'
@@ -154,53 +152,29 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
 };
 
 export const LectureComponent = () => {
+  const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const { lectureId } = extractIdsFromBreadcrumbs();
 
-  const { data: lecture, isLoading: isLoadingLecture } = useQuery<Lecture>({
+  const { data: lecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
     queryFn: () => getLecture(lectureId, true),
-    enabled: !!lectureId
+    enabled: true
   });
 
   const {
     data: assignments = [],
-    isLoading: isLoadingAssignments,
-    refetch: refetchAssignments
+    isPending: isPendingAssignments,
+    refetch: refreshAssignments
   } = useQuery<AssignmentDetail[]>({
-    queryKey: ['assignments', lecture, lectureId],
+    queryKey: ['assignments', lectureId],
     queryFn: () => getAllAssignments(lectureId),
-    enabled: !!lecture
+    enabled: true
   });
-
-  React.useEffect(() => {
-    if (assignments.length > 0) {
-      setAssignments(assignments);
-    }
-  }, [assignments]);
-
-  const [lectureState, setLecture] = React.useState(lecture);
-  const [assignmentsState, setAssignments] = React.useState<Assignment[]>([]);
-  const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
-
-  if (isLoadingLecture || isLoadingAssignments) {
-    return (
-      <div>
-        <Card>
-          <LinearProgress />
-        </Card>
-      </div>
-    );
-  }
-
-  const handleOpenEditDialog = () => {
-    setEditDialogOpen(true);
-  };
 
   const handleUpdateLecture = updatedLecture => {
     updateLecture(updatedLecture).then(
       async response => {
         await updateMenus(true);
-        setLecture(response);
         // Invalidate query key "lectures" and "completedLectures", so that we trigger refetch on lectures table and correct lecture name is shown in the table!
         await queryClient.invalidateQueries({ queryKey: ['lectures'] });
         await queryClient.invalidateQueries({
@@ -215,11 +189,21 @@ export const LectureComponent = () => {
     );
   };
 
+  if (isPendingAssignments) {
+    return (
+      <div>
+        <Card>
+          <LinearProgress />
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <Stack direction={'column'} sx={{ mt: 5, ml: 5, flex: 1 }}>
       <Typography variant={'h4'} sx={{ mr: 2 }}>
-        {lectureState.name}
-        {lectureState.complete ? (
+        {lecture.name}
+        {lecture.complete ? (
           <Typography
             sx={{
               display: 'inline-block',
@@ -250,7 +234,7 @@ export const LectureComponent = () => {
                   textDecoration: 'underline',
                   fontWeight: 'bold'
                 }}
-                onClick={handleOpenEditDialog}
+                onClick={() => setEditDialogOpen(true)}
               >
                 Rename Lecture.
               </span>
@@ -260,13 +244,13 @@ export const LectureComponent = () => {
 
         <Stack direction="row" alignItems="center" spacing={2}>
           <CreateDialog
-            lecture={lectureState}
+            lecture={lecture}
             handleSubmit={async () => {
-              await refetchAssignments();
+              await refreshAssignments();
             }}
           />
           <EditLectureDialog
-            lecture={lectureState}
+            lecture={lecture}
             handleSubmit={handleUpdateLecture}
             open={isEditDialogOpen}
             handleClose={() => setEditDialogOpen(false)}
@@ -278,9 +262,9 @@ export const LectureComponent = () => {
         <Typography variant={'h6'}>Assignments</Typography>
       </Stack>
       <AssignmentTable
-        lecture={lectureState}
-        rows={assignmentsState}
-        setAssignments={setAssignments}
+        lecture={lecture}
+        rows={assignments}
+        refreshAssignments={refreshAssignments}
       />
     </Stack>
   );
