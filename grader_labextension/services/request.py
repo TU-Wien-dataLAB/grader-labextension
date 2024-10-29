@@ -6,7 +6,6 @@ from urllib.parse import urlparse, ParseResultBytes, urlencode, quote_plus
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPResponse, HTTPError
 from traitlets import Unicode, TraitError, validate
 from traitlets.config import SingletonConfigurable
-from cachetools import TTLCache
 
 class RequestServiceError(Exception):
     def __init__(self, code: int, status_text: str, message: str):
@@ -26,8 +25,6 @@ class RequestService(SingletonConfigurable):
         self, 
         default_request_timeout: float = 20.0, 
         default_connect_timeout: float = 20.0, 
-        cache_ttl: int = 60,  # Time-to-live for cached responses in seconds
-        max_cache_size: int = 100,  # Maximum number of cached responses
         max_retries: int = 3,  # Max retry attempts for transient errors
         **kwargs
     ):
@@ -37,7 +34,6 @@ class RequestService(SingletonConfigurable):
         self.default_request_timeout = default_request_timeout
         self.default_connect_timeout = default_connect_timeout
         self.max_retries = max_retries
-        self.cache = TTLCache(maxsize=max_cache_size, ttl=cache_ttl)
         
     def get_authorization_header(self):
         auth_token = os.environ.get("GRADER_API_TOKEN")
@@ -115,11 +111,6 @@ class RequestService(SingletonConfigurable):
         if isinstance(body, dict):
             body = json.dumps(body)
 
-        cache_key = f"{method}:{endpoint}"
-        if method == "GET" and cache_key in self.cache:
-            self.log.info(f"Returning cached response for {endpoint}")
-            return self.cache[cache_key]
-
         request = HTTPRequest(
             url=self.url + endpoint,
             method=method,
@@ -136,9 +127,6 @@ class RequestService(SingletonConfigurable):
                 response_data = json.loads(response.body)
             else:
                 response_data = response
-
-            if method == "GET":
-                self.cache[cache_key] = response_data
 
             if response_callback:
                 response_callback(response)
