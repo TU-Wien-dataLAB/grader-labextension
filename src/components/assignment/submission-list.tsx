@@ -132,7 +132,9 @@ export const SubmissionList = (props: ISubmissionListProps) => {
                   size="small"
                   onClick={() => {
                     const warningMessage =
-                      props.subLeft === 0 && props.submissions.length === 1
+                      props.assignment.max_submissions !== null &&
+                      props.subLeft === 0 &&
+                      props.submissions.length === 1
                         ? '<strong>This is your last submission left. If you delete it, you won’t be able to submit again and you will be graded with 0 points.<strong></strong>'
                         : '';
                     showDialog(
