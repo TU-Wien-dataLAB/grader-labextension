@@ -1,13 +1,6 @@
 import React from 'react';
-import {
-  Card,
-  List,
-  Paper,
-  Typography
-} from '@mui/material';
-import { Contents } from '@jupyterlab/services';
-import IModel = Contents.IModel;
-import { Stack, SxProps } from '@mui/system';
+import { Card, List, Paper, Typography } from '@mui/material';
+import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material/styles';
 import {
   getFiles,

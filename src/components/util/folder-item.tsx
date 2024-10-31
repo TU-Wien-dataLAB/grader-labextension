@@ -5,33 +5,14 @@ import {
   ListItemIcon,
   ListItemText,
   Collapse,
-  Stack,
-  Tooltip,
   Typography,
   List
 } from '@mui/material';
-import { Contents } from '@jupyterlab/services';
-import IModel = Contents.IModel;
 import FolderIcon from '@mui/icons-material/Folder';
 import FileItem from './file-item';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { File, getFiles } from '../../services/file.service';
-import { Lecture } from '../../model/lecture';
-import { Assignment } from '../../model/assignment';
-
-interface IFolderItemProps {
-  folder: File;
-  lecture?: Lecture;
-  assignment?: Assignment;
-  inContained: (file: string) => boolean;
-  openFile: (path: string) => void;
-  allowFiles?: boolean;
-  missingFiles?: File[];
-  checkboxes: boolean;
-  onFileSelectChange?: (filePath: string, isSelected: boolean) => void;
-  checkStatus?: boolean;
-}
+import { getFiles } from '../../services/file.service';
 
 const FolderItem = ({
   folder,
