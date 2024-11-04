@@ -39,17 +39,13 @@ dependencies:
   - seaborn-base=0.12.2
   - sympy=1.12
   - traittypes=0.2.1
-  # C++ Kernel
-  - xeus-cling=0.13.0
-  - xtensor=0.23.10
-  - xtensor-blas=0.19.2
-  - xwidgets=0.26.1
-  - xleaflet=0.16.0
+
   # CLI tools
   - pip
   - vim
   - git
+  - sqlite3
   - pip:
-      - grader-service==0.3.0
+      - grader-service==0.5.1
       - grader-labextension==0.5.5
       - traitlets==5.9.0
