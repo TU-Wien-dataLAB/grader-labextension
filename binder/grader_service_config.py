@@ -1,3 +1,5 @@
+print("Loading config file")
+
 import os
 
 from grader_service.autograding.local_grader import LocalAutogradeExecutor
