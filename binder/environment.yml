@@ -44,7 +44,7 @@ dependencies:
   - pip
   - vim
   - git
-  - sqlite3
+  - sqlite
   - pip:
       - grader-service==0.5.1
       - grader-labextension==0.5.5
