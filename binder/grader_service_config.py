@@ -8,9 +8,6 @@ import os
 cwd = os.getcwd()
 c.GraderService.grader_service_dir = os.path.join(cwd, "grader_service_dir")
 
-c.LocalAutogradeExecutor.relative_input_path = "convert_in"
-c.LocalAutogradeExecutor.relative_output_path = "convert_out"
-
 c.RequestHandlerConfig.autograde_executor_class = LocalAutogradeExecutor
 
 c.CeleryApp.conf = dict(
