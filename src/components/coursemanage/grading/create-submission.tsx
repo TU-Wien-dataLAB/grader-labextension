@@ -14,10 +14,7 @@ import { Lecture } from '../../../model/lecture';
 import { Assignment } from '../../../model/assignment';
 import { Submission } from '../../../model/submission';
 import { FilesList } from '../../util/file-list';
-import {
-  lectureBasePath,
-  makeDirs
-} from '../../../services/file.service';
+import { lectureBasePath, makeDirs } from '../../../services/file.service';
 import { Link, useOutletContext } from 'react-router-dom';
 import { showDialog } from '../../util/dialog-provider';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -25,9 +22,7 @@ import moment from 'moment';
 import { Contents } from '@jupyterlab/services';
 import { GlobalObjects } from '../../../index';
 import { openBrowser } from '../overview/util';
-import {
-  createSubmissionFiles
-} from '../../../services/submissions.service';
+import { createSubmissionFiles } from '../../../services/submissions.service';
 import { enqueueSnackbar } from 'notistack';
 import { GraderLoadingButton } from '../../util/loading-button';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -35,13 +30,8 @@ import { getLecture, getUsers } from '../../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 
 export const CreateSubmission = () => {
-  const { assignment, rows, setRows } = useOutletContext() as {
-    lecture: Lecture;
+  const { assignment } = useOutletContext() as {
     assignment: Assignment;
-    rows: Submission[];
-    setRows: React.Dispatch<React.SetStateAction<Submission[]>>;
-    manualGradeSubmission: Submission;
-    setManualGradeSubmission: React.Dispatch<React.SetStateAction<Submission>>;
   };
 
   const { lectureId } = extractIdsFromBreadcrumbs();
@@ -52,15 +42,17 @@ export const CreateSubmission = () => {
     enabled: !!lectureId
   });
 
-  const { data: students = [], isLoading: isLoadingStudents } = useQuery<string[]>({
+  const { data: students = [], isLoading: isLoadingStudents } = useQuery<
+    string[]
+  >({
     queryKey: ['students', lectureId],
     queryFn: async () => {
       const users = await getUsers(lectureId);
       return users['students'];
     },
-    enabled: !!lectureId, 
+    enabled: !!lectureId
   });
-  
+
   const { data: path, refetch: reloadPath } = useQuery({
     queryKey: ['path', lectureBasePath, lecture.code, assignment.id],
     queryFn: () =>
@@ -96,7 +88,7 @@ export const CreateSubmission = () => {
       openBrowser(path);
       GlobalObjects.docManager.services.contents.fileChanged.connect(
         (sender: Contents.IManager, change: Contents.IChangedArgs) => {
-          const { oldValue, newValue } = change;
+          const { newValue } = change;
           if (!newValue.path.includes(path)) {
             return;
           }
@@ -111,7 +103,6 @@ export const CreateSubmission = () => {
     }
   }, [path]);
 
- 
   if (isLoadingLecture || isLoadingStudents) {
     return (
       <div>
@@ -121,7 +112,6 @@ export const CreateSubmission = () => {
       </div>
     );
   }
-
 
   const createSubmission = async () => {
     createSubmissionMutation.mutate();
@@ -135,8 +125,7 @@ export const CreateSubmission = () => {
           If you want to create a submission for a student manually, make sure
           to follow these steps: <br />
           <br />
-          1. &ensp; Choose a student for whom you want to create a
-          submission.
+          1. &ensp; Choose a student for whom you want to create a submission.
           <br />
           2. &ensp; By selecting the student for whom you want to create
           submission, directory 'create/{assignment.id}/student_id' is

@@ -289,6 +289,7 @@ class PullHandler(ExtensionBaseHandler):
             config=self.config,
             force_user_repo=repo == "release",
             sub_id=sub_id,
+            log=self.log
         )
         try:
             if not git_service.is_git():

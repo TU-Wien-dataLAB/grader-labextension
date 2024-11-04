@@ -39,9 +39,9 @@ class GitService(Configurable):
     git_access_token = Unicode(os.environ.get("GRADER_API_TOKEN"), allow_none=False).tag(config=True)
     git_service_url = Unicode(os.environ.get("GRADER_HOST_URL", DEFAULT_HOST_URL) + os.environ.get("GRADER_GIT_PREFIX", DEFAULT_GIT_URL_PREFIX), allow_none=False).tag(config=True)
     def __init__(self, server_root_dir: str, lecture_code: str, assignment_id: int, repo_type: str,
-                 force_user_repo=False, sub_id=None, username=None, *args, **kwargs):
+                 force_user_repo=False, sub_id=None, username=None, log=logging.getLogger('gitservice'), *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.log = logging.getLogger(__name__)
+        self.log = log
         self.git_root_dir = server_root_dir
         self.lecture_code = lecture_code
         self.assignment_id = assignment_id
@@ -57,7 +57,10 @@ class GitService(Configurable):
         if self.repo_type == "assignment" or force_user_repo:
             return os.path.join(self.git_root_dir, self.lecture_code, "assignments", str(self.assignment_id))
         elif self.repo_type == "edit":
-            return os.path.join(self.git_root_dir, self.lecture_code, "create", str(self.assignment_id), username or str(sub_id))
+            if username is not None:
+                return os.path.join(self.git_root_dir, self.lecture_code, "create", str(self.assignment_id), username)
+            else:
+                return os.path.join(self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id), str(sub_id))
         return os.path.join(self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id))
 
     def _initialize_git_logging(self):
