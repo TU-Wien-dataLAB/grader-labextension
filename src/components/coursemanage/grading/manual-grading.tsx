@@ -16,6 +16,7 @@ import { Assignment } from '../../../model/assignment';
 import { Submission } from '../../../model/submission';
 import {
   getProperties,
+  getSubmission,
   updateSubmission
 } from '../../../services/submissions.service';
 import { GradeBook } from '../../../services/gradebook';
@@ -121,40 +122,56 @@ export const ManualGrading = () => {
   const rowIdx = rows.findIndex(s => s.id === manualGradeSubmission.id);
   const submissionsLink = `/lecture/${lecture.id}/assignment/${assignment.id}/submissions`;
 
+  const {
+    data: submission = manualGradeSubmission,
+    refetch: refetchSubmission
+  } = useQuery<Submission>({
+    queryKey: [
+      'submission',
+      lecture.id,
+      assignment.id,
+      manualGradeSubmission.id
+    ],
+    queryFn: () =>
+      getSubmission(lecture.id, assignment.id, manualGradeSubmission.id, true)
+  });
+
   const [submissionScaling, setSubmissionScaling] = React.useState(
-    manualGradeSubmission.score_scaling
+    submission.score_scaling
   );
 
   React.useEffect(() => {
-    refetchGradeBook().then(async () => {
-      const manualPath = `${lectureBasePath}${lecture.code}/manualgrade/${assignment.id}/${manualGradeSubmission.id}`;
-      const files = await getFiles(manualPath);
-      if (files.length === 0) {
-        openBrowser(
-          `${lectureBasePath}${lecture.code}/source/${assignment.id}`
-        );
-      } else {
-        openBrowser(manualPath);
-      }
+    refetchSubmission().then(response => {
+      setSubmissionScaling(response.data.score_scaling);
+      refetchGradeBook().then(async () => {
+        const manualPath = `${lectureBasePath}${lecture.code}/manualgrade/${assignment.id}/${manualGradeSubmission.id}`;
+        const files = await getFiles(manualPath);
+        if (files.length === 0) {
+          openBrowser(
+            `${lectureBasePath}${lecture.code}/source/${assignment.id}`
+          );
+        } else {
+          openBrowser(manualPath);
+        }
+      });
     });
   }, [manualGradeSubmission.id]);
 
   const { data: gradeBook, refetch: refetchGradeBook } = useQuery({
-    queryKey: ['gradeBook', manualGradeSubmission.id],
+    queryKey: ['gradeBook', submission.id],
     queryFn: () =>
-      getProperties(
-        lecture.id,
-        assignment.id,
-        manualGradeSubmission.id,
-        true
-      ).then(properties => new GradeBook(properties)),
-    enabled: !!manualGradeSubmission
+      getProperties(lecture.id, assignment.id, submission.id, true).then(
+        properties => new GradeBook(properties)
+      ),
+    enabled: !!submission
   });
 
   const handleAutogradeSubmission = async () => {
     await autogradeSubmissionsDialog(async () => {
       try {
-        await autogradeSubmission(lecture, assignment, manualGradeSubmission);
+        await autogradeSubmission(lecture, assignment, submission).then(() => {
+          refetchSubmission();
+        });
         enqueueSnackbar('Autograding submission!', {
           variant: 'success'
         });
@@ -170,7 +187,9 @@ export const ManualGrading = () => {
   const handleGenerateFeedback = async () => {
     await generateFeedbackDialog(async () => {
       try {
-        await generateFeedback(lecture, assignment, manualGradeSubmission);
+        await generateFeedback(lecture, assignment, submission).then(() => {
+          refetchSubmission().then(() => refetchGradeBook());
+        });
         enqueueSnackbar('Generating feedback for submission!', {
           variant: 'success'
         });
@@ -195,17 +214,13 @@ export const ManualGrading = () => {
   };
 
   const finishGrading = () => {
-    manualGradeSubmission.manual_status = 'manually_graded';
-    if (manualGradeSubmission.feedback_status === 'generated') {
-      manualGradeSubmission.feedback_status = 'feedback_outdated';
+    submission.manual_status = 'manually_graded';
+    if (submission.feedback_status === 'generated') {
+      submission.feedback_status = 'feedback_outdated';
     }
-    updateSubmission(
-      lecture.id,
-      assignment.id,
-      manualGradeSubmission.id,
-      manualGradeSubmission
-    ).then(
+    updateSubmission(lecture.id, assignment.id, submission.id, submission).then(
       response => {
+        refetchSubmission().then(() => refetchGradeBook());
         enqueueSnackbar('Successfully Graded Submission', {
           variant: 'success'
         });
@@ -219,14 +234,10 @@ export const ManualGrading = () => {
   };
 
   const handlePullSubmission = async () => {
-    createManualFeedback(
-      lecture.id,
-      assignment.id,
-      manualGradeSubmission.id
-    ).then(
+    createManualFeedback(lecture.id, assignment.id, submission.id).then(
       response => {
         openBrowser(
-          `${lectureBasePath}${lecture.code}/manualgrade/${assignment.id}/${manualGradeSubmission.id}`
+          `${lectureBasePath}${lecture.code}/manualgrade/${assignment.id}/${submission.id}`
         );
         refetchGradeBook();
         enqueueSnackbar('Successfully Pulled Submission', {
@@ -242,13 +253,12 @@ export const ManualGrading = () => {
   };
 
   const handleNavigation = direction => {
-    const currentIndex = rows.findIndex(s => s.id === manualGradeSubmission.id);
+    const currentIndex = rows.findIndex(s => s.id === submission.id);
     const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
 
     if (newIndex >= 0 && newIndex < rows.length) {
       const newSubmission = rows[newIndex];
       setManualGradeSubmission(newSubmission);
-      setSubmissionScaling(newSubmission.score_scaling);
     }
   };
 
@@ -304,13 +314,13 @@ export const ManualGrading = () => {
                 color="text.primary"
                 sx={{ display: 'inline-block', fontSize: 16, height: 35 }}
               >
-                {manualGradeSubmission.username}
+                {submission.username}
               </Typography>
               <Typography
                 color="text.primary"
                 sx={{ display: 'inline-block', fontSize: 16, height: 35 }}
               >
-                {utcToLocalFormat(manualGradeSubmission.submitted_at)}
+                {utcToLocalFormat(submission.submitted_at)}
               </Typography>
               <Typography
                 color="text.primary"
@@ -333,12 +343,12 @@ export const ManualGrading = () => {
               <Box sx={{ height: 75 }}>
                 <form
                   onSubmit={event => {
-                    const s = manualGradeSubmission;
+                    const s = submission;
                     s.score_scaling = submissionScaling;
                     updateSubmission(
                       lecture.id,
                       assignment.id,
-                      manualGradeSubmission.id,
+                      submission.id,
                       s
                     ).then(() => {
                       enqueueSnackbar('Updated submission scaling!', {
@@ -374,17 +384,17 @@ export const ManualGrading = () => {
           <Stack direction={'row'} spacing={2}>
             <Box sx={{ flex: 'auto' }}>
               <Typography color="text.primary" sx={{ fontSize: 14 }}>
-                Autograde Status: {getAutogradeChip(manualGradeSubmission)}
+                Autograde Status: {getAutogradeChip(submission)}
               </Typography>
             </Box>
             <Box sx={{ flex: 'auto' }}>
               <Typography color="text.primary" sx={{ fontSize: 14 }}>
-                Manualgrade Status: {getManualChip(manualGradeSubmission)}
+                Manualgrade Status: {getManualChip(submission)}
               </Typography>
             </Box>
             <Box sx={{ flex: 'auto' }}>
               <Typography color="text.primary" sx={{ fontSize: 14 }}>
-                Feedback: {getFeedbackChip(manualGradeSubmission)}
+                Feedback: {getFeedbackChip(submission)}
               </Typography>
             </Box>
           </Stack>
@@ -396,7 +406,7 @@ export const ManualGrading = () => {
         </Stack>
 
         <FilesList
-          path={`${lectureBasePath}${lecture.code}/manualgrade/${assignment.id}/${manualGradeSubmission.id}`}
+          path={`${lectureBasePath}${lecture.code}/manualgrade/${assignment.id}/${submission.id}`}
           sx={{ m: 2 }}
           lecture={lecture}
           assignment={assignment}
@@ -405,12 +415,15 @@ export const ManualGrading = () => {
 
         <Stack direction={'row'} sx={{ ml: 2, mr: 2 }} spacing={2}>
           <Tooltip title="Reload">
-            <IconButton aria-label="reload" onClick={() => refetchGradeBook()}>
+            <IconButton
+              aria-label="reload"
+              onClick={() => refetchSubmission().then(() => refetchGradeBook())}
+            >
               <ReplayIcon />
             </IconButton>
           </Tooltip>
 
-          {manualGradeSubmission.auto_status !== 'automatically_graded' ? (
+          {submission.auto_status !== 'automatically_graded' ? (
             <Tooltip title="Assinment is not auto-graded. To pull submission and finish manual grading, make sure to first autograde it.">
               <Button
                 size={'small'}
@@ -425,9 +438,7 @@ export const ManualGrading = () => {
           ) : null}
           <GraderLoadingButton
             size={'small'}
-            disabled={
-              manualGradeSubmission.auto_status !== 'automatically_graded'
-            }
+            disabled={submission.auto_status !== 'automatically_graded'}
             color="primary"
             variant="outlined"
             onClick={handlePullSubmission}
@@ -440,9 +451,7 @@ export const ManualGrading = () => {
             size={'small'}
             variant="outlined"
             color="success"
-            disabled={
-              manualGradeSubmission.auto_status !== 'automatically_graded'
-            }
+            disabled={submission.auto_status !== 'automatically_graded'}
             onClick={openFinishDialog}
             sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
           >
@@ -459,7 +468,7 @@ export const ManualGrading = () => {
             Edit Submission
           </Button>
           <Box sx={{ flex: '1 1 100%' }}></Box>
-          {manualGradeSubmission.auto_status === 'automatically_graded' ? (
+          {submission.auto_status === 'automatically_graded' ? (
             <Button
               size={'small'}
               variant="outlined"
@@ -471,7 +480,7 @@ export const ManualGrading = () => {
             </Button>
           ) : null}
 
-          {manualGradeSubmission.auto_status === 'automatically_graded' ? (
+          {submission.auto_status === 'automatically_graded' ? (
             <Button
               size={'small'}
               variant="outlined"
