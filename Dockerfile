@@ -6,7 +6,7 @@
 
 ARG REGISTRY=quay.io
 ARG OWNER=jupyter
-ARG BASE_CONTAINER=$REGISTRY/$OWNER/datascience-notebook
+ARG BASE_CONTAINER=$REGISTRY/$OWNER/datascience-notebook:2024-10-29
 FROM $BASE_CONTAINER
 
 USER root
