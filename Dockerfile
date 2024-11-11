@@ -18,10 +18,10 @@ RUN apt-get update &&\
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY ./ /Grader-Labextension
+COPY ./ /grader-labextension
 
-RUN python3 -m pip install /Grader-Labextension
-RUN rm -rf /Grader-Labextension
+RUN python3 -m pip install /grader-labextension
+RUN rm -rf /grader-labextension
 
 WORKDIR /home/jovyan
 
