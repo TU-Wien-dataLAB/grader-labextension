@@ -12,11 +12,7 @@ import Checkbox from '@mui/material/Checkbox';
 import { visuallyHidden } from '@mui/utils';
 import { Lecture } from '../../../model/lecture';
 import { Assignment } from '../../../model/assignment';
-import {
-  Outlet,
-  useNavigate,
-  useOutletContext
-} from 'react-router-dom';
+import { Outlet, useNavigate, useOutletContext } from 'react-router-dom';
 import { Submission } from '../../../model/submission';
 import { utcToLocalFormat } from '../../../services/datetime.service';
 import {
@@ -586,20 +582,22 @@ export default function GradingTable() {
 export const GradingComponent = () => {
   const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
   const [rows, setRows] = React.useState<Submission[]>([]);
-  const [manualGradeSubmission, setManualGradeSubmission] = React.useState<Submission | undefined>(undefined);
+  const [manualGradeSubmission, setManualGradeSubmission] = React.useState<
+    Submission | undefined
+  >(undefined);
 
   const { data: lectureData, isLoading: isLoadingLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
-    queryFn: () => getLecture(lectureId), 
-    enabled: !!lectureId, 
+    queryFn: () => getLecture(lectureId),
+    enabled: !!lectureId
   });
 
-  const { data: assignmentData, isLoading: isLoadingAssignment } = useQuery<Assignment>({
-    queryKey: ['assignment', assignmentId],
-    queryFn: () => getAssignment(lectureId, assignmentId), 
-    enabled: !!lectureId && !!assignmentId, 
-  });
-
+  const { data: assignmentData, isLoading: isLoadingAssignment } =
+    useQuery<Assignment>({
+      queryKey: ['assignment', assignmentId],
+      queryFn: () => getAssignment(lectureId, assignmentId),
+      enabled: !!lectureId && !!assignmentId
+    });
 
   if (isLoadingLecture || isLoadingAssignment) {
     return <div>Loading...</div>;

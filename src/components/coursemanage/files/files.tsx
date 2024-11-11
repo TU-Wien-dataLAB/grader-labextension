@@ -5,7 +5,6 @@
 // LICENSE file in the root directory of this source tree.
 
 import * as React from 'react';
-import { useEffect } from 'react';
 import { Assignment } from '../../../model/assignment';
 import { Lecture } from '../../../model/lecture';
 import {
@@ -54,7 +53,6 @@ import { loadString, storeString } from '../../../services/storage.service';
 import { queryClient } from '../../../widgets/assignmentmanage';
 import { RemoteFileStatus } from '../../../model/remoteFileStatus';
 import { GitLogModal } from './git-log';
-import moment from 'moment';
 
 export interface IFilesProps {
   lecture: Lecture;
@@ -208,7 +206,7 @@ export const Files = ({
       case RemoteFileStatus.StatusEnum.UpToDate:
         return 'The local files are up to date with the remote repository.';
       case RemoteFileStatus.StatusEnum.PullNeeded:
-        return 'The remote repository has new changes. Pull now to load them.';
+        return 'The remote repository has new changes. Pull now to update your local files.';
       case RemoteFileStatus.StatusEnum.PushNeeded:
         return 'You have made changes to your local repository which you can push.';
       case RemoteFileStatus.StatusEnum.Divergent:

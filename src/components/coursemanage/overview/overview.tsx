@@ -23,23 +23,31 @@ export const OverviewComponent = () => {
 
   const { data: lecture, isLoading: isLoadingLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
-    queryFn: () => getLecture(lectureId), 
-    enabled: !!lectureId, 
+    queryFn: () => getLecture(lectureId),
+    enabled: !!lectureId
   });
 
-  const { data: assignment, refetch: refetchAssignment, isLoading: isLoadingAssignment } = useQuery<Assignment>({
+  const {
+    data: assignment,
+    refetch: refetchAssignment,
+    isLoading: isLoadingAssignment
+  } = useQuery<Assignment>({
     queryKey: ['assignment', assignmentId],
-    queryFn: () => getAssignment(lectureId, assignmentId, true), 
-    enabled: !!lectureId && !!assignmentId, 
+    queryFn: () => getAssignment(lectureId, assignmentId, true),
+    enabled: !!lectureId && !!assignmentId
   });
 
   const { data: latestSubmissionsNumber = 0 } = useQuery<number>({
     queryKey: ['latestSubmissionsNumber', lectureId, assignmentId],
     queryFn: async () => {
-      const submissions = await getAllSubmissions(lectureId, assignmentId, 'latest');
+      const submissions = await getAllSubmissions(
+        lectureId,
+        assignmentId,
+        'latest'
+      );
       return submissions.length;
     },
-    enabled: !!lectureId && !!assignmentId,
+    enabled: !!lectureId && !!assignmentId
   });
 
   const { data: students = 0 } = useQuery<number>({
@@ -48,9 +56,8 @@ export const OverviewComponent = () => {
       const users = await getUsers(lectureId);
       return users['students'].length;
     },
-    enabled: !!lectureId, 
+    enabled: !!lectureId
   });
-
 
   if (isLoadingLecture || isLoadingAssignment) {
     return (
@@ -61,7 +68,6 @@ export const OverviewComponent = () => {
       </div>
     );
   }
-
 
   const onAssignmentChange = async () => {
     await refetchAssignment();

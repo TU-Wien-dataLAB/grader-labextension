@@ -122,17 +122,16 @@ export const CreateSubmission = () => {
       <Stack direction={'column'} sx={{ flex: '1 1 100%' }}>
         <Alert severity="info" sx={{ m: 2 }}>
           <AlertTitle>Info</AlertTitle>
-          If you want to create a submission for a student manually, make sure
+          If you want to manually create a submission for a student, make sure
           to follow these steps: <br />
           <br />
-          1. &ensp; Choose a student for whom you want to create a submission.
+          1. &ensp; Select the student for whom you want to create a submission.
           <br />
-          2. &ensp; By selecting the student for whom you want to create
-          submission, directory 'create/{assignment.id}/student_id' is
-          automatically opened in File Browser on your left-hand side.
+          2. &ensp; When you select the student for whom you want to create a
+          submission, the directory 'create/{assignment.id}/student_id' will
+          will automatically open in the File Browser on the left.
           <br />
-          3. &ensp; Upload the desired files here. They will automatically
-          appear in the Submission Files below.
+          3. &ensp; Upload the desired files here. They will appear automatically in the Submission Files list below.
           <br />
           4. &ensp; Push the submission.
         </Alert>

@@ -4,9 +4,7 @@
 // This source code is licensed under the BSD-style license found in the
 // LICENSE file in the root directory of this source tree.
 import * as React from 'react';
-import {
-  useNavigate
-} from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   IconButton,
   Card,
@@ -26,7 +24,7 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { enqueueSnackbar } from 'notistack';
 
 import { ButtonTr, GraderTable, headerWidth, IHeaderCell } from '../util/table';
-import { DeadlineComponent, getDisplayDate } from '../util/deadline';
+import { DeadlineComponent } from '../util/deadline';
 import { Assignment } from '../../model/assignment';
 import { AssignmentDetail } from '../../model/assignmentDetail';
 import { Submission } from '../../model/submission';
@@ -200,7 +198,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                 status={row.status}
                 lecture={props.lecture}
                 assignment={row}
-                />
+              />
             </TableCell>
             <TableCell style={{ width: headerWidth(headers, 'Reset') }}>
               <IconButton
@@ -350,8 +348,7 @@ export const LectureComponent = () => {
     }
   }, [assignments]);
 
-
-  if (isLoadingLecture || isLoadingAssignments) {   
+  if (isLoadingLecture || isLoadingAssignments) {
     return (
       <div>
         <Card>

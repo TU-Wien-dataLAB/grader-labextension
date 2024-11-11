@@ -1,4 +1,3 @@
-import { SectionTitle } from '../../util/section-title';
 import {
   Box,
   Button,

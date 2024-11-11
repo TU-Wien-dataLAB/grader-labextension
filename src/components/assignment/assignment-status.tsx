@@ -23,7 +23,6 @@ import ChatRoundedIcon from '@mui/icons-material/ChatRounded';
  * Props for AssignmentComponent.
  */
 export interface IAssignmentStatusProps {
-  //assignment: Assignment;
   submissions: Submission[];
   activeStep: number;
 }
@@ -40,9 +39,9 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
       description: (
         <Typography sx={{ fontSize }}>
           You pulled from the release repository and can now work on the
-          assignment. If you are happy with your solution you can submit it.
-          Before the deadline you can always resubmit until you are happy with
-          the solution.
+          assignment. If you are happy with your solution, you can submit it.
+          Before the deadline, you can always resubmit until you are satisfied
+          with the solution.
         </Typography>
       )
     },
@@ -51,8 +50,8 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
       description: (
         <Typography sx={{ fontSize }}>
           You have submitted the assignment {props.submissions.length} time
-          {props.submissions.length == 1 ? '' : 's'}. The instructor can review
-          each submission, but will most likely prioritise the latest.
+          {props.submissions.length === 1 ? '' : 's'}. The instructor can review
+          each submission but will most likely prioritize the latest one.
         </Typography>
       )
     },
@@ -61,15 +60,14 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
       description: (
         <Typography sx={{ fontSize }}>
           You received feedback for one or more of your submissions! You can
-          view the feedback in the list of submission when clicking on the{' '}
-          <ChatRoundedIcon sx={{ fontSize }} /> icon. Within the deadline you
-          can make more submissions, regardless of whether you already received
+          view the feedback in the list of submissions by clicking on the{' '}
+          <ChatRoundedIcon sx={{ fontSize }} /> icon. Before the deadline, you
+          can continue making submissions, even if you have already received
           feedback.
         </Typography>
       )
     }
   ];
-  //getActiveStep().then(s => setActiveStep(s));
 
   return (
     <Card elevation={0}>

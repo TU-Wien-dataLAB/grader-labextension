@@ -6,19 +6,12 @@ import {
 } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import { Typography } from '@mui/material';
-import { extractIdsFromBreadcrumbs, LinkRouter, Page } from '../util/breadcrumbs';
+import { LinkRouter, Page } from '../util/breadcrumbs';
 import ErrorPage from '../util/error';
 
 import { UserPermissions } from '../../services/permission.service';
-import {
-  getAllLectures,
-  getLecture,
-  getUsers
-} from '../../services/lectures.service';
-import {
-  getAllAssignments,
-  getAssignment
-} from '../../services/assignments.service';
+import { getAllLectures, getLecture } from '../../services/lectures.service';
+import { getAssignment } from '../../services/assignments.service';
 import { getAllSubmissions } from '../../services/submissions.service';
 
 import { enqueueSnackbar } from 'notistack';
@@ -46,32 +39,33 @@ export const loadPermissions = async () => {
   }
 };
 
-export const loadLecture = async (lectureId: number, queryClient: QueryClient) => {
-
+export const loadLecture = async (
+  lectureId: number,
+  queryClient: QueryClient
+) => {
   const query = {
     queryKey: ['lecture', lectureId],
-    queryFn: async () => getLecture(lectureId), 
-  }
+    queryFn: async () => getLecture(lectureId)
+  };
   return (
     queryClient.getQueryData(query.queryKey) ??
     (await queryClient.fetchQuery(query))
-  )
-  
+  );
 };
 
 export const loadAssignment = async (
   lectureId: number,
-  assignmentId: number, 
+  assignmentId: number,
   queryClient: QueryClient
 ) => {
   const query = {
     queryKey: ['assignment', lectureId, assignmentId],
-    queryFn: async () => getAssignment(lectureId, assignmentId), 
-  }
+    queryFn: async () => getAssignment(lectureId, assignmentId)
+  };
   return (
     queryClient.getQueryData(query.queryKey) ??
     (await queryClient.fetchQuery(query))
-  )
+  );
 };
 
 /*
@@ -102,8 +96,6 @@ export const loadSubmissions = async (
   }
 };
 
-
-
 function ExamplePage({ to }) {
   const navigation = useNavigation(); // router navigates to new route (and loads data)
   const loading = navigation.state === 'loading';
@@ -126,11 +118,7 @@ function ExamplePage({ to }) {
   );
 }
 
-
-
-
 export const getRoutes = (queryClient: QueryClient) => {
-
   const routes = createRoutesFromElements(
     // this is a layout route without a path (see: https://reactrouter.com/en/main/start/concepts#layout-routes)
     <Route
@@ -161,7 +149,9 @@ export const getRoutes = (queryClient: QueryClient) => {
           <Route
             id={'assignment'}
             path={'assignment/:aid/*'}
-            loader={({ params }) => loadAssignment(+params.lid, +params.aid, queryClient)}
+            loader={({ params }) =>
+              loadAssignment(+params.lid, +params.aid, queryClient)
+            }
             handle={{
               crumb: data => data?.name,
               link: params => `assignment/${params?.aid}/`

@@ -15,8 +15,7 @@ import {
   ListItemText,
   Paper,
   Typography,
-  ListItemSecondaryAction,
-  Tooltip
+  ListItemSecondaryAction
 } from '@mui/material';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material/styles';
@@ -94,7 +93,7 @@ export const SubmissionList = (props: ISubmissionListProps) => {
                   onClick={() => {
                     showDialog(
                       'Restore Submission',
-                      'Do you really want to revert the assignment state to this submission? This deletes all the current changes you made!',
+                      'Do you really want to revert the assignment state to this submission? This deletes all current changes you made!',
                       async () => {
                         try {
                           await restoreSubmission(
@@ -113,7 +112,7 @@ export const SubmissionList = (props: ISubmissionListProps) => {
                             );
                           } else {
                             console.error(
-                              'Error: cannot interpret type unkown as error',
+                              'Error: cannot interpret type unknown as error',
                               e
                             );
                           }
@@ -135,12 +134,11 @@ export const SubmissionList = (props: ISubmissionListProps) => {
                       props.assignment.max_submissions !== null &&
                       props.subLeft === 0 &&
                       props.submissions.length === 1
-                        ? '<strong>This is your last submission left. If you delete it, you won’t be able to submit again and you will be graded with 0 points.<strong></strong>'
+                        ? '<strong>This is your last submission that can be graded. If you delete it, you won’t be able to submit again, and you will receive 0 points.<strong></strong>'
                         : '';
                     showDialog(
                       'Delete Submission',
-                      'Do you really want to delete this submission? After you delete it, you will not be able to revert the change. This does not affect number of submissions ' +
-                        'you have left if there is maximum number of submission allowed.<br><br>' +
+                      'Are you sure you want to delete this submission? Once deleted, you cannot undo this action. This will not affect the number of submissions you have remaining, if a maximum number of submissions is allowed.<br><br>' +
                         warningMessage,
                       async () => {
                         try {

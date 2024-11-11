@@ -77,23 +77,24 @@ const InfoModal = () => {
           <h2>Manual Grading Information</h2>
           <Alert severity="info" sx={{ m: 2 }}>
             <AlertTitle>Info</AlertTitle>
-            If you want to manually grade an assignment, make sure to follow
-            these steps: <br />
+            If you want to manually grade an assignment, please follow these
+            steps: <br />
             <br />
-            1. &ensp; In order to grade a submission manually, the submission
-            must first be auto-graded. This sets meta data for manual grading.
-            However, we're actively working towards enabling direct manual
-            grading without the necessity of auto-grading in the future.
+            1. &ensp; To grade a submission manually, it must first be
+            auto-graded. This step sets the necessary metadata for manual
+            grading. We are working on enabling direct manual grading without
+            auto-grading in the future.
             <br />
-            2. &ensp; Once the meta data was set for submission, you can pull
-            the submission.
+            2. &ensp; Once the metadata has been set for the submission, you can
+            pull the submission.
             <br />
-            3. &ensp; From file list access submission files and grade them
-            manually.
+            3. &ensp; Access the submission files from the file list and grade
+            them manually.
             <br />
-            4. &ensp; After you've completed the grading of the submission,
-            click "FINISH MANUAL GRADING." This action will save the grading and
-            determine the points that the student receives for their submission.
+            4. &ensp; After you've completed the grading of the submission and
+            saved revised notebook, click button "FINISH MANUAL GRADING". This
+            action will save the grading and determine the points that the
+            student receives for their submission.
           </Alert>
           <Button onClick={handleClose}>Close</Button>
         </Box>
