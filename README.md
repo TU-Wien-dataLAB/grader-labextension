@@ -1,6 +1,9 @@
 # grader_labextension
 
-[![Github Actions Status](https://github.com/TU-Wien-dataLAB/Grader-Labextension/workflows/Build/badge.svg)](https://github.com/TU-Wien-dataLAB/Grader-Labextension/actions/workflows/build.yml)[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/TU-Wien-dataLAB/Grader-Labextension/main?urlpath=lab)
+[![Github Actions Status](https://github.com/TU-Wien-dataLAB/grader-labextension/workflows/Build/badge.svg)](https://github.com/TU-Wien-dataLAB/grader-labextension/actions/workflows/build.yml)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/TU-Wien-dataLAB/grader-labextension/main?urlpath=lab)
+
+
 Grader Labextension is a JupyterLab extension to enable automatic grading of assignment notebooks.
 
 This extension is composed of a Python package named `grader_labextension`

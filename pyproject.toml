@@ -73,7 +73,7 @@ search = "grader-labextension=={current_version}"
 source = "nodejs"
 
 [tool.hatch.metadata.hooks.nodejs]
-fields = ["description", "authors", "urls"]
+fields = ["description", "authors", "urls", "keywords"]
 
 [tool.hatch.build.targets.sdist]
 artifacts = ["grader_labextension/labextension"]
