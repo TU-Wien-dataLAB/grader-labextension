@@ -24,7 +24,7 @@ import { SubmissionList } from './submission-list';
 import { AssignmentStatus } from './assignment-status';
 import { Files } from './files/files';
 import WarningIcon from '@mui/icons-material/Warning';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import {
   getAssignment,
   getAssignmentProperties,
@@ -152,6 +152,7 @@ export const AssignmentComponent = () => {
         ]);
         const active_step = calculateActiveStep(submissions);
         setActiveStatus(active_step);
+        refetchSubleft();
       });
     }
   }, [lecture, assignment, submissions]);

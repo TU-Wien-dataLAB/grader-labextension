@@ -458,16 +458,18 @@ export const ManualGrading = () => {
           >
             Finish Manual Grading
           </Button>
-          <Button
-            size={'small'}
-            variant="outlined"
-            color="success"
-            component={Link as any}
-            to={submissionsLink + '/edit'}
-            sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
-          >
-            Edit Submission
-          </Button>
+          <Tooltip title="Edit Submission allows you to revise a student's submission. This may be useful if the student made a minor mistake that significantly affected their score or caused autograding to fail.">
+            <Button
+              size={'small'}
+              variant="outlined"
+              color="success"
+              component={Link as any}
+              to={submissionsLink + '/edit'}
+              sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
+            >
+              Edit Submission
+            </Button>
+          </Tooltip>
           <Box sx={{ flex: '1 1 100%' }}></Box>
           {submission.auto_status === 'automatically_graded' ? (
             <Button
