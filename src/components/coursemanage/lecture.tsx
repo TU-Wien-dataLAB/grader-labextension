@@ -155,7 +155,7 @@ export const LectureComponent = () => {
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const { lectureId } = extractIdsFromBreadcrumbs();
 
-  const { data: lecture } = useQuery<Lecture>({
+  const { data: lecture, refetch: refetchLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
     queryFn: () => getLecture(lectureId, true),
     enabled: true
@@ -180,6 +180,7 @@ export const LectureComponent = () => {
         await queryClient.invalidateQueries({
           queryKey: ['completedLectures']
         });
+        setRefreshTrigger(prev => !prev);
       },
       error => {
         enqueueSnackbar(error.message, {
@@ -188,6 +189,12 @@ export const LectureComponent = () => {
       }
     );
   };
+
+  const [refreshTrigger, setRefreshTrigger] = React.useState(false);
+
+  React.useEffect(() => {
+    refetchLecture();
+  }, [refreshTrigger, refetchLecture]);
 
   if (isPendingAssignments) {
     return (

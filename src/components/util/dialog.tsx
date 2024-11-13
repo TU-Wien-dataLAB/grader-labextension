@@ -57,7 +57,11 @@ import MuiAlert, { AlertProps } from '@mui/material/Alert';
 import { updateMenus } from '../../menu';
 import { GraderLoadingButton } from './loading-button';
 import { FilesList } from './file-list';
-import { extractRelativePaths, getFiles, lectureBasePath } from '../../services/file.service';
+import {
+  extractRelativePaths,
+  getFiles,
+  lectureBasePath
+} from '../../services/file.service';
 import InfoIcon from '@mui/icons-material/Info';
 import { queryClient } from '../../widgets/assignmentmanage';
 
@@ -131,7 +135,6 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
     setOpen(true);
   };
 
-
   return (
     <div>
       <EditLectureNameTooltip
@@ -162,8 +165,13 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
           <SettingsIcon />
         </IconButton>
       </EditLectureNameTooltip>
-      <Dialog open={open || openDialog}
-              onBackdropClick={() => { setOpen(false); handleClose(); }}>
+      <Dialog
+        open={open || openDialog}
+        onBackdropClick={() => {
+          setOpen(false);
+          handleClose();
+        }}
+      >
         <DialogTitle>Edit Lecture</DialogTitle>
         <form onSubmit={formik.handleSubmit}>
           <DialogContent>
@@ -516,26 +524,30 @@ const InfoModal = () => {
         <InfoIcon />
       </IconButton>
       <Modal open={open} onClose={handleClose}>
-        <Box 
-        sx={{ position: 'absolute' as const,
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '80%',
-              bgcolor: 'background.paper',
-              boxShadow: 3,
-              pt: 2,
-              px: 4,
-              pb: 3
-            }}
+        <Box
+          sx={{
+            position: 'absolute' as const,
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '80%',
+            bgcolor: 'background.paper',
+            boxShadow: 3,
+            pt: 2,
+            px: 4,
+            pb: 3
+          }}
         >
           <h2>Selecting Files to Push</h2>
           <Alert severity="info" sx={{ m: 2 }}>
             <AlertTitle>Info</AlertTitle>
-            If you have made changes to multiple files in your source directory and wish to push only specific 
-            files to the remote repository, you can toggle the 'Select files to commit' button. This allows you to
-            choose the files you want to push. Your students will then be able to view only the changes in files you have selected.
-            If you do not use this option, all changed files from the source repository will be pushed, and students will see all the changes.
+            If you have made changes to multiple files in your source directory
+            and wish to push only specific files to the remote repository, you
+            can toggle the 'Select files to commit' button. This allows you to
+            choose the files you want to push. Your students will then be able
+            to view only the changes in files you have selected. If you do not
+            use this option, all changed files from the source repository will
+            be pushed, and students will see all the changes.
           </Alert>
           <Button onClick={handleClose}>Close</Button>
         </Box>
@@ -543,7 +555,6 @@ const InfoModal = () => {
     </React.Fragment>
   );
 };
-
 
 export interface ICommitDialogProps {
   handleCommit: (msg: string, selectedFiles?: string[]) => void;
@@ -604,20 +615,25 @@ export const CommitDialog = (props: ICommitDialogProps) => {
         <Stack direction={'row'} justifyContent={'space-between'}>
           <DialogTitle>Commit Files</DialogTitle>
           <InfoModal />
-        </Stack>  
+        </Stack>
         <DialogContent>
-        <Button onClick={toggleFilesList} sx={{ mb: 2 }}>
-            {filesListVisible ? <KeyboardArrowUpIcon /> : <KeyboardArrowRightIcon />}
+          <Button onClick={toggleFilesList} sx={{ mb: 2 }}>
+            {filesListVisible ? (
+              <KeyboardArrowUpIcon />
+            ) : (
+              <KeyboardArrowRightIcon />
+            )}
             Choose files to commit
           </Button>
           {filesListVisible && (
-            <FilesList  
-            path={path} 
-            lecture={props.lecture}
-            assignment={props.assignment}
-            checkboxes={true} 
-            onFileSelectChange={handleFileSelectChange} 
-            checkStatus={true}/>
+            <FilesList
+              path={path}
+              lecture={props.lecture}
+              assignment={props.assignment}
+              checkboxes={true}
+              onFileSelectChange={handleFileSelectChange}
+              checkStatus={true}
+            />
           )}
           <TextField
             sx={{ mt: 2, width: '100%' }}
