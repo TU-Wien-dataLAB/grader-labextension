@@ -1,34 +1,46 @@
-import { Box } from '@mui/material';
 import { Files } from './files';
 import * as React from 'react';
-import { useRouteLoaderData } from 'react-router-dom';
 import { Lecture } from '../../../model/lecture';
 import { Assignment } from '../../../model/assignment';
-import { Submission } from '../../../model/submission';
+import { getAssignment } from '../../../services/assignments.service';
+import { useQuery } from '@tanstack/react-query';
+import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
+import { getLecture } from '../../../services/lectures.service';
 
 export const FileView = () => {
-  const { lecture, assignments, users } = useRouteLoaderData('lecture') as {
-    lecture: Lecture;
-    assignments: Assignment[];
-    users: { instructors: string[]; tutors: string[]; students: string[] };
-  };
-  const { assignment, allSubmissions, latestSubmissions } = useRouteLoaderData(
-    'assignment'
-  ) as {
-    assignment: Assignment;
-    allSubmissions: Submission[];
-    latestSubmissions: Submission[];
-  };
+  const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
 
-  const [assignmentState, setAssignmentState] = React.useState(assignment);
-  const onAssignmentChange = (assignment: Assignment) => {
-    setAssignmentState(assignment);
+  const { data: lectureData, isLoading: isLoadingLecture } = useQuery<Lecture>({
+    queryKey: ['lecture', lectureId],
+    queryFn: () => getLecture(lectureId),
+    enabled: !!lectureId
+  });
+
+  const {
+    data: assignmentData,
+    refetch: refetchAssignment,
+    isLoading: isLoadingAssignment
+  } = useQuery<Assignment>({
+    queryKey: ['assignment', assignmentId],
+    queryFn: () => getAssignment(lectureId, assignmentId),
+    enabled: !!lectureId && !!assignmentId
+  });
+
+  if (isLoadingLecture || isLoadingAssignment) {
+    return <div>Loading...</div>;
+  }
+
+  const lecture = lectureData;
+  const assignment = assignmentData;
+
+  const onAssignmentChange = async () => {
+    await refetchAssignment();
   };
 
   return (
     <Files
       lecture={lecture}
-      assignment={assignmentState}
+      assignment={assignment}
       onAssignmentChange={onAssignmentChange}
     />
   );

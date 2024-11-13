@@ -160,7 +160,12 @@ export class GradingModeSwitch extends React.Component<IModeSwitchProps> {
         } else {
           currentLayout.widgets.map(w => {
             if (w instanceof DataWidget || w instanceof GradeWidget) {
-              currentLayout.removeWidget(w);
+              try {
+                currentLayout.removeWidget(w);
+              } catch(error: any) {
+                console.log("Could not remove widget of cell:" + w.cell.id)
+                console.log("Error: " + error)
+              }
             }
           });
         }

@@ -1,7 +1,7 @@
 import { Lecture } from '../../../model/lecture';
 import { Assignment } from '../../../model/assignment';
 import { Submission } from '../../../model/submission';
-import { Box, IconButton, Tooltip } from '@mui/material';
+import { Box, Card, IconButton, LinearProgress, Tooltip } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import { SectionTitle } from '../../util/section-title';
 import ReplayIcon from '@mui/icons-material/Replay';
@@ -11,11 +11,12 @@ import { SubmissionTimeSeries } from './submission-timeseries';
 import { GradingProgress } from './grading-progress';
 import { StudentSubmissions } from './student-submissions';
 import { ScoreDistribution } from './score-distribution';
-import { getUsers } from '../../../services/lectures.service';
+import { getLecture, getUsers } from '../../../services/lectures.service';
 import { GradeBook } from '../../../services/gradebook';
 import { AssignmentScore } from './assignment-score';
-import { getAssignmentProperties } from '../../../services/assignments.service';
-import { useRouteLoaderData } from 'react-router-dom';
+import { getAssignment, getAssignmentProperties } from '../../../services/assignments.service';
+import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
+import { useQuery } from '@tanstack/react-query';
 
 export const filterUserSubmissions = (
   submissions: Submission[],
@@ -33,63 +34,90 @@ export interface IStatsSubComponentProps {
 }
 
 export const StatsComponent = () => {
-  const { lecture, assignments, users } = useRouteLoaderData('lecture') as {
-    lecture: Lecture;
-    assignments: Assignment[];
-    users: { instructors: string[]; tutors: string[]; students: string[] };
-  };
-  const { assignment, allSubmissions, latestSubmissions } = useRouteLoaderData(
-    'assignment'
-  ) as {
-    assignment: Assignment;
-    allSubmissions: Submission[];
-    latestSubmissions: Submission[];
-  };
+  const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
 
-  const [allSubmissionsState, setAllSubmissionsState] =
-    React.useState(allSubmissions);
-  const [latestSubmissionsState, setLatestSubmissionsState] =
-    React.useState(latestSubmissions);
-  const [gb, setGb] = React.useState(null as GradeBook);
-  const [usersState, setUsersState] = React.useState(users);
+  const { data: lecture, isLoading: isLoadingLecture } = useQuery({
+    queryKey: ['lecture', lectureId],
+    queryFn: () => getLecture(lectureId), 
+    enabled: !!lectureId, 
+  });
+
+  const { data: assignment, isLoading: isLoadingAssignment } = useQuery({
+    queryKey: ['assignment', assignmentId],
+    queryFn: () => getAssignment(lectureId, assignmentId), 
+    enabled: !!lectureId && !!assignmentId, 
+  });
+
+  const { data: usersData, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['users', lectureId],
+    queryFn: () => getUsers(lectureId),
+    enabled: !!lectureId, 
+  });
+
+  const { data: allSubmissions = [], isLoading: isLoadingAllSubmissions } = useQuery({
+    queryKey: ['allSubmissions', lectureId, assignmentId],
+    queryFn: () => getAllSubmissions(lectureId, assignmentId, 'none', true),
+    enabled: !!lectureId && !!assignmentId, 
+  });
+
+  const { data: latestSubmissions = [], isLoading: isLoadingLatestSubmissions } = useQuery({
+    queryKey: ['latestSubmissions', lectureId, assignmentId],
+    queryFn: () => getAllSubmissions(lectureId, assignmentId, 'latest', true),
+    enabled: !!lectureId && !!assignmentId, 
+  });
+
+  const [allSubmissionsState, setAllSubmissionsState] = React.useState([]);
+  const [latestSubmissionsState, setLatestSubmissionsState] = React.useState([]);
+  const [gb, setGb] = React.useState(null);
+  const [usersState, setUsersState] = React.useState({ students: [], tutors: [], instructors: [] });
 
   const updateSubmissions = async () => {
-    setAllSubmissionsState(
-      await getAllSubmissions(lecture.id, assignment.id, 'none', true)
-    );
-    setLatestSubmissionsState(
-      await getAllSubmissions(lecture.id, assignment.id, 'latest', true)
-    );
-    setUsersState(await getUsers(lecture.id));
-    setGb(
-      new GradeBook(await getAssignmentProperties(lecture.id, assignment.id))
-    );
+    const newAllSubmissions = await getAllSubmissions(lectureId, assignmentId, 'none', true);
+    const newLatestSubmissions = await getAllSubmissions(lectureId, assignmentId, 'latest', true);
+    const newUsers = await getUsers(lectureId);
+    const newGb = new GradeBook(await getAssignmentProperties(lectureId, assignmentId));
+
+    setAllSubmissionsState(newAllSubmissions);
+    setLatestSubmissionsState(newLatestSubmissions);
+    setUsersState(newUsers);
+    setGb(newGb);
   };
 
   React.useEffect(() => {
-    getAllSubmissions(lecture.id, assignment.id, 'none', true).then(
-      response => {
-        setAllSubmissionsState(response);
-      }
-    );
-    getAllSubmissions(lecture.id, assignment.id, 'latest', true).then(
-      response => {
-        setLatestSubmissionsState(response);
-      }
-    );
-  }, [allSubmissions, latestSubmissions]);
+    if (allSubmissions.length > 0) {
+      setAllSubmissionsState(allSubmissions);
+    }
+  }, [allSubmissions]);
 
   React.useEffect(() => {
-    getUsers(lecture.id).then(response => {
-      setUsersState(response);
-    });
-  }, [users]);
+    if (latestSubmissions.length > 0) {
+      setLatestSubmissionsState(latestSubmissions);
+    }
+  }, [latestSubmissions]);
 
   React.useEffect(() => {
-    getAssignmentProperties(lecture.id, assignment.id).then(properties => {
-      setGb(new GradeBook(properties));
-    });
-  }, []);
+    if (Object.keys(usersData).length > 0) {
+      setUsersState(usersData);
+    }
+  }, [usersData]);
+
+  React.useEffect(() => {
+    if (lecture && assignment) {
+      getAssignmentProperties(lecture.id, assignment.id).then(properties => {
+        setGb(new GradeBook(properties));
+      });
+    }
+  }, [lecture, assignment]);
+
+  if (isLoadingLecture || isLoadingAssignment || isLoadingUsers || isLoadingAllSubmissions || isLoadingLatestSubmissions) {   
+    return (
+      <div>
+        <Card>
+          <LinearProgress />
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <Box sx={{ flex: 1, overflow: 'auto' }}>

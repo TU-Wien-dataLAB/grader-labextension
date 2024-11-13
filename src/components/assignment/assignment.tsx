@@ -11,8 +11,10 @@ import { Submission } from '../../model/submission';
 import {
   Box,
   Button,
+  Card,
   Chip,
   IconButton,
+  LinearProgress,
   Stack,
   Tooltip,
   Typography
@@ -22,8 +24,9 @@ import { SubmissionList } from './submission-list';
 import { AssignmentStatus } from './assignment-status';
 import { Files } from './files/files';
 import WarningIcon from '@mui/icons-material/Warning';
-import { Outlet, useNavigate, useRouteLoaderData } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import {
+  getAssignment,
   getAssignmentProperties,
   pullAssignment,
   pushAssignment,
@@ -32,7 +35,7 @@ import {
 import { getFiles, lectureBasePath } from '../../services/file.service';
 import {
   getAllSubmissions,
-  getProperties,
+  getSubmissionCount,
   submitAssignment
 } from '../../services/submissions.service';
 import { enqueueSnackbar } from 'notistack';
@@ -48,6 +51,9 @@ import { openBrowser } from '../coursemanage/overview/util';
 import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser';
 import { Scope, UserPermissions } from '../../services/permission.service';
 import { GradeBook } from '../../services/gradebook';
+import { useQuery } from '@tanstack/react-query';
+import { getLecture } from '../../services/lectures.service';
+import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 
 const calculateActiveStep = (submissions: Submission[]) => {
   const hasFeedback = submissions.reduce(
@@ -69,6 +75,7 @@ const calculateActiveStep = (submissions: Submission[]) => {
 interface ISubmissionsLeft {
   subLeft: number;
 }
+
 const SubmissionsLeftChip = (props: ISubmissionsLeft) => {
   const output =
     props.subLeft + ' submission' + (props.subLeft === 1 ? ' left' : 's left');
@@ -81,60 +88,91 @@ const SubmissionsLeftChip = (props: ISubmissionsLeft) => {
  * Renders the components available in the extended assignment modal view
  */
 export const AssignmentComponent = () => {
-  const navigate = useNavigate();
-  const reloadPage = () => navigate(0);
+  const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
 
-  const { lecture, assignment, submissions } = useRouteLoaderData(
-    'assignment'
-  ) as {
-    lecture: Lecture;
-    assignment: Assignment;
-    submissions: Submission[];
-  };
+  const { data: lecture, isLoading: isLoadingLecture } = useQuery<Lecture>({
+    queryKey: ['lecture', lectureId],
+    queryFn: () => getLecture(lectureId),
+    enabled: !!lectureId
+  });
 
-  const [fileList, setFileList] = React.useState([] as string[]);
+  const { data: assignment, isLoading: isLoadingAssignment } =
+    useQuery<Assignment>({
+      queryKey: ['assignment', assignmentId],
+      queryFn: () => getAssignment(lectureId, assignmentId),
+      enabled: !!lectureId && !!assignmentId
+    });
+
+  const { data: submissions = [], refetch: refetchSubmissions } = useQuery<
+    Submission[]
+  >({
+    queryKey: ['submissionsAssignmentStudent', lectureId, assignmentId],
+    queryFn: () => getAllSubmissions(lectureId, assignmentId, 'none', false),
+    enabled: !!lectureId && !!assignmentId
+  });
+
+  const [fileList, setFileList] = React.useState<string[]>([]);
+  const [activeStatus, setActiveStatus] = React.useState(0);
+
+  const {
+    data: subLeft,
+    isLoading: isLoadingSubLeft,
+    refetch: refetchSubleft
+  } = useQuery<number>({
+    queryKey: ['subLeft'],
+    queryFn: async () => {
+      await refetchSubmissions();
+      const response = await getSubmissionCount(lectureId, assignmentId);
+      const remainingSubmissions =
+        assignment.max_submissions - response.submission_count;
+      return remainingSubmissions <= 0 ? 0 : remainingSubmissions;
+    }
+  });
+
+  const {
+    data: files,
+    refetch: refetchFiles,
+    isLoading: isLoadingFiles
+  } = useQuery({
+    queryKey: ['files', lectureId, assignmentId],
+    queryFn: () =>
+      getFiles(
+        `${lectureBasePath}${lecture?.code}/assignments/${assignmentId}`
+      ),
+    enabled: !!lecture && !!assignment
+  });
 
   React.useEffect(() => {
-    getAssignmentProperties(lecture.id, assignment.id).then(properties => {
-      const gb = new GradeBook(properties);
-      setFileList([
-        ...gb.getNotebooks().map(n => n + '.ipynb'),
-        ...gb.getExtraFiles()
-      ]);
-    });
-  }, []);
+    if (lecture && assignment) {
+      getAssignmentProperties(lecture.id, assignment.id).then(properties => {
+        const gb = new GradeBook(properties);
+        setFileList([
+          ...gb.getNotebooks().map(n => n + '.ipynb'),
+          ...gb.getExtraFiles()
+        ]);
+        const active_step = calculateActiveStep(submissions);
+        setActiveStatus(active_step);
+        refetchSubleft();
+      });
+    }
+  }, [lecture, assignment]);
+
+  if (
+    isLoadingAssignment ||
+    isLoadingLecture ||
+    isLoadingFiles ||
+    isLoadingSubLeft
+  ) {
+    return (
+      <div>
+        <Card>
+          <LinearProgress />
+        </Card>
+      </div>
+    );
+  }
 
   const path = `${lectureBasePath}${lecture.code}/assignments/${assignment.id}`;
-
-  /* Now we can divvy this into a useReducer  */
-  const [allSubmissions, setSubmissions] = React.useState(submissions);
-  const [files, setFiles] = React.useState([]);
-  const [activeStatus, setActiveStatus] = React.useState(0);
-  const [subLeft, setSubLeft] = React.useState(0);
-
-  React.useEffect(() => {
-    getAllSubmissions(lecture.id, assignment.id, 'none', false).then(
-      response => {
-        setSubmissions(response);
-        if (assignment.max_submissions - response.length < 0) {
-          setSubLeft(0);
-        } else {
-          setSubLeft(assignment.max_submissions - response.length);
-        }
-      }
-    );
-    getFiles(path).then(files => {
-      // TODO: make it really explicit where & who pulls the asssignment
-      // files!
-      //if (files.length === 0) {
-      //    pullAssignment(lecture.id, assignment.id, 'assignment');
-      //}
-      setFiles(files);
-    });
-
-    const active_step = calculateActiveStep(submissions);
-    setActiveStatus(active_step);
-  }, []);
 
   const resetAssignmentHandler = async () => {
     showDialog(
@@ -153,7 +191,7 @@ export const AssignmentComponent = () => {
           enqueueSnackbar('Successfully Reset Assignment', {
             variant: 'success'
           });
-          reloadPage();
+          await refetchFiles();
         } catch (e) {
           if (e instanceof Error) {
             enqueueSnackbar('Error Reset Assignment: ' + e.message, {
@@ -176,14 +214,11 @@ export const AssignmentComponent = () => {
       'This action will submit your current notebooks!',
       async () => {
         await submitAssignment(lecture, assignment, true).then(
-          response => {
-            console.log('Submitted');
-            setSubmissions([response, ...allSubmissions]);
-            if (subLeft - 1 < 0) {
-              setSubLeft(0);
-            } else {
-              setSubLeft(subLeft - 1);
-            }
+          () => {
+            refetchSubleft().then(() => {
+              const active_step = calculateActiveStep(submissions);
+              setActiveStatus(active_step);
+            });
             enqueueSnackbar('Successfully Submitted Assignment', {
               variant: 'success'
             });
@@ -210,6 +245,7 @@ export const AssignmentComponent = () => {
         })
     );
   };
+
   /**
    * Pulls from given repository by sending a request to the grader git service.
    * @param repo input which repository should be fetched
@@ -220,11 +256,7 @@ export const AssignmentComponent = () => {
         enqueueSnackbar('Successfully Pulled Repo', {
           variant: 'success'
         });
-        getFiles(
-          `${lectureBasePath}${lecture.code}/assignments/${assignment.id}`
-        ).then(files => {
-          setFiles(files);
-        });
+        refetchFiles();
       },
       error => {
         enqueueSnackbar(error.message, {
@@ -235,7 +267,7 @@ export const AssignmentComponent = () => {
   };
 
   const isDeadlineOver = () => {
-    if (assignment.due_date === null) {
+    if (!assignment.due_date) {
       return false;
     }
     const time = new Date(assignment.due_date).getTime();
@@ -243,13 +275,17 @@ export const AssignmentComponent = () => {
   };
 
   const isLateSubmissionOver = () => {
-    if (assignment.due_date === null) {
+    if (!assignment.due_date) {
       return false;
     }
-    let late_submission = assignment.settings.late_submission;
-    if (late_submission === null || late_submission.length === 0) {
-      late_submission = [{ period: 'P0D', scaling: undefined }];
+    const late_submission = assignment.settings.late_submission || [
+      { period: 'P0D', scaling: undefined }
+    ];
+    // no late_submission entry found
+    if (late_submission.length === 0) {
+      return false;
     }
+
     const late = moment(assignment.due_date)
       .add(moment.duration(late_submission[late_submission.length - 1].period))
       .toDate()
@@ -262,11 +298,10 @@ export const AssignmentComponent = () => {
   };
 
   const isMaxSubmissionReached = () => {
-    if (assignment.max_submissions === null) {
-      return false;
-    } else {
-      return assignment.max_submissions <= submissions.length;
-    }
+    return (
+      assignment.max_submissions !== null &&
+      assignment.max_submissions <= submissions.length
+    );
   };
 
   const isAssignmentFetched = () => {
@@ -277,11 +312,6 @@ export const AssignmentComponent = () => {
     const permissions = UserPermissions.getPermissions();
     const scope = permissions[lecture.code];
     return scope >= Scope.tutor;
-  };
-  const [reloadFilesToggle, setReloadFiles] = React.useState(false);
-
-  const reloadFiles = () => {
-    setReloadFiles(!reloadFilesToggle);
   };
 
   return (
@@ -314,7 +344,7 @@ export const AssignmentComponent = () => {
               Files
             </Typography>
             <Tooltip title="Reload Files">
-              <IconButton aria-label="reload" onClick={() => reloadFiles()}>
+              <IconButton aria-label="reload" onClick={() => refetchFiles()}>
                 <ReplayIcon />
               </IconButton>
             </Tooltip>
@@ -371,7 +401,7 @@ export const AssignmentComponent = () => {
                     : isLateSubmissionOver() ||
                       isMaxSubmissionReached() ||
                       isAssignmentCompleted() ||
-                      files.length == 0
+                      files.length === 0
                 }
                 onClick={() => submitAssignmentHandler()}
               >
@@ -425,7 +455,13 @@ export const AssignmentComponent = () => {
             )
           ) : null}
         </Typography>
-        <SubmissionList submissions={allSubmissions} sx={{ m: 2, mt: 1 }} />
+        <SubmissionList
+          lecture={lecture}
+          assignment={assignment}
+          submissions={submissions}
+          subLeft={subLeft}
+          sx={{ m: 2, mt: 1 }}
+        />
       </Box>
     </Box>
   );

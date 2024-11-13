@@ -3,8 +3,6 @@ import Link, { LinkProps } from '@mui/material/Link';
 import {
   Link as RouterLink,
   useMatches,
-  useParams,
-  useLoaderData,
   Outlet,
   useLocation
 } from 'react-router-dom';
@@ -21,7 +19,6 @@ export const Page = ({ id }: { id: string }) => {
       .filter(v => v.length > 0)
       .slice(0, 2)
       .join('/');
-  console.log(`Storing path: ${pathname}`);
   storeString(`${id}-react-router-path`, pathname);
 
   return (
@@ -54,7 +51,6 @@ export function LinkRouter(props: ILinkRouterProps) {
 export const RouterBreadcrumbs = () => {
   const pathname = useLocation().pathname.replace(/\/$/, '');
   const matches = useMatches();
-  console.log(`Navigating to: ${pathname}`);
 
   const crumbs = matches
     // first get rid of any matches that don't have handle and crumb
@@ -63,13 +59,9 @@ export const RouterBreadcrumbs = () => {
     // data to each one
     .map((match: any) => match.handle.crumb(match.data));
 
-  console.log(crumbs);
-
   const links = matches
     .filter((match: any) => Boolean(match.handle?.link))
     .map((match: any) => match.handle.link(match.params));
-
-  console.log(links);
 
   return (
     <Breadcrumbs
@@ -93,4 +85,26 @@ export const RouterBreadcrumbs = () => {
       })}
     </Breadcrumbs>
   );
+};
+
+export const extractIdsFromBreadcrumbs = () => {
+  const matches = useMatches();
+  const links = matches
+  .filter((match: any) => Boolean(match.handle?.link))
+  .map((match: any) => match.handle.link(match.params));
+
+  let lectureId;
+  let assignmentId;
+
+  for (let i = 0; i < links.length; i++) {
+    if (links[i].includes("lecture")) {
+      const lecture = links[i].split("/");
+      lectureId = parseInt(lecture[1], 10);
+    } else if (links[i].includes("assignment")) {
+      const assignment = links[i].split("/");
+      assignmentId = parseInt(assignment[1], 10);
+    }
+  }
+
+  return { lectureId, assignmentId };
 };

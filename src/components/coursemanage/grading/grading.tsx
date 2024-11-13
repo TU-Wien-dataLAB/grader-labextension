@@ -3,23 +3,16 @@ import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
 import Checkbox from '@mui/material/Checkbox';
 import { visuallyHidden } from '@mui/utils';
 import { Lecture } from '../../../model/lecture';
 import { Assignment } from '../../../model/assignment';
-import {
-  Outlet,
-  useNavigate,
-  useOutletContext,
-  useRouteLoaderData
-} from 'react-router-dom';
+import { Outlet, useNavigate, useOutletContext } from 'react-router-dom';
 import { Submission } from '../../../model/submission';
 import { utcToLocalFormat } from '../../../services/datetime.service';
 import {
@@ -30,9 +23,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  Stack,
-  Toolbar,
-  Tooltip
+  Stack
 } from '@mui/material';
 import { SectionTitle } from '../../util/section-title';
 import { enqueueSnackbar } from 'notistack';
@@ -43,13 +34,16 @@ import {
 import { EnhancedTableToolbar } from './table-toolbar';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import { green } from '@mui/material/colors';
-import AddIcon from '@mui/icons-material/Add';
 import {
   loadNumber,
   loadString,
   storeNumber,
   storeString
 } from '../../../services/storage.service';
+import { getAssignment } from '../../../services/assignments.service';
+import { useQuery } from '@tanstack/react-query';
+import { getLecture } from '../../../services/lectures.service';
+import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 
 /**
  * Calculates chip color based on submission status.
@@ -586,23 +580,31 @@ export default function GradingTable() {
 }
 
 export const GradingComponent = () => {
-  const { lecture, assignments, users } = useRouteLoaderData('lecture') as {
-    lecture: Lecture;
-    assignments: Assignment[];
-    users: { instructors: string[]; tutors: string[]; students: string[] };
-  };
-  const { assignment, allSubmissions, latestSubmissions } = useRouteLoaderData(
-    'assignment'
-  ) as {
-    assignment: Assignment;
-    allSubmissions: Submission[];
-    latestSubmissions: Submission[];
-  };
+  const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
+  const [rows, setRows] = React.useState<Submission[]>([]);
+  const [manualGradeSubmission, setManualGradeSubmission] = React.useState<
+    Submission | undefined
+  >(undefined);
 
-  const [rows, setRows] = React.useState([] as Submission[]);
-  const [manualGradeSubmission, setManualGradeSubmission] = React.useState(
-    undefined as Submission
-  );
+  const { data: lectureData, isLoading: isLoadingLecture } = useQuery<Lecture>({
+    queryKey: ['lecture', lectureId],
+    queryFn: () => getLecture(lectureId),
+    enabled: !!lectureId
+  });
+
+  const { data: assignmentData, isLoading: isLoadingAssignment } =
+    useQuery<Assignment>({
+      queryKey: ['assignment', assignmentId],
+      queryFn: () => getAssignment(lectureId, assignmentId),
+      enabled: !!lectureId && !!assignmentId
+    });
+
+  if (isLoadingLecture || isLoadingAssignment) {
+    return <div>Loading...</div>;
+  }
+
+  const lecture = lectureData;
+  const assignment = assignmentData;
 
   return (
     <Stack direction={'column'} sx={{ flex: 1, overflow: 'hidden' }}>

@@ -10,15 +10,8 @@ import { LinkRouter, Page } from '../util/breadcrumbs';
 import ErrorPage from '../util/error';
 
 import { UserPermissions } from '../../services/permission.service';
-import {
-  getAllLectures,
-  getLecture,
-  getUsers
-} from '../../services/lectures.service';
-import {
-  getAllAssignments,
-  getAssignment
-} from '../../services/assignments.service';
+import { getAllLectures, getLecture } from '../../services/lectures.service';
+import { getAssignment } from '../../services/assignments.service';
 import { getAllSubmissions } from '../../services/submissions.service';
 
 import { enqueueSnackbar } from 'notistack';
@@ -28,6 +21,7 @@ import { AssignmentManageComponent } from './assignmentmanage.component';
 import { LectureComponent } from './lecture';
 import { AssignmentComponent } from './assignment';
 import { Feedback } from './feedback';
+import { QueryClient } from '@tanstack/react-query';
 
 export const loadPermissions = async () => {
   try {
@@ -45,19 +39,33 @@ export const loadPermissions = async () => {
   }
 };
 
-export const loadLecture = async (lectureId: number) => {
-  try {
-    const [lecture, assignments] = await Promise.all([
-      getLecture(lectureId),
-      getAllAssignments(lectureId, false, true)
-    ]);
-    return { lecture, assignments };
-  } catch (error: any) {
-    enqueueSnackbar(error.message, {
-      variant: 'error'
-    });
-    throw new Error('Could not load data!');
-  }
+export const loadLecture = async (
+  lectureId: number,
+  queryClient: QueryClient
+) => {
+  const query = {
+    queryKey: ['lecture', lectureId],
+    queryFn: async () => getLecture(lectureId)
+  };
+  return (
+    queryClient.getQueryData(query.queryKey) ??
+    (await queryClient.fetchQuery(query))
+  );
+};
+
+export const loadAssignment = async (
+  lectureId: number,
+  assignmentId: number,
+  queryClient: QueryClient
+) => {
+  const query = {
+    queryKey: ['assignment', lectureId, assignmentId],
+    queryFn: async () => getAssignment(lectureId, assignmentId)
+  };
+  return (
+    queryClient.getQueryData(query.queryKey) ??
+    (await queryClient.fetchQuery(query))
+  );
 };
 
 /*
@@ -88,25 +96,6 @@ export const loadSubmissions = async (
   }
 };
 
-export const loadAssignment = async (
-  lectureId: number,
-  assignmentId: number
-) => {
-  try {
-    const [lecture, assignment, submissions] = await Promise.all([
-      getLecture(lectureId),
-      getAssignment(lectureId, assignmentId),
-      getAllSubmissions(lectureId, assignmentId, 'none', false)
-    ]);
-    return { lecture, assignment, submissions };
-  } catch (error: any) {
-    enqueueSnackbar(error.message, {
-      variant: 'error'
-    });
-    throw error;
-  }
-};
-
 function ExamplePage({ to }) {
   const navigation = useNavigation(); // router navigates to new route (and loads data)
   const loading = navigation.state === 'loading';
@@ -129,19 +118,7 @@ function ExamplePage({ to }) {
   );
 }
 
-// TODO: remove test code
-
-const testFetchAssignment = async (lectureId: number, assignmentId: number) => {
-  console.log(lectureId, assignmentId);
-  const { lecture } = await loadLecture(lectureId);
-  // throw lecture;
-  return {
-    assignment: { id: assignmentId, name: 'Introduction to Python' },
-    lecture: lecture
-  };
-};
-
-export const getRoutes = () => {
+export const getRoutes = (queryClient: QueryClient) => {
   const routes = createRoutesFromElements(
     // this is a layout route without a path (see: https://reactrouter.com/en/main/start/concepts#layout-routes)
     <Route
@@ -151,7 +128,7 @@ export const getRoutes = () => {
       <Route
         id={'root'}
         path={'/*'}
-        loader={loadPermissions}
+        // loader={loadPermissions}
         handle={{
           crumb: data => 'Lectures',
           link: params => '/'
@@ -161,10 +138,10 @@ export const getRoutes = () => {
         <Route
           id={'lecture'}
           path={'lecture/:lid/*'}
-          loader={({ params }) => loadLecture(+params.lid)}
+          loader={({ params }) => loadLecture(+params.lid, queryClient)}
           handle={{
             // functions in handle have to handle undefined data (error page is displayed afterwards)
-            crumb: data => data?.lecture.name,
+            crumb: data => data?.name,
             link: params => `lecture/${params?.lid}/`
           }}
         >
@@ -172,9 +149,11 @@ export const getRoutes = () => {
           <Route
             id={'assignment'}
             path={'assignment/:aid/*'}
-            loader={({ params }) => loadAssignment(+params.lid, +params.aid)}
+            loader={({ params }) =>
+              loadAssignment(+params.lid, +params.aid, queryClient)
+            }
             handle={{
-              crumb: data => data?.assignment.name,
+              crumb: data => data?.name,
               link: params => `assignment/${params?.aid}/`
             }}
           >

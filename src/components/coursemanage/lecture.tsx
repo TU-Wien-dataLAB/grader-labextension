@@ -18,27 +18,30 @@ import {
 import * as React from 'react';
 import { Assignment } from '../../model/assignment';
 import { Lecture } from '../../model/lecture';
-import { deleteAssignment } from '../../services/assignments.service';
-import { CreateDialog, EditLectureDialog, IEditLectureProps } from '../util/dialog';
-import { updateLecture } from '../../services/lectures.service';
+import {
+  deleteAssignment,
+  getAllAssignments
+} from '../../services/assignments.service';
+import { CreateDialog, EditLectureDialog } from '../util/dialog';
+import { getLecture, updateLecture } from '../../services/lectures.service';
 import { red, grey } from '@mui/material/colors';
 import { enqueueSnackbar } from 'notistack';
-import {
-  useNavigate,
-  useNavigation,
-  useRouteLoaderData
-} from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ButtonTr, GraderTable } from '../util/table';
 import { DeadlineComponent } from '../util/deadline';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import { showDialog } from '../util/dialog-provider';
 import { updateMenus } from '../../menu';
+import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
+import { useQuery } from '@tanstack/react-query';
+import { AssignmentDetail } from '../../model/assignmentDetail';
+import { queryClient } from '../../widgets/assignmentmanage';
 
 interface IAssignmentTableProps {
   lecture: Lecture;
   rows: Assignment[];
-  setAssignments: React.Dispatch<React.SetStateAction<Assignment[]>>;
+  refreshAssignments: any;
 }
 
 const AssignmentTable = (props: IAssignmentTableProps) => {
@@ -116,9 +119,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                                   variant: 'success'
                                 }
                               );
-                              props.setAssignments(
-                                props.rows.filter(a => a.id !== row.id)
-                              );
+                              props.refreshAssignments();
                             } catch (error: any) {
                               enqueueSnackbar(error.message, {
                                 variant: 'error'
@@ -151,38 +152,44 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
 };
 
 export const LectureComponent = () => {
-  const { lecture, assignments } = useRouteLoaderData('lecture') as {
-    lecture: Lecture;
-    assignments: Assignment[];
-    users: { instructors: string[]; tutors: string[]; students: string[] };
-  };
-  const navigation = useNavigation();
-
-  const [lectureState, setLecture] = React.useState(lecture);
-  const [assignmentsState, setAssignments] = React.useState(assignments);
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
+  const { lectureId } = extractIdsFromBreadcrumbs();
 
-  const handleOpenEditDialog = () => {
-    setEditDialogOpen(true);
-  };
+  const { data: lecture } = useQuery<Lecture>({
+    queryKey: ['lecture', lectureId],
+    queryFn: () => getLecture(lectureId, true),
+    enabled: true
+  });
 
-  
-  const handleUpdateLecture = (updatedLecture) => {
+  const {
+    data: assignments = [],
+    isPending: isPendingAssignments,
+    refetch: refreshAssignments
+  } = useQuery<AssignmentDetail[]>({
+    queryKey: ['assignments', lectureId],
+    queryFn: () => getAllAssignments(lectureId),
+    enabled: true
+  });
+
+  const handleUpdateLecture = updatedLecture => {
     updateLecture(updatedLecture).then(
-      async (response) => {
+      async response => {
         await updateMenus(true);
-        setLecture(response);
+        // Invalidate query key "lectures" and "completedLectures", so that we trigger refetch on lectures table and correct lecture name is shown in the table!
+        await queryClient.invalidateQueries({ queryKey: ['lectures'] });
+        await queryClient.invalidateQueries({
+          queryKey: ['completedLectures']
+        });
       },
-      (error) => {
+      error => {
         enqueueSnackbar(error.message, {
-          variant: 'error',
+          variant: 'error'
         });
       }
     );
   };
 
-
-  if (navigation.state === 'loading') {
+  if (isPendingAssignments) {
     return (
       <div>
         <Card>
@@ -195,8 +202,8 @@ export const LectureComponent = () => {
   return (
     <Stack direction={'column'} sx={{ mt: 5, ml: 5, flex: 1 }}>
       <Typography variant={'h4'} sx={{ mr: 2 }}>
-        {lectureState.name}
-        {lectureState.complete ? (
+        {lecture.name}
+        {lecture.complete ? (
           <Typography
             sx={{
               display: 'inline-block',
@@ -215,15 +222,20 @@ export const LectureComponent = () => {
         alignItems="center"
         sx={{ mt: 2, mb: 1 }}
       >
-        <Stack
-          direction="row"
-          alignItems="center"
-          sx={{ mr: 2}}
-          >
+        <Stack direction="row" alignItems="center" sx={{ mr: 2 }}>
           {lecture.code === lecture.name ? (
             <Alert severity="info">
-              The name of the lecture is identical to the lecture code. You should give it a meaningful title that accurately reflects its content.{' '}
-              <span style={{ cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }} onClick={handleOpenEditDialog}>
+              The name of the lecture is identical to the lecture code. You
+              should give it a meaningful title that accurately reflects its
+              content.{' '}
+              <span
+                style={{
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  fontWeight: 'bold'
+                }}
+                onClick={() => setEditDialogOpen(true)}
+              >
                 Rename Lecture.
               </span>
             </Alert>
@@ -232,16 +244,13 @@ export const LectureComponent = () => {
 
         <Stack direction="row" alignItems="center" spacing={2}>
           <CreateDialog
-            lecture={lectureState}
-            handleSubmit={assigment => {
-              setAssignments((oldAssignments: Assignment[]) => [
-                ...oldAssignments,
-                assigment
-              ]);
+            lecture={lecture}
+            handleSubmit={async () => {
+              await refreshAssignments();
             }}
           />
           <EditLectureDialog
-            lecture={lectureState}
+            lecture={lecture}
             handleSubmit={handleUpdateLecture}
             open={isEditDialogOpen}
             handleClose={() => setEditDialogOpen(false)}
@@ -249,14 +258,13 @@ export const LectureComponent = () => {
         </Stack>
       </Stack>
 
-
       <Stack>
         <Typography variant={'h6'}>Assignments</Typography>
       </Stack>
       <AssignmentTable
-        lecture={lectureState}
-        rows={assignmentsState}
-        setAssignments={setAssignments}
+        lecture={lecture}
+        rows={assignments}
+        refreshAssignments={refreshAssignments}
       />
     </Stack>
   );

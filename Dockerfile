@@ -6,7 +6,7 @@
 
 ARG REGISTRY=quay.io
 ARG OWNER=jupyter
-ARG BASE_CONTAINER=$REGISTRY/$OWNER/datascience-notebook
+ARG BASE_CONTAINER=$REGISTRY/$OWNER/datascience-notebook:latest
 FROM $BASE_CONTAINER
 
 USER root
@@ -18,10 +18,11 @@ RUN apt-get update &&\
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY ./ /Grader-Labextension
+COPY ./ /grader-labextension
 
-RUN python3 -m pip install /Grader-Labextension
-RUN rm -rf /Grader-Labextension
+RUN mamba install nodejs
+RUN python3 -m pip install /grader-labextension
+RUN rm -rf /grader-labextension
 
 WORKDIR /home/jovyan
 

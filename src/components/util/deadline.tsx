@@ -27,6 +27,7 @@ import AlarmAddIcon from '@mui/icons-material/AlarmAdd';
 import { SubmissionPeriod } from '../../model/submissionPeriod';
 import { utcToLocalFormat } from '../../services/datetime.service';
 import { GlobalObjects } from '../../index';
+import { useQuery } from '@tanstack/react-query';
 
 export interface IDeadlineProps {
   due_date: string | null;
@@ -211,11 +212,13 @@ export function DeadlineDetail(props: IDeadlineDetailProps) {
   }
   const [open, setOpen] = React.useState(true);
 
-  const [date, setDate] = React.useState(
-    props.due_date !== null
-      ? moment.utc(props.due_date).local().toDate()
-      : undefined
-  );
+  const {data: date = undefined } = useQuery({
+    queryKey: ['date'],
+    queryFn: () => {
+      props.due_date != null ? moment.utc(props.due_date).local().toDate() : undefined
+    }
+  });
+
   const [displayDuration, setDisplayDuration] = React.useState(
     getDisplayDate(date, false)
   );

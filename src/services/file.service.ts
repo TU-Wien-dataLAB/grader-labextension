@@ -4,9 +4,8 @@
 // This source code is licensed under the BSD-style license found in the
 // LICENSE file in the root directory of this source tree.
 
-import { FilterFileBrowserModel } from '@jupyterlab/filebrowser/lib/model';
+import { FileBrowserModel } from '@jupyterlab/filebrowser/lib/model';
 import { GlobalObjects } from '../index';
-import { renameFile } from '@jupyterlab/docmanager';
 import { Contents } from '@jupyterlab/services';
 import { Assignment } from '../model/assignment';
 import { HTTPMethod, request } from './request.service';
@@ -15,6 +14,7 @@ import { RepoType } from '../components/util/repo-type';
 import IModel = Contents.IModel;
 import { PageConfig, PathExt } from '@jupyterlab/coreutils';
 import { enqueueSnackbar } from 'notistack';
+import { RemoteFileStatus } from '../model/remoteFileStatus';
 
 // remove slashes at beginning and end of base path if they exist
 export let lectureBasePath = PageConfig.getOption('lectures_base_path').replace(
@@ -39,19 +39,20 @@ export interface File {
   content: File[];
 }
 
-// TODO: getFiles should return Promise<File[]>
 export const getFiles = async (path: string): Promise<File[]> => {
   if (path === null) {
     return [];
   }
 
-  const model = new FilterFileBrowserModel({
-    auto: true,
-    manager: GlobalObjects.docManager
+  const model = new FileBrowserModel({
+    auto: false,
+    manager: GlobalObjects.docManager,
+    refreshInterval: 1000000
   });
 
   try {
     await model.cd(path);
+    await model.refresh();
   } catch (_) {
     return [];
   }
@@ -83,27 +84,28 @@ export const getFiles = async (path: string): Promise<File[]> => {
     }
     f = items.next();
   }
-
-  console.log('getting files from path ' + path);
   return files;
 };
 
-export const getRelativePathAssignment = (path: string) => {
-  const regex = /assignments\/[^/]+\/(.+)/;
+export const getRelativePath = (path: string, reg: 'assignments' | 'source') => {
+  const regexStr = `${reg}\/[^/]+\/(.+)`;
+  const regex = new RegExp(regexStr);
   const match = path.match(regex);
   return match ? match[1] : path;
 };
 
-export const extractRelativePathsAssignment = (file: File) => {
+export const extractRelativePaths = (file: File, reg: 'assignments' | 'source' ) => {
   if (file.type === 'directory') {
     const nestedPaths = file.content.flatMap(nestedFile =>
-      extractRelativePathsAssignment(nestedFile)
+      extractRelativePaths(nestedFile, reg)
     );
-    return [getRelativePathAssignment(file.path), ...nestedPaths];
+    return [getRelativePath(file.path, reg), ...nestedPaths];
   } else {
-    return [getRelativePathAssignment(file.path)];
+    return [getRelativePath(file.path, reg)];
   }
 };
+
+
 
 export const openFile = async (path: string) => {
   GlobalObjects.commands
@@ -123,12 +125,14 @@ export const openFile = async (path: string) => {
 export const makeDir = async (path: string, name: string) => {
   const newPath = PathExt.join(path, name);
   let exists = false;
-  const model = new FilterFileBrowserModel({
-    auto: true,
-    manager: GlobalObjects.docManager
+  const model = new FileBrowserModel({
+    auto: false,
+    manager: GlobalObjects.docManager,
+    refreshInterval: 1000000
   });
   try {
     await model.cd(path);
+    await model.refresh();
   } catch (_) {
     exists = false;
   }
@@ -163,10 +167,8 @@ export const makeDir = async (path: string, name: string) => {
 
 export const makeDirs = async (path: string, names: string[]) => {
   let p = path;
-  console.log('path: ' + path);
   for (let i = 0; i < names.length; i++) {
     const n = names[i];
-    console.log('try to create dir: ' + names[i]);
     p = await makeDir(p, n);
   }
   return p;
@@ -187,7 +189,7 @@ export function getGitLog(
   repo: RepoType,
   nCommits: number
 ): Promise<IGitLogObject[]> {
-  let url = `/lectures/${lecture.id}/assignments/${assignment.id}/log/${repo}/`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/log/${repo}/`;
   const searchParams = new URLSearchParams({
     n: String(nCommits)
   });
@@ -200,7 +202,18 @@ export function getRemoteStatus(
   assignment: Assignment,
   repo: RepoType,
   reload = false
-): Promise<string> {
-  const url = `/lectures/${lecture.id}/assignments/${assignment.id}/remote-status/${repo}/`;
-  return request<string>(HTTPMethod.GET, url, null, reload);
+): Promise<RemoteFileStatus> {
+  const url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/remote-status/${repo}/`;
+  return request<RemoteFileStatus>(HTTPMethod.GET, url, null, reload);
+}
+
+export function getRemoteFileStatus(
+  lecture: Lecture,
+  assignment: Assignment,
+  repo: RepoType,
+  filePath: string,
+  reload = false
+): Promise<RemoteFileStatus> {
+  const url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/remote-file-status/${repo}/?file=${encodeURIComponent(filePath)}`;
+  return request<RemoteFileStatus>(HTTPMethod.GET, url, null, reload);
 }

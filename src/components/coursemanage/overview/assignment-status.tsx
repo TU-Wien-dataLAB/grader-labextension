@@ -22,6 +22,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import { ReleaseDialog } from '../../util/dialog';
 import {
+  getAssignment,
   pushAssignment,
   updateAssignment
 } from '../../../services/assignments.service';
@@ -29,6 +30,8 @@ import { Lecture } from '../../../model/lecture';
 import { enqueueSnackbar } from 'notistack';
 import { DeadlineComponent } from '../../util/deadline';
 import { showDialog } from '../../util/dialog-provider';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { queryClient } from '../../../widgets/assignmentmanage';
 
 /**
  * Props for AssignmentStatusComponent.
@@ -60,7 +63,28 @@ const getActiveStep = (status: Assignment.StatusEnum) => {
  * @param props props of assignment status
  */
 export const AssignmentStatus = (props: IAssignmentStatusProps) => {
-  const [assignment, setAssignment] = React.useState(props.assignment);
+  const { data: assignment = props.assignment, refetch: refetchAssignment } =
+    useQuery({
+      queryKey: ['assignment'],
+      queryFn: () => getAssignment(props.lecture.id, props.assignment.id, true)
+    });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async (status: 'pushed' | 'released' | 'complete') => {
+      const updatedAssignment = { ...props.assignment, status };
+      return updateAssignment(props.lecture.id, updatedAssignment);
+    },
+    onError: (error: any) => {
+      enqueueSnackbar('Error: ' + error.message, { variant: 'error' });
+    },
+    onSuccess: (data: Assignment) => {
+      props.onAssignmentChange(data);
+      enqueueSnackbar('Successfully updated assignment', {
+        variant: 'success'
+      });
+    }
+  });
+
   /**
    * Updates assignment status.
    * @param status assignment status
@@ -73,18 +97,12 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
     error: string
   ) => {
     try {
-      let a = assignment;
-      a.status = status;
-      a = await updateAssignment(props.lecture.id, a);
-      setAssignment(a);
-      props.onAssignmentChange(a);
-      enqueueSnackbar(success, {
-        variant: 'success'
-      });
+      await updateStatusMutation.mutateAsync(status);
+      await refetchAssignment();
+      await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      enqueueSnackbar(success, { variant: 'success' });
     } catch (err) {
-      enqueueSnackbar(error, {
-        variant: 'error'
-      });
+      enqueueSnackbar(error, { variant: 'error' });
     }
   };
   /**
@@ -131,14 +149,14 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
       description: (
         <Box>
           <Typography sx={{ fontSize }}>
-            The assignment has been created and files can now be added to be
-            pushed. You can commit and pull changes from the remote file
-            repository through the file view or can work directly with the
-            underlying git repositories by opening the assignment in the
-            terminal (<TerminalIcon color={'primary'} fontSize={'inherit'} />
-            ). After you are done working on the files you can release the
-            assignment, which makes a final commit with the current state of the
-            assignment.
+            The assignment has been created, and files can now be added and
+            pushed. You can commit and pull changes from the remote repository
+            through the file view, or work directly with the underlying Git
+            repositories by opening the assignment in the terminal (
+            <TerminalIcon color={'primary'} fontSize={'inherit'} />
+            ). Once you’re done working on the files, you can release the
+            assignment, which will make a final commit with the current state of
+            the assignment.
           </Typography>
           <ReleaseDialog
             assignment={assignment}
@@ -160,14 +178,14 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
       description: (
         <Box>
           <Typography sx={{ fontSize }}>
-            The assignment has been released to students and it is not advised
-            to push further changes to the repository. If the assignment is over
-            you can mark it as complete in the edit menu or right here. Undoing
-            the release of the assignment will hide the assignment from students
-            again but their local files are unaffected by this action. When
-            re-releasing the assignment after significant changes a new commit
-            will be made and you will have to instruct users to reset their
-            progress thus far or work with separate versions later on.
+            The assignment has been released to students, and further changes to
+            the repository are not advised. When the assignment period is over,
+            you can mark it as complete in the edit menu or directly here.
+            Undoing the release will hide the assignment from students, but
+            their local files will remain unaffected. If you re-release the
+            assignment after making significant changes, a new commit will be
+            made, and you may need to instruct users to reset their progress or
+            work with separate versions.
           </Typography>
           <Tooltip title={'Hide Released Assignment from Students'}>
             <Button
@@ -205,10 +223,10 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
       description: (
         <Box>
           <Typography sx={{ fontSize }}>
-            The assignment has been completed and is not visible to students
-            anymore but all their progress will be saved. When re-activating the
-            assignment it will again show up in the assignment view and new
-            submissions can be made given the deadline is set accordingly.
+            The assignment has been completed and is no longer visible to
+            students, but all their progress has been saved. If you re-activate
+            the assignment, it will reappear in the assignment view, allowing
+            new submissions as long as the deadline is adjusted accordingly.
           </Typography>
           <Tooltip title={'Undo Complete and Release Assignment'}>
             <Button
@@ -242,7 +260,7 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
       async () => {
         await updateAssignmentStatus(
           'complete',
-          'Successfully Updated Assignment',
+          'Successfully Completed Assignment',
           'Error Updating Assignment'
         );
       }

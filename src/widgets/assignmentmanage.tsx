@@ -9,13 +9,23 @@ import { ReactWidget } from '@jupyterlab/apputils';
 import { closeSnackbar, SnackbarProvider } from 'notistack';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { getRoutes } from '../components/assignment/routes';
-import { loadString } from '../services/storage.service';
 import { Router } from '@remix-run/router';
 import { DialogProvider } from '../components/util/dialog-provider';
 import { Button } from '@mui/material';
 import { GlobalObjects } from '../index';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 10 * 60 * 1000, // 10 mins
+      cacheTime: 15 * 60 * 1000, // 15 mins
+    }  as any,
+  },
+});
 
 export class AssignmentManageView extends ReactWidget {
   /**
@@ -28,7 +38,7 @@ export class AssignmentManageView extends ReactWidget {
     super();
     this.id = options.id || 'assignment-view';
     this.addClass('GradingWidget');
-    this.router = createMemoryRouter(getRoutes(), { initialEntries: ['/'] });
+    this.router = createMemoryRouter(getRoutes(queryClient), { initialEntries: ['/'] });
 
     const themeManager = GlobalObjects.themeManager;
     this.theme = themeManager.isLight(themeManager.theme) ? 'light' : 'dark';
@@ -40,28 +50,31 @@ export class AssignmentManageView extends ReactWidget {
 
   render() {
     return (
-      <ThemeProvider theme={createTheme({ palette: { mode: this.theme } })}>
-        <CssBaseline />
-        <SnackbarProvider
-          maxSnack={3}
-          // the parent of the parent is the main dock panel in JupyterLab
-          domRoot={this.node.parentNode.parentElement}
-          action={snackbarId => (
-            <Button
-              variant="outlined"
-              size="small"
-              style={{ color: 'white', borderColor: 'white' }}
-              onClick={() => closeSnackbar(snackbarId)}
-            >
-              Dismiss
-            </Button>
-          )}
-        >
-          <DialogProvider>
-            <RouterProvider router={this.router} />
-          </DialogProvider>
-        </SnackbarProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        {/* <ReactQueryDevtools initialIsOpen={false} /> */}
+        <ThemeProvider theme={createTheme({ palette: { mode: this.theme } })}>
+          <CssBaseline />
+          <SnackbarProvider
+            maxSnack={3}
+            // the parent of the parent is the main dock panel in JupyterLab
+            domRoot={this.node.parentNode.parentElement}
+            action={snackbarId => (
+              <Button
+                variant="outlined"
+                size="small"
+                style={{ color: 'white', borderColor: 'white' }}
+                onClick={() => closeSnackbar(snackbarId)}
+              >
+                Dismiss
+              </Button>
+            )}
+          >
+            <DialogProvider>
+              <RouterProvider router={this.router} />
+            </DialogProvider>
+          </SnackbarProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     );
   }
 }

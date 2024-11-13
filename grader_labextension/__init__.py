@@ -9,11 +9,9 @@ except ImportError:
     __version__ = "dev"
     
 import asyncio
-from tornado.httpclient import HTTPClientError
 from grader_labextension.registry import HandlerPathRegistry
 from grader_labextension.handlers.base_handler import HandlerConfig
-from traitlets.config.loader import Config
-from grader_labextension.services.request import RequestService
+from grader_labextension.services.request import RequestService, RequestServiceError
 
 
 def _jupyter_labextension_paths():
@@ -62,13 +60,13 @@ def setup_handlers(server_app):
         try:
             response: dict = await request_service.request(
                 "GET",
-                f"{handler_config.service_base_url}/config",
+                f"{handler_config.service_base_url}api/config",
                 header=dict(
-                    Authorization="Token " + HandlerConfig.instance().hub_api_token),
+                    Authorization="Token " + HandlerConfig.instance().grader_api_token),
             )
-        except HTTPClientError as e:
+        except RequestServiceError as e:
             log.error("Error: could not get grader config")
-            log.error(e.response)
+            log.error(e)
             response = dict()
         for key, value in response.items():
             web_app.settings['page_config_data'][key] = value
@@ -81,7 +79,7 @@ def setup_handlers(server_app):
     log.info(f'{web_app.settings["server_root_dir"]=}')
     log.info("base_url: " + base_url)
     handlers = HandlerPathRegistry.handler_list(
-        base_url=base_url + "grader_labextension")
+        base_url=base_url + "grader_labextension/")
     log.info("Subscribed handlers:")
     log.info([str(h[0]) for h in handlers])
 

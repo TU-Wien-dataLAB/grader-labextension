@@ -1,25 +1,13 @@
 import React from 'react';
-import {
-  Box,
-  Card,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Paper,
-  Tooltip,
-  Typography
-} from '@mui/material';
-import { Contents } from '@jupyterlab/services';
-import IModel = Contents.IModel;
-import { Stack, SxProps } from '@mui/system';
+import { Card, List, Paper, Typography } from '@mui/material';
+import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material/styles';
 import {
   getFiles,
   openFile,
   File,
-  extractRelativePathsAssignment,
-  getRelativePathAssignment,
+  extractRelativePaths,
+  getRelativePath,
   lectureBasePath
 } from '../../services/file.service';
 import { grey } from '@mui/material/colors';
@@ -27,6 +15,7 @@ import FileItem from './file-item';
 import FolderItem from './folder-item';
 import { Assignment } from '../../model/assignment';
 import { Lecture } from '../../model/lecture';
+import { useQuery } from '@tanstack/react-query';
 
 interface IFileListProps {
   path: string;
@@ -35,13 +24,22 @@ interface IFileListProps {
   assignment?: Assignment;
   lecture?: Lecture;
   missingFiles?: File[];
+  checkboxes: boolean;
+  onFileSelectChange?: (filePath: string, isSelected: boolean) => void;
+  checkStatus?: boolean; // check if files in list are up to date with remote git repo
 }
 
 export const FilesList = (props: IFileListProps) => {
-  const [files, setFiles] = React.useState([]);
+  const { data: files = [], refetch } = useQuery({
+    queryKey: ['files', props.path],
+    queryFn: () => getFiles(props.path),
+    // Disable automatic refetching, since we want to subscribe directyly on property changes.
+    refetchOnMount: false,
+    refetchInterval: false
+  });
 
   React.useEffect(() => {
-    getFiles(props.path).then(files => setFiles(files));
+    refetch();
   }, [props]);
 
   const inContained = (file: string) => {
@@ -51,9 +49,13 @@ export const FilesList = (props: IFileListProps) => {
     return true;
   };
 
-  const generateItems = (files: File[]) => {
+  const handleFileSelectChange = (filePath: string, isSelected: boolean) => {
+    props.onFileSelectChange(filePath, isSelected);
+  };
+
+  const generateItems = (files: File[], handleFileSelectChange) => {
     const filePaths = files.flatMap(file =>
-      extractRelativePathsAssignment(file)
+      extractRelativePaths(file, 'assignments')
     );
     const missingFiles: File[] =
       (props.shouldContain &&
@@ -72,7 +74,7 @@ export const FilesList = (props: IFileListProps) => {
       [];
 
     const missingFilesTopOrder = missingFiles.filter(missingFile => {
-      const relativePath = getRelativePathAssignment(missingFile.path);
+      const relativePath = getRelativePath(missingFile.path, 'assignments');
       return !relativePath.includes('/');
     });
 
@@ -82,10 +84,15 @@ export const FilesList = (props: IFileListProps) => {
           <FolderItem
             key={file.path}
             folder={file}
+            lecture={props.lecture}
+            assigment={props.assignment}
             missingFiles={missingFiles || []}
             inContained={inContained}
             openFile={openFile}
             allowFiles={props.assignment?.allow_files}
+            checkboxes={props.checkboxes}
+            onFileSelectChange={handleFileSelectChange}
+            checkStatus={props.checkStatus}
           />
         );
       } else {
@@ -93,10 +100,15 @@ export const FilesList = (props: IFileListProps) => {
           <FileItem
             key={file.path}
             file={file}
+            lecture={props.lecture}
+            assignment={props.assignment}
             missingFiles={missingFiles || []}
             inContained={inContained}
             openFile={openFile}
             allowFiles={props.assignment?.allow_files}
+            checkboxes={props.checkboxes}
+            onFileSelectChange={handleFileSelectChange}
+            checkStatus={props.checkStatus}
           />
         );
       }
@@ -113,7 +125,7 @@ export const FilesList = (props: IFileListProps) => {
             No Files Found
           </Typography>
         ) : (
-          <List dense={false}>{generateItems(files)}</List>
+          <List dense={false}>{generateItems(files, props.onFileSelectChange)}</List>
         )}
       </Card>
     </Paper>

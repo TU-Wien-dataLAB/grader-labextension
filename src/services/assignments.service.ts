@@ -15,7 +15,7 @@ export function createAssignment(
 ): Promise<Assignment> {
   return request<Assignment, Assignment>(
     HTTPMethod.POST,
-    `/lectures/${lectureId}/assignments`,
+    `/api/lectures/${lectureId}/assignments`,
     assignment
   );
 }
@@ -25,7 +25,8 @@ export function getAllAssignments(
   reload = false,
   includeSubmissions = false
 ): Promise<AssignmentDetail[]> {
-  let url = `/lectures/${lectureId}/assignments`;
+
+  let url = `/api/lectures/${lectureId}/assignments`;
   if (includeSubmissions) {
     const searchParams = new URLSearchParams({
       'include-submissions': String(includeSubmissions)
@@ -42,7 +43,7 @@ export function getAssignment(
 ): Promise<Assignment> {
   return request<Assignment>(
     HTTPMethod.GET,
-    `/lectures/${lectureId}/assignments/${assignmentId}`,
+    `/api/lectures/${lectureId}/assignments/${assignmentId}`,
     null,
     reload
   );
@@ -55,7 +56,7 @@ export function getAssignmentProperties(
 ): Promise<any> {
   return request<any>(
     HTTPMethod.GET,
-    `/lectures/${lectureId}/assignments/${assignmentId}/properties`,
+    `/api/lectures/${lectureId}/assignments/${assignmentId}/properties`,
     null,
     reload
   );
@@ -67,7 +68,7 @@ export function updateAssignment(
 ): Promise<Assignment> {
   return request<Assignment, Assignment>(
     HTTPMethod.PUT,
-    `/lectures/${lectureId}/assignments/${assignment.id}`,
+    `/api/lectures/${lectureId}/assignments/${assignment.id}`,
     assignment
   );
 }
@@ -78,7 +79,7 @@ export function generateAssignment(
 ): Promise<any> {
   return request<any>(
     HTTPMethod.PUT,
-    `/lectures/${lectureId}/assignments/${assignment.id}/generate`,
+    `/api/lectures/${lectureId}/assignments/${assignment.id}/generate`,
     null
   );
 }
@@ -90,7 +91,7 @@ export function fetchAssignment(
   metadataOnly: boolean = false,
   reload: boolean = false
 ): Promise<Assignment> {
-  let url = `/lectures/${lectureId}/assignments/${assignmentId}`;
+  let url = `/api/lectures/${lectureId}/assignments/${assignmentId}`;
   if (instructor || metadataOnly) {
     const searchParams = new URLSearchParams({
       'instructor-version': String(instructor),
@@ -108,7 +109,7 @@ export function deleteAssignment(
 ): Promise<void> {
   return request<void>(
     HTTPMethod.DELETE,
-    `/lectures/${lectureId}/assignments/${assignmentId}`,
+    `/api/lectures/${lectureId}/assignments/${assignmentId}`,
     null
   );
 }
@@ -117,17 +118,26 @@ export function pushAssignment(
   lectureId: number,
   assignmentId: number,
   repoType: string,
-  commitMessage?: string
+  commitMessage?: string,
+  selectedFiles?: string[]
 ): Promise<void> {
-  let url = `/lectures/${lectureId}/assignments/${assignmentId}/push/${repoType}`;
-  if (commitMessage) {
+  let url = `/api/lectures/${lectureId}/assignments/${assignmentId}/push/${repoType}`;
+  if (commitMessage && commitMessage !== undefined) {
     const searchParams = new URLSearchParams({
       'commit-message': commitMessage
     });
     url += '?' + searchParams;
   }
+  
+  if (selectedFiles && selectedFiles.length > 0) {
+    selectedFiles.forEach(file => {
+      url += `&selected-files=${encodeURIComponent(file)}`;
+    });
+  }
+
   return request<void>(HTTPMethod.PUT, url, null);
 }
+
 
 export function pullAssignment(
   lectureId: number,
@@ -136,7 +146,7 @@ export function pullAssignment(
 ): Promise<void> {
   return request<void>(
     HTTPMethod.GET,
-    `/lectures/${lectureId}/assignments/${assignmentId}/pull/${repoType}`,
+    `/api/lectures/${lectureId}/assignments/${assignmentId}/pull/${repoType}`,
     null
   );
 }
@@ -147,7 +157,7 @@ export function resetAssignment(
 ): Promise<void> {
   return request<void>(
     HTTPMethod.GET,
-    `/lectures/${lecture.id}/assignments/${assignment.id}/reset`,
+    `/api/lectures/${lecture.id}/assignments/${assignment.id}/reset`,
     null
   );
 }

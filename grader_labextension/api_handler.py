@@ -13,6 +13,6 @@ class HealthHandler(ExtensionBaseHandler):
 
     @tornado.web.authenticated
     def get(self):
-        response = "Grader Labextension: Health OK"
+        response = {"health": "OK"}
         self.write(response)
 

@@ -1,24 +1,25 @@
 {
     "name": "grader-labextension",
-    "version": "0.4.0",
+    "version": "0.6.1",
     "description": "Grader Labextension is a JupyterLab extension to enable automatic grading of assignment notebooks.",
     "keywords": [
         "jupyter",
         "jupyterlab",
         "jupyterlab-extension"
     ],
-    "homepage": "https://github.com/TU-Wien-dataLAB/Grader-Labextension",
+    "homepage": "https://github.com/TU-Wien-dataLAB/grader-labextension",
     "bugs": {
-        "url": "https://github.com/TU-Wien-dataLAB/Grader-Labextension/issues"
+        "url": "https://github.com/TU-Wien-dataLAB/grader-labextension/issues"
     },
     "license": "BSD-3-Clause",
     "author": {
-        "name": "Florian Jaeger",
+        "name": "Florian Jaeger, Marijana Petojevic, Matthias Matt",
         "email": "datalab@tuwien.ac.at"
     },
     "files": [
         "lib/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
         "style/**/*.{css,js,eot,gif,html,jpg,json,png,svg,woff2,ttf}",
+        "src/**/*.{ts,tsx}",
         "schema/*.json"
     ],
     "main": "lib/index.js",
@@ -26,7 +27,7 @@
     "style": "style/index.css",
     "repository": {
         "type": "git",
-        "url": "https://github.com/TU-Wien-dataLAB/Grader-Labextension.git"
+        "url": "https://github.com/TU-Wien-dataLAB/grader-labextension.git"
     },
     "scripts": {
         "build": "jlpm build:lib && jlpm build:labextension:dev",
@@ -73,6 +74,7 @@
         "@mui/material": "^5.13.4",
         "@mui/system": "^5.13.2",
         "@mui/x-date-pickers": "^6.19.0",
+        "@tanstack/react-query": "^5.27.5",
         "@types/d3-shape": "^3.1.1",
         "date-fns": "^3.2.0",
         "formik": "^2.4.1",
@@ -91,6 +93,7 @@
     "devDependencies": {
         "@jupyterlab/builder": "^4.0.0",
         "@jupyterlab/testutils": "^4.0.0",
+        "@tanstack/react-query-devtools": "^5.49.2",
         "@types/d3-scale": "^4.0.3",
         "@types/jest": "^29.2.0",
         "@types/json-schema": "^7.0.11",

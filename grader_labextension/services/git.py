@@ -1,18 +1,14 @@
 # Copyright (c) 2022, TU Wien
 # All rights reserved.
 #
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
-
 import enum
 import logging
 import subprocess
+from pathlib import Path
 from typing import List, Dict, Union, Tuple
-from urllib.parse import urlparse, ParseResultBytes
-
+from urllib.parse import urlparse
 from traitlets.config.configurable import Configurable
-from traitlets.config.loader import Config
-from traitlets.traitlets import Int, TraitError, Unicode, validate
+from traitlets.traitlets import Unicode
 import os
 import posixpath
 import shlex
@@ -22,119 +18,151 @@ import sys
 
 
 class GitError(Exception):
-    def __init__(self, error: str):
+    def __init__(self, code: int = 500, error: str = "Unknown Error"):
+        self.code = code
         self.error = error
+        super().__init__(error)
 
-    def __str__(self):
-        return self.error
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-
-class RemoteStatus(enum.Enum):
-    up_to_date = 1
-    pull_needed = 2
-    push_needed = 3
-    divergent = 4
+class RemoteFileStatus(enum.Enum):
+    UP_TO_DATE = 1
+    PULL_NEEDED = 2
+    PUSH_NEEDED = 3
+    DIVERGENT = 4
+    NO_REMOTE_REPO = 5
 
 
 class GitService(Configurable):
-    git_access_token = Unicode(os.environ.get("JUPYTERHUB_API_TOKEN"), allow_none=False).tag(config=True)
-    git_service_url = Unicode(
-        f'{os.environ.get("GRADER_HOST_URL", "http://127.0.0.1:4010")}{os.environ.get("GRADER_GIT_BASE_URL", "/services/grader/git")}',
-        allow_none=False).tag(config=True)
+    DEFAULT_HOST_URL = "http://127.0.0.1:4010"
+    DEFAULT_GIT_URL_PREFIX = "/services/grader/git"
+    _git_version = None
 
+    git_access_token = Unicode(os.environ.get("GRADER_API_TOKEN"), allow_none=False).tag(config=True)
+    git_service_url = Unicode(os.environ.get("GRADER_HOST_URL", DEFAULT_HOST_URL) + os.environ.get("GRADER_GIT_PREFIX", DEFAULT_GIT_URL_PREFIX), allow_none=False).tag(config=True)
     def __init__(self, server_root_dir: str, lecture_code: str, assignment_id: int, repo_type: str,
-                 force_user_repo=False, sub_id=None, username=None, *args, **kwargs):
+                 force_user_repo=False, sub_id=None, username=None, log=logging.getLogger('gitservice'), *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.log = logging.getLogger(str(self.__class__))
-        self._git_version = None
+        self.log = log
         self.git_root_dir = server_root_dir
         self.lecture_code = lecture_code
         self.assignment_id = assignment_id
         self.repo_type = repo_type
-        if self.repo_type == "assignment" or force_user_repo:
-            self.path = os.path.join(self.git_root_dir, self.lecture_code, "assignments", str(self.assignment_id))
-        elif self.repo_type == "edit":
-            if username is not None:
-                self.path = os.path.join(self.git_root_dir, self.lecture_code, "create", str(self.assignment_id), username)
-            else:
-                self.path = os.path.join(self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id), str(sub_id))
-        else:
-            self.path = os.path.join(self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id))
-            
-        self.log.info(f"New git service working in {self.path}")
+
+        self.path = self._determine_repo_path(force_user_repo, sub_id, username)
         os.makedirs(self.path, exist_ok=True)
 
-        self.log.info("git_access_token: " + self.git_access_token)
-        url_parsed = urlparse(self.git_service_url)
-        self.log.info(f"git_service_url: " + self.git_service_url)
-        self.git_http_scheme: str = url_parsed.scheme
-        self.git_remote_url: str = url_parsed.netloc + url_parsed.path
-        self.log.info("git_http_scheme: " + self.git_http_scheme)
-        self.log.info("git_remote_url: " + self.git_remote_url)
+        self._initialize_git_logging()
 
-    def push(self, origin: str, force=False):
-        """Pushes commits on the remote
+    def _determine_repo_path(self, force_user_repo: bool, sub_id: str, username: str) -> str:
+        """Determine the path for the git repository based on the type."""
+        if self.repo_type == "assignment" or force_user_repo:
+            return os.path.join(self.git_root_dir, self.lecture_code, "assignments", str(self.assignment_id))
+        elif self.repo_type == "edit":
+            if username is not None:
+                return os.path.join(self.git_root_dir, self.lecture_code, "create", str(self.assignment_id), username)
+            else:
+                return os.path.join(self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id), str(sub_id))
+        return os.path.join(self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id))
+
+    def _initialize_git_logging(self):
+        """Initialize logging related to git configuration."""
+        self.log.info(f"New git service working in {self.path}")
+        self.git_http_scheme, self.git_remote_url = self._parse_git_service_url()
+        self.log.info(f"git_service_url: {self.git_service_url}")
+
+    def _parse_git_service_url(self) -> Tuple[str, str]:
+        """Parse the git service URL into scheme and remote URL."""
+        url_parsed = urlparse(self.git_service_url)
+        return url_parsed.scheme, f"{url_parsed.netloc}{url_parsed.path}"
+
+    def push(self, origin: str, force: bool = False):
+        """Push commits to the remote repository.
 
         Args:
-            origin (str): the remote
-            force (bool, optional): states if the operation should be forced. Defaults to False.
+            origin (str): The remote repository.
+            force (bool): Whether to force push. Defaults to False.
         """
-        self.log.info(f"Pushing remote {origin} for {self.path}")
+        self.log.info(f"Pushing to remote {origin} at {self.path}")
         self._run_command(f"git push {origin} main" + (" --force" if force else ""), cwd=self.path)
 
-    def set_remote(self, origin: str, sub_id=None):
-        """Set a remote in the local repository
+    def set_remote(self, origin: str, sub_id: str = None):
+        """Set or update the remote repository.
 
         Args:
-            origin (str): the remote
-            sub_id ([type], optional): a query param for the feedback pull. Defaults to None.
+            origin (str): The remote name.
+            sub_id (str): Optional query parameter for feedback pull.
         """
         self.log.info(f"Setting remote {origin} for {self.path}")
         url = posixpath.join(self.git_remote_url, self.lecture_code, str(self.assignment_id), self.repo_type)
+
         try:
-            if sub_id is None:
-                self._run_command(
-                    f"git remote add {origin} {self.git_http_scheme}://oauth:{self.git_access_token}@{url}",
-                    cwd=self.path)
-            else:
-                self.log.info(f"Setting remote with sub_id {sub_id}")
-                self._run_command(
-                    f"git remote add {origin} {self.git_http_scheme}://oauth:{self.git_access_token}@{posixpath.join(url, sub_id)}",
-                    cwd=self.path)
+            self._run_command(f"git remote add {origin} {self._build_remote_url(url, sub_id)}", cwd=self.path)
+        except GitError:
+            self.log.warning(f"Remote {origin} already exists. Updating URL.")
+            self._run_command(f"git remote set-url {origin} {self._build_remote_url(url, sub_id)}", cwd=self.path)
 
-        except GitError as e:
-            self.log.error("GitError:\n" + e.error)
-            self.log.info(f"Remote set: Updating remote {origin} for {self.path}")
-            if sub_id is None:
-                self._run_command(
-                    f"git remote set-url {origin} {self.git_http_scheme}://oauth:{self.git_access_token}@{url}",
-                    cwd=self.path)
-            else:
-                self.log.info(f"Setting remote with sub_id {sub_id}")
-                self._run_command(
-                    f"git remote set-url {origin} {self.git_http_scheme}://oauth:{self.git_access_token}@{posixpath.join(url, sub_id)}",
-                    cwd=self.path)
-
-    def delete_remote(self, origin: str):
-        raise NotImplementedError()
-
-    def switch_branch(self, branch: str):
-        """Switches into another branch
+    def _build_remote_url(self, base_url: str, sub_id: str = None) -> str:
+        """Build the complete remote URL for the git repository.
 
         Args:
-            branch (str): the branch name
+            base_url (str): The base URL of the remote repository.
+            sub_id (str): Optional sub_id for the URL.
+
+        Returns:
+            str: The complete remote URL.
         """
-        self.log.info(f"Fetching all at path {self.path}")
-        self._run_command(f"git fetch --all", cwd=self.path)
-        self.log.info(f"Switching to branch {branch} at path {self.path}")
+        return f"{self.git_http_scheme}://oauth:{self.git_access_token}@{posixpath.join(base_url, sub_id or '')}"
+
+    def switch_branch(self, branch: str):
+        """Switch to the specified branch.
+
+        Args:
+            branch (str): The branch name.
+        """
+        self.log.info(f"Fetching all branches at {self.path}")
+        self._run_command("git fetch --all", cwd=self.path)
+        self.log.info(f"Switching to branch {branch} at {self.path}")
         self._run_command(f"git checkout {branch}", cwd=self.path)
 
     def fetch_all(self):
         self.log.info(f"Fetching all at path {self.path}")
         self._run_command(f"git fetch --all", cwd=self.path)
+        
+    def pull(self, origin: str, branch: str = "main", force: bool = False):
+        """Pull changes from the remote repository.
+
+        Args:
+            origin (str): The remote repository.
+            branch (str): The branch to pull from. Defaults to "main".
+            force (bool): Whether to force the pull. Defaults to False.
+        """
+        self.log.info(f"Pulling from {origin}/{branch} at {self.path}")
+        if not self.remote_branch_exists(origin=origin, branch=branch):
+            raise GitError(404, "Remote repository not found. Please ensure your assignment is pushed to the repository before proceeding.")
+        if force:
+            # clean local changes
+            command = "git clean -fd"
+            self._run_command(command, cwd=self.path)
+            # fetch info
+            command = f"git fetch {origin}"
+            self._run_command(command, cwd=self.path)
+            # reset to branch head
+            command = f"git reset --hard {origin}/{branch}"
+            self._run_command(command, cwd=self.path)
+        else:
+            # just pull the branch
+            command = f"git pull {origin} {branch}"
+            self._run_command(command, cwd=self.path)
+
+    def init(self, force: bool = False):
+        """Initialize a local repository.
+
+        Args:
+            force (bool): Whether to force initialization. Defaults to False.
+        """
+        if not self.is_git() or force:
+            self.log.info(f"Initializing git repository at {self.path}")
+            command = "git init -b main" if self.git_version >= (2, 28) else "git init"
+            self._run_command(command, cwd=self.path)
 
     def go_to_commit(self, commit_hash):
         self.log.info(f"Show commit with hash {commit_hash}")
@@ -145,59 +173,18 @@ class GitService(Configurable):
         self._run_command(f"git reset --hard HEAD~{n}", cwd=self.path)
         self._run_command(f"git gc", cwd=self.path)
 
-
-    def pull(self, origin: str, branch="main", force=False):
-        """Pulls a repository
-
-        Args:
-            origin (str): the remote
-            branch (str, optional): the branch name. Defaults to "main".
-            force (bool, optional): states if the operation should be forced. Defaults to False.
-        """
-        if force:
-            self.log.info(f"Pulling remote {origin}")
-            out = self._run_command(
-                f'sh -c "git clean -fd && git fetch {origin} && git reset --hard {origin}/{branch}"', cwd=self.path,
-                capture_output=True)
-            self.log.info(out)
-            # self._run_command(f'sh -c "git fetch --all && git reset --mixed {origin}/main"',cwd=self.path)
-        else:
-            self._run_command(f"git pull {origin} {branch}", cwd=self.path)
-
-    def init(self, force=False):
-        """Initiates a local repository
-
-        Args:
-            force (bool, optional): states if the operation should be forced. Defaults to False.
-        """
-        if not self.is_git() or force:
-            self.log.info(f"Calling init for {self.path}")
-            if self.git_version < (2, 28):
-                self._run_command(f"git init", cwd=self.path)
-                self._run_command("git checkout -b main", cwd=self.path)
-            else:
-                self._run_command(f"git init -b main", cwd=self.path)
-
-    def is_git(self):
-        """Checks if the directory is a local repository
+    def revert(self, commit_hash: str):
+        self.log.info(f"Reverting to {commit_hash}")
+        self._run_command(f'git revert --no-commit {commit_hash}..HEAD', cwd=self.path)
+        self._run_command(f'git commit -m "reverting to {commit_hash}" --allow-empty', cwd=self.path)
+    
+    def is_git(self) -> bool:
+        """Check if the directory is a git repository.
 
         Returns:
-            bool: states if the directory is a repository
+            bool: True if it's a git repository, False otherwise.
         """
-        return os.path.exists(os.path.join(self.path, ".git"))
-
-    def commit(self, m=str(datetime.now())):
-        """Commits the staged changes
-
-        Args:
-            m (str, optional): the commit message. Defaults to str(datetime.now()).
-        """
-        # self.log.info("Adding all files")
-        # self._run_command(f'git add -A', cwd=self.path)
-        # self.log.info("Committing repository")
-        # self._run_command(f'git commit -m "{m}"', cwd=self.path)
-        self.log.info(f"Adding all files and committing in {self.path}")
-        self._run_command(f'sh -c \'git add -A && git commit --allow-empty -m "{m}"\'', cwd=self.path)
+        return Path(self.path).joinpath(".git").exists()
 
     def set_author(self, author):
         # TODO: maybe ask user to specify their own choices
@@ -215,6 +202,7 @@ class GitService(Configurable):
         self.set_remote(origin=origin)
         self.pull(origin=origin, force=force)
 
+
     def delete_repo_contents(self, include_git=False):
         """Deletes the contents of the git service
 
@@ -231,60 +219,69 @@ class GitService(Configurable):
                     self.log.info(f"Deleted {os.path.join(root, d)} from {self.git_root_dir}")
 
     # Note: dirs_exist_ok was only added in Python 3.8
-    def copy_repo_contents(self, src: str):
+    def copy_repo_contents(self, src: str, selected_files: List[str] = None):
         """copies repo contents from src to the git path
 
         Args:
             src (str): path where the to be copied files reside
         """
-        self.log.info(f"Copying repository contents from {src} to {self.path}")
         ignore = shutil.ignore_patterns(".git", "__pycache__")
-        if sys.version_info.major == 3 and sys.version_info.minor >= 8:
-            shutil.copytree(src, self.path, ignore=ignore, dirs_exist_ok=True)
-        else:
+        if selected_files:
+            self.log.info(f"Copying only selected files from {src} to {self.path}")
             for item in os.listdir(src):
-                s = os.path.join(src, item)
-                d = os.path.join(self.path, item)
-                if os.path.isdir(s):
-                    shutil.copytree(s, d, ignore=ignore)
-                else:
-                    shutil.copy2(s, d)
+                if item in selected_files:
+                    s = os.path.join(src, item)
+                    d = os.path.join(self.path, item)
+                    if os.path.isdir(s):
+                        shutil.copytree(s, d, ignore=ignore)
+                    else:
+                        shutil.copy2(s, d)
+        else:    
+            self.log.info(f"Copying repository contents from {src} to {self.path}")
+            if sys.version_info.major == 3 and sys.version_info.minor >= 8:
+                shutil.copytree(src, self.path, ignore=ignore, dirs_exist_ok=True)
+            else:
+                for item in os.listdir(src):
+                    s = os.path.join(src, item)
+                    d = os.path.join(self.path, item)
+                    if os.path.isdir(s):
+                        shutil.copytree(s, d, ignore=ignore)
+                    else:
+                        shutil.copy2(s, d)
 
-    def check_remote_status(self, origin: str, branch: str) -> RemoteStatus:
+    def check_remote_status(self, origin: str, branch: str) -> RemoteFileStatus:
         untracked, added, modified, deleted = self.git_status(hidden_files=False)
         local_changes = len(untracked) > 0 or len(added) > 0 or len(modified) > 0 or len(deleted) > 0
         if self.local_branch_exists(branch):
-            local = self._run_command(f"git rev-parse {branch}", cwd=self.path, capture_output=True).strip()
+            local = self._run_command(f"git rev-parse {branch}", cwd=self.path).strip()
         else:
             local = None
         if self.remote_branch_exists(origin, branch):
-            remote = self._run_command(f"git rev-parse {origin}/{branch}", cwd=self.path, capture_output=True).strip()
+            remote = self._run_command(f"git rev-parse {origin}/{branch}", cwd=self.path).strip()
         else:
-            if len(untracked) + len(added) + len(modified) == 0:
-                return RemoteStatus.up_to_date  # if we don't have remote and no files we are up-to-date
-            return RemoteStatus.push_needed
+            return RemoteFileStatus.NO_REMOTE_REPO
 
         if local is None and remote:
             if local_changes:
-                return RemoteStatus.divergent
-            return RemoteStatus.pull_needed
+                return RemoteFileStatus.DIVERGENT
+            return RemoteFileStatus.PULL_NEEDED
 
         if local == remote:
             if local_changes:
-                return RemoteStatus.push_needed
-            return RemoteStatus.up_to_date
+                return RemoteFileStatus.PUSH_NEEDED
+            return RemoteFileStatus.UP_TO_DATE
 
-        base = self._run_command(f"git merge-base {branch} {origin}/{branch}", cwd=self.path, capture_output=True).strip()
+        base = self._run_command(f"git merge-base {branch} {origin}/{branch}", cwd=self.path).strip()
 
         if local == base:
-            return RemoteStatus.pull_needed
+            return RemoteFileStatus.PULL_NEEDED
         elif remote == base:
-            return RemoteStatus.push_needed
+            return RemoteFileStatus.PUSH_NEEDED
         else:
-            return RemoteStatus.divergent
+            return RemoteFileStatus.DIVERGENT
 
     def git_status(self, hidden_files: bool = False) -> Tuple[List[str], List[str], List[str], List[str]]:
-        files = self._run_command("git status --porcelain", cwd=self.path, capture_output=True)
+        files = self._run_command("git status --porcelain", cwd=self.path)
         untracked, added, modified, deleted = [], [], [], []
         for line in files.splitlines():
             k, v = line.split(maxsplit=1)
@@ -299,28 +296,41 @@ class GitService(Configurable):
             elif k == "D":
                 deleted.append(v)
         return untracked, added, modified, deleted
+    
+    def check_remote_file_status(self, file_path: str) -> RemoteFileStatus:
+        file_status_list = self._run_command(f"git status --porcelain {file_path}", cwd=self.path).split(maxsplit=1)
+        # Extract the status character from the list
+        if file_status_list:
+            file_status = file_status_list[0]
+        else:
+            # If the list is empty, the file is up-to-date
+            return RemoteFileStatus.UP_TO_DATE
+        # Convert the file status to the corresponding enum value
+        if file_status in {"??", "M", "A", "D"}:
+            return RemoteFileStatus.PUSH_NEEDED
+        else:
+            return RemoteFileStatus.DIVERGENT
 
     def local_branch_exists(self, branch: str) -> bool:
-        ret_code = self._run_command(f"git rev-parse --quiet --verify {branch}", cwd=self.path, check=False).returncode
-        if ret_code == 0:
-            return True
-        else:
+        try:
+            self._run_command(f"git rev-parse --quiet --verify {branch}", cwd=self.path)
+        except GitError as e:
             return False
+        return True
 
     def remote_branch_exists(self, origin: str, branch: str) -> bool:
-        ret_code = self._run_command(f"git ls-remote --exit-code {origin}  {branch}", cwd=self.path,
-                                     check=False).returncode
-        if ret_code == 0:
-            return True
-        else:
+        try:
+            self._run_command(f"git ls-remote --exit-code {origin}  {branch}", cwd=self.path)
+        except GitError as e:
             return False
+        return True
 
     def get_log(self, history_count=10) -> List[Dict[str, str]]:
         """
         Execute git log command & return the result.
         """
         cmd = f'git log --pretty=format:%H%n%an%n%at%n%D%n%s -{history_count}'
-        my_output = self._run_command(cmd, cwd=self.path, capture_output=True)
+        my_output = self._run_command(cmd, cwd=self.path)
 
         result = []
         line_array = my_output.splitlines()
@@ -331,7 +341,7 @@ class GitService(Configurable):
             commit = {
                 "commit": line_array[i],
                 "author": line_array[i + 1],
-                "date": datetime.utcfromtimestamp(int(line_array[i + 2])).isoformat("T", "milliseconds") + "Z",
+                "date": datetime.fromtimestamp(int(line_array[i + 2])).isoformat("T", "milliseconds") + "Z",
                 # "date": line_array[i + 2],
                 "ref": line_array[i + 3],
                 "commit_msg": line_array[i + 4],
@@ -354,37 +364,44 @@ class GitService(Configurable):
         """
         if self._git_version is None:
             try:
-                version = self._run_command("git --version", capture_output=True)
+                version = self._run_command("git --version", cwd=self.path)
             except GitError:
                 return tuple()
             version = version.split(" ")[2]
             self._git_version = tuple([int(v) for v in version.split(".")])
         return self._git_version
 
-    def _run_command(self, command, cwd=None, capture_output=False, check=True) -> Union[str, subprocess.CompletedProcess]:
-        """Starts a sub process and runs a cmd command
+    def commit(self, message: str = str(datetime.now()), selected_files: List[str] = None):
+        """Commit staged changes.
 
         Args:
-            command str: command that is getting run.
-            cwd (str, optional): states where the command is getting run. Defaults to None.
-            capture_output (bool, optional): states if output is getting saved. Defaults to False.
-            check (bool, optional): whether to raise a GitError if process fails.
-        Raises:
-            GitError: returns appropriate git error 
-
-        Returns:
-            str: command output
+            message (str): The commit message. Defaults to the current datetime.
+            selected_files (List[str]): Specific files to commit. Defaults to None.
         """
-        ret = None
+        if selected_files:
+            for file in selected_files:
+                self._run_command(f"git add {shlex.quote(file)}", cwd=self.path)
+        else:
+            self._run_command("git add .", cwd=self.path)
+
+        self.log.info(f"Committing changes with message: {message}")
+        self._run_command(f'git commit --allow-empty -m "{message}"', cwd=self.path)
+
+    def _run_command(self, command: str, cwd: str) -> Union[str, None]:
+        """Run a shell command and return the output.
+
+        Args:
+            command (str): The command to run.
+            cwd (str): The working directory for the command.
+
+        Raises:
+            GitError: If the command fails.
+        """
         try:
-            self.log.info(f"Running: {command}")
-            ret = subprocess.run(shlex.split(command), cwd=cwd, capture_output=True, text=True)
-            ret.check_returncode()
-            if capture_output:
-                return ret.stdout
-            else:
-                return ret
+            self.log.debug(f"Executing command: {command} in {cwd}")
+            result = subprocess.run(command, shell=True, check=True, cwd=cwd, text=True, capture_output=True)
+            return result.stdout
         except subprocess.CalledProcessError as e:
-            raise GitError(ret.stderr.replace("\n", ""))
-        except FileNotFoundError as e:
-            raise GitError(e.strerror)
+            error_message = f"Command '{command}' failed with error: {e.stderr}"
+            self.log.error(error_message)
+            raise GitError(500, error_message)

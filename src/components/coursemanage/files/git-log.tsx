@@ -21,12 +21,17 @@ import {
 } from '@mui/material';
 
 import * as React from 'react';
-import { IGitLogObject } from '../../../services/file.service';
+import { IGitLogObject, getGitLog } from '../../../services/file.service';
 import { utcToLocalFormat } from '../../../services/datetime.service';
 import GitHubIcon from '@mui/icons-material/GitHub';
+import { RepoType } from '../../util/repo-type';
+import { useQuery } from '@tanstack/react-query';
+import { Lecture } from '../../../model/lecture';
+import { Assignment } from '../../../model/assignment';
 
 interface IGitLogProps {
-  gitLogs: IGitLogObject[];
+  lecture: Lecture;
+  assignment: Assignment;
 }
 
 const style = {
@@ -58,15 +63,20 @@ const getTimelineItem = (logItem: IGitLogObject) => {
 };
 
 export const GitLogModal = (props: IGitLogProps) => {
-  const [gitLogs, setGitLogs] = React.useState(props.gitLogs);
-  React.useEffect(() => {
-    setGitLogs(props.gitLogs);
-  }, [props.gitLogs]);
+  const { data: gitLogs = [] as IGitLogObject[], refetch: refetchGitLogs } =
+    useQuery({
+      queryKey: ['gitLogs', props.lecture, props.assignment],
+      queryFn: () =>
+        getGitLog(props.lecture, props.assignment, RepoType.SOURCE, 10)
+    });
 
   const [open, setOpen] = React.useState(false);
-  const handleOpen = () => {
+
+  const handleOpen = async () => {
     setOpen(true);
+    await refetchGitLogs();
   };
+
   const handleClose = () => {
     setOpen(false);
   };

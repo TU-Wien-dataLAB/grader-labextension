@@ -39,6 +39,7 @@ export const Files = (props: IFilesProps) => {
         lecture={props.lecture}
         shouldContain={props.files}
         assignment={props.assignment}
+        checkboxes={false}
       />
     </div>
   );

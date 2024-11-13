@@ -11,16 +11,10 @@ import FolderIcon from '@mui/icons-material/Folder';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { Assignment } from '../../model/assignment';
-import { Lecture } from '../../model/lecture';
-import { Submission } from '../../model/submission';
-import {
-  Link,
-  Outlet,
-  useMatch,
-  useParams,
-  useRouteLoaderData
-} from 'react-router-dom';
+import { Link, Outlet, useMatch, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getAllSubmissions } from '../../services/submissions.service';
+import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 
 function a11yProps(index: any) {
   return {
@@ -30,13 +24,20 @@ function a11yProps(index: any) {
 }
 
 export const AssignmentModalComponent = () => {
-  const { assignment, allSubmissions, latestSubmissions } = useRouteLoaderData(
-    'assignment'
-  ) as {
-    assignment: Assignment;
-    allSubmissions: Submission[];
-    latestSubmissions: Submission[];
-  };
+  const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
+
+  const { data: latestSubmissionsNumber = 0 } = useQuery<number>({
+    queryKey: ['latestSubmissionsNumber', lectureId, assignmentId],
+    queryFn: async () => {
+      const submissions = await getAllSubmissions(
+        lectureId,
+        assignmentId,
+        'latest'
+      );
+      return submissions.length;
+    },
+    enabled: !!lectureId && !!assignmentId
+  });
 
   const params = useParams();
   const match = useMatch(`/lecture/${params.lid}/assignment/${params.aid}/*`);
@@ -101,8 +102,8 @@ export const AssignmentModalComponent = () => {
             icon={
               <Badge
                 color="secondary"
-                badgeContent={latestSubmissions?.length}
-                showZero={latestSubmissions !== null}
+                badgeContent={latestSubmissionsNumber}
+                showZero={latestSubmissionsNumber !== 0}
               >
                 <FormatListNumberedIcon />
               </Badge>

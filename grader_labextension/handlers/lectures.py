@@ -8,18 +8,16 @@ import json
 from grader_labextension.registry import register_handler
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler, cache
 import tornado
-from tornado import web
-from grader_labextension.services.request import RequestService
-from tornado.httpclient import HTTPClientError
+from tornado.web import authenticated, HTTPError
+from grader_labextension.services.request import RequestService, RequestServiceError
 
 
-@register_handler(path=r"\/lectures\/?")
+@register_handler(path=r"api\/lectures\/?")
 class LectureBaseHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures.
     """
-    @web.authenticated
-    @cache(max_age=60)
+    @authenticated
     async def get(self):
         """Sends a GET-request to the grader service and returns the autorized lectures
         """
@@ -29,16 +27,16 @@ class LectureBaseHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures{query_params}",
+                f"{self.service_base_url}api/lectures{query_params}",
                 header=self.grader_authentication_header,
                 response_callback=self.set_service_headers
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise web.HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         self.write(json.dumps(response))
 
-    @web.authenticated
+    @authenticated
     async def post(self):
         """Sends a POST-request to the grader service to create a lecture
         """
@@ -46,22 +44,22 @@ class LectureBaseHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 "POST",
-                f"{self.service_base_url}/lectures",
+                f"{self.service_base_url}api/lectures",
                 body=data,
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise web.HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         self.write(json.dumps(response))
 
 
-@register_handler(path=r"\/lectures\/(?P<lecture_id>\d*)\/?")
+@register_handler(path=r"api\/lectures\/(?P<lecture_id>\d*)\/?")
 class LectureObjectHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}.
     """
-    @web.authenticated
+    @authenticated
     async def put(self, lecture_id: int):
         """Sends a PUT-request to the grader service to update a lecture
 
@@ -73,17 +71,16 @@ class LectureObjectHandler(ExtensionBaseHandler):
         try:
             response_data: dict = await self.request_service.request(
                 "PUT",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 body=data,
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise web.HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         self.write(json.dumps(response_data))
 
-    @web.authenticated
-    @cache(max_age=60)
+    @authenticated
     async def get(self, lecture_id: int):
         """Sends a GET-request to the grader service and returns the lecture
 
@@ -93,16 +90,16 @@ class LectureObjectHandler(ExtensionBaseHandler):
         try:
             response_data: dict = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
                 response_callback=self.set_service_headers
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise web.HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         self.write(json.dumps(response_data))
 
-    @web.authenticated
+    @authenticated
     async def delete(self, lecture_id: int):
         """Sends a DELETE-request to the grader service to delete a lecture
 
@@ -113,23 +110,23 @@ class LectureObjectHandler(ExtensionBaseHandler):
         try:
             await self.request_service.request(
                 "DELETE",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise web.HTTPError(e.code, reason=e.response.reason)
-        self.write("OK")
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
+        self.write({"status": "OK"})
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/users\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/users\/?"
 )
 class LectureStudentsHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/users.
     """
-    @cache(max_age=60)
+    @authenticated
     async def get(self, lecture_id: int):
         """
         Sends a GET request to the grader service and returns attendants of lecture
@@ -139,12 +136,12 @@ class LectureStudentsHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/users/",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/users",
                 header=self.grader_authentication_header,
                 response_callback=self.set_service_headers
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise web.HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
         self.write(json.dumps(response))

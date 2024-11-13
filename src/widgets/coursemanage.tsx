@@ -10,12 +10,15 @@ import { closeSnackbar, SnackbarProvider } from 'notistack';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { getRoutes } from '../components/coursemanage/routes';
 import { Button } from '@mui/material';
-import { loadString } from '../services/storage.service';
 import { Router } from '@remix-run/router';
 import { DialogProvider } from '../components/util/dialog-provider';
 import { GlobalObjects } from '../index';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './assignmentmanage';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
 
 export class CourseManageView extends ReactWidget {
   /**
@@ -40,28 +43,31 @@ export class CourseManageView extends ReactWidget {
 
   render() {
     return (
-      <ThemeProvider theme={createTheme({ palette: { mode: this.theme } })}>
-        <CssBaseline />
-        <SnackbarProvider
-          maxSnack={3}
-          // the parent of the parent is the main dock panel in JupyterLab
-          domRoot={this.node.parentNode.parentElement}
-          action={snackbarId => (
-            <Button
-              variant="outlined"
-              size="small"
-              style={{ color: 'white', borderColor: 'white' }}
-              onClick={() => closeSnackbar(snackbarId)}
-            >
-              Dismiss
-            </Button>
-          )}
-        >
-          <DialogProvider>
-            <RouterProvider router={this.router} />
-          </DialogProvider>
-        </SnackbarProvider>
-      </ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        {/* <ReactQueryDevtools initialIsOpen={false} /> */}
+        <ThemeProvider theme={createTheme({ palette: { mode: this.theme } })}>
+          <CssBaseline />
+          <SnackbarProvider
+            maxSnack={3}
+            // the parent of the parent is the main dock panel in JupyterLab
+            domRoot={this.node.parentNode.parentElement}
+            action={snackbarId => (
+              <Button
+                variant="outlined"
+                size="small"
+                style={{ color: 'white', borderColor: 'white' }}
+                onClick={() => closeSnackbar(snackbarId)}
+              >
+                Dismiss
+              </Button>
+            )}
+          >
+            <DialogProvider>
+              <RouterProvider router={this.router} />
+            </DialogProvider>
+          </SnackbarProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     );
   }
 }

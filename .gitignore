@@ -1,3 +1,4 @@
+.vscode/
 *.bundle.*
 lib/
 node_modules/
@@ -14,6 +15,11 @@ grader_labextension/_version.py
 # Integration tests
 ui-tests/test-results/
 ui-tests/playwright-report/
+
+
+jupyterhub_cookie_secret
+jupyterhub-proxy.pid
+jupyterhub.sqlite
 
 # Created by https://www.gitignore.io/api/python
 # Edit at https://www.gitignore.io/?templates=python

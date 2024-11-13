@@ -5,33 +5,26 @@ import {
   ListItemIcon,
   ListItemText,
   Collapse,
-  Stack,
-  Tooltip,
   Typography,
   List
 } from '@mui/material';
-import { Contents } from '@jupyterlab/services';
-import IModel = Contents.IModel;
 import FolderIcon from '@mui/icons-material/Folder';
 import FileItem from './file-item';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { File, getFiles } from '../../services/file.service';
-
-interface IFolderItemProps {
-  folder: File;
-  inContained: (file: string) => boolean;
-  openFile: (path: string) => void;
-  allowFiles?: boolean;
-  missingFiles?: File[];
-}
+import { getFiles } from '../../services/file.service';
 
 const FolderItem = ({
   folder,
+  lecture,
+  assigment,
   missingFiles,
   inContained,
   openFile,
-  allowFiles
+  allowFiles,
+  checkboxes,
+  onFileSelectChange,
+  checkStatus
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -65,8 +58,6 @@ const FolderItem = ({
     setOpen(!open);
   };
 
-  //console.log("Folder " + folder.name + " contents: " + folder.content.map(f => f.path));
-
   return (
     <>
       <ListItem disablePadding>
@@ -86,19 +77,29 @@ const FolderItem = ({
                 <FolderItem
                   key={file.path}
                   folder={file}
+                  lecture={lecture}
+                  assigment={assigment}
                   missingFiles={missingFiles || []}
                   inContained={inContained}
                   openFile={openFile}
                   allowFiles={allowFiles}
+                  checkboxes={checkboxes}
+                  onFileSelectChange={onFileSelectChange}
+                  checkStatus={checkStatus}
                 />
               ) : (
                 <FileItem
                   key={file.path}
                   file={file}
+                  lecture={lecture}
+                  assignment={assigment}
                   missingFiles={missingFiles || []}
                   inContained={inContained}
                   openFile={openFile}
                   allowFiles={allowFiles}
+                  checkboxes={checkboxes}
+                  onFileSelectChange={onFileSelectChange}
+                  checkStatus={checkStatus}
                 />
               )
             )}

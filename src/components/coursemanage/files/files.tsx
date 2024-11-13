@@ -5,15 +5,16 @@
 // LICENSE file in the root directory of this source tree.
 
 import * as React from 'react';
-import { useEffect } from 'react';
 import { Assignment } from '../../../model/assignment';
 import { Lecture } from '../../../model/lecture';
 import {
   generateAssignment,
+  getAssignment,
   pullAssignment,
   pushAssignment
 } from '../../../services/assignments.service';
 import GetAppRoundedIcon from '@mui/icons-material/GetAppRounded';
+import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser';
 import { CommitDialog } from '../../util/dialog';
 import {
   Box,
@@ -29,7 +30,6 @@ import {
   Tooltip
 } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
-import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
@@ -37,136 +37,107 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { FilesList } from '../../util/file-list';
 import { GlobalObjects } from '../../../index';
 import { Contents } from '@jupyterlab/services';
-import moment from 'moment';
 import { openBrowser, openTerminal } from '../overview/util';
 import { PageConfig } from '@jupyterlab/coreutils';
 import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
 import {
-  IGitLogObject,
-  getGitLog,
   getRemoteStatus,
   lectureBasePath
 } from '../../../services/file.service';
 import { RepoType } from '../../util/repo-type';
 import { enqueueSnackbar } from 'notistack';
-import { GitLogModal } from './git-log';
-import { showDialog } from '../../util/dialog-provider';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getLecture } from '../../../services/lectures.service';
+import { loadString, storeString } from '../../../services/storage.service';
+import { queryClient } from '../../../widgets/assignmentmanage';
+import { RemoteFileStatus } from '../../../model/remoteFileStatus';
+import { GitLogModal } from './git-log';
 
-/**
- * Props for FilesComponent.
- */
 export interface IFilesProps {
   lecture: Lecture;
   assignment: Assignment;
   onAssignmentChange: (assignment: Assignment) => void;
 }
 
-/**
- * Renders in a file list the assignment files.
- * @param props props of the file component
- */
-export const Files = (props: IFilesProps) => {
+export const Files = ({
+  lecture,
+  assignment,
+  onAssignmentChange
+}: IFilesProps) => {
   const navigate = useNavigate();
   const reloadPage = () => navigate(0);
+  const serverRoot = PageConfig.getOption('serverRoot');
 
-  const [assignment, setAssignment] = React.useState(props.assignment);
-  const [lecture, setLecture] = React.useState(props.lecture);
-  const [selectedDir, setSelectedDir] = React.useState('source');
-  const [gitLogs, setGitLog] = React.useState([] as IGitLogObject[]);
-  const [assignmentState, setAssignmentState] = React.useState(assignment);
+  const { data: updatedLecture = lecture } = useQuery({
+    queryKey: ['lecture', lecture.id],
+    queryFn: () => getLecture(lecture.id, true)
+  });
 
-  const updateGitLog = () => {
-    getGitLog(lecture, assignment, RepoType.SOURCE, 10).then(logs =>
-      setGitLog(logs)
-    );
-  };
-  const updateRemoteStatus = async () => {
-    const status = await getRemoteStatus(
-      props.lecture,
-      props.assignment,
-      RepoType.SOURCE,
-      true
-    );
-    setRepoStatus(
-      status as 'up_to_date' | 'pull_needed' | 'push_needed' | 'divergent'
-    );
-  };
-  React.useEffect(() => {
-    updateGitLog();
-  }, [assignmentState]);
+  const { data: updatedAssignment = assignment } = useQuery({
+    queryKey: ['assignment', lecture.id, assignment.id],
+    queryFn: () => getAssignment(lecture.id, assignment.id, true)
+  });
+
+  const { data: selectedDir = 'source', refetch: refetchSelectedDir } =
+    useQuery({
+      queryKey: ['selectedDir'],
+      queryFn: async () => {
+        const data = loadString('files-selected-dir');
+        if (data) {
+          return data as 'source' | 'release';
+        } else {
+          return 'source';
+        }
+      }
+    });
+
+  const { data: repoStatus, refetch: refetchRepoStatus } = useQuery({
+    queryKey: ['repoStatus', lecture.id, assignment.id],
+    queryFn: async () => {
+      const response = await getRemoteStatus(
+        lecture,
+        assignment,
+        RepoType.SOURCE,
+        true
+      );
+      return response.status;
+    }
+  });
 
   openBrowser(
     `${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`
   );
 
-  const [repoStatus, setRepoStatus] = React.useState(
-    null as 'up_to_date' | 'pull_needed' | 'push_needed' | 'divergent'
-  );
-
-  const [srcChangedTimestamp, setSrcChangeTimestamp] = React.useState(
-    moment().valueOf()
-  ); // now
-  const [generateTimestamp, setGenerateTimestamp] = React.useState(null);
-
-  const serverRoot = PageConfig.getOption('serverRoot');
-
-  const isCommitOverwrite = () =>
-    repoStatus === 'pull_needed' || repoStatus === 'divergent';
-  const isPullOverwrite = () =>
-    repoStatus === 'push_needed' || repoStatus === 'divergent';
-
-  useEffect(() => {
+  React.useEffect(() => {
     const srcPath = `${lectureBasePath}${lecture.code}/source/${assignment.id}`;
     GlobalObjects.docManager.services.contents.fileChanged.connect(
       (sender: Contents.IManager, change: Contents.IChangedArgs) => {
         const { oldValue, newValue } = change;
-        if (newValue && !newValue.path.includes(srcPath)) {
+        if (
+          (newValue && !newValue.path.includes(srcPath)) ||
+          (oldValue && !oldValue.path.includes(srcPath))
+        ) {
           return;
-        }
-
-        if (oldValue && !oldValue.path.includes(srcPath)) {
-          return;
-        }
-
-        if (newValue) {
-          const modified = moment(newValue.last_modified).valueOf();
-          if (srcChangedTimestamp === null || srcChangedTimestamp < modified) {
-            setSrcChangeTimestamp(modified);
-          }
         }
         reloadPage();
+        refetchRepoStatus();
       },
       this
     );
-
-    getRemoteStatus(
-      props.lecture,
-      props.assignment,
-      RepoType.SOURCE,
-      true
-    ).then(status => {
-      setRepoStatus(
-        status as 'up_to_date' | 'pull_needed' | 'push_needed' | 'divergent'
-      );
-    });
-  }, [props.assignment, props.lecture]);
+  }, [assignment, lecture]);
 
   /**
    * Switches between source and release directory.
    * @param dir dir which should be switched to
    */
   const handleSwitchDir = async (dir: 'source' | 'release') => {
-    if (
-      dir === 'release' &&
-      (generateTimestamp === null || generateTimestamp < srcChangedTimestamp)
-    ) {
+    if (dir === 'release') {
       await generateAssignment(lecture.id, assignment)
         .then(() => {
           enqueueSnackbar('Generated Student Version Notebooks', {
             variant: 'success'
           });
-          setGenerateTimestamp(moment().valueOf());
           setSelectedDir(dir);
         })
         .catch(error => {
@@ -179,135 +150,72 @@ export const Files = (props: IFilesProps) => {
           );
         });
     } else {
-      setSelectedDir(dir);
+      await setSelectedDir(dir);
     }
   };
 
-  /**
-   * Pushes files to the source und release repo.
-   * @param commitMessage the commit message
-   */
-  const handlePushAssignment = async (commitMessage: string) => {
-    showDialog(
-      'Push Assignment',
-      `Do you want to push ${assignment.name}? This updates the state of the assignment on the server with your local state.`,
-      async () => {
-        try {
-          // Note: has to be in this order (release -> source)
-          await pushAssignment(lecture.id, assignment.id, 'release');
-          await pushAssignment(
-            lecture.id,
-            assignment.id,
-            'source',
-            commitMessage
-          );
-
-          enqueueSnackbar('Successfully Pushed Assignment', {
-            variant: 'success'
-          });
-          reloadPage();
-        } catch (err) {
-          if (err instanceof Error) {
-            enqueueSnackbar('Error Pushing Assignment: ' + err.message, {
-              variant: 'error'
-            });
-          } else {
-            console.error('Error cannot interpret unknown as error', err);
-          }
-          return;
-        }
-      }
-    );
+  const setSelectedDir = async (dir: 'source' | 'release') => {
+    storeString('files-selected-dir', dir);
+    refetchSelectedDir().then(() => {
+      openBrowser(
+        `${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`
+      );
+    });
   };
-  /**
-   * Sets the repo status text.
-   * @param status repo status
-   */
-  const getRemoteStatusText = (
-    status: 'up_to_date' | 'pull_needed' | 'push_needed' | 'divergent'
+
+  const handlePushAssignment = async (
+    commitMessage: string,
+    selectedFiles: string[]
   ) => {
-    if (status === 'up_to_date') {
-      return 'The local files are up to date with the remote repository.';
-    } else if (status === 'pull_needed') {
-      return 'The remote repository has new changes. Pull now to load them.';
-    } else if (status === 'push_needed') {
-      return 'You have made changes to your local repository which you can push.';
-    } else {
-      return 'The local and remote files are divergent.';
+    try {
+      // Note: has to be in this order (release -> source)
+      await pushAssignment(
+        lecture.id,
+        assignment.id,
+        'release',
+        commitMessage,
+        selectedFiles
+      );
+      await pushAssignment(
+        lecture.id,
+        assignment.id,
+        'source',
+        commitMessage,
+        selectedFiles
+      );
+      await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      enqueueSnackbar('Successfully Pushed Assignment', { variant: 'success' });
+      refetchRepoStatus();
+    } catch (err) {
+      enqueueSnackbar(`Error Pushing Assignment: ${err}`, { variant: 'error' });
     }
   };
 
-  const getStatusChip = (
-    status: 'up_to_date' | 'pull_needed' | 'push_needed' | 'divergent'
-  ) => {
-    if (status === 'up_to_date') {
-      return (
-        <Chip
-          sx={{ mb: 1.0 }}
-          label={'Up To Date'}
-          color="success"
-          size="small"
-          icon={<CheckIcon />}
-        />
-      );
-    } else if (status === 'pull_needed') {
-      return (
-        <Chip
-          sx={{ mb: 1.0 }}
-          label={'Pull Needed'}
-          color="warning"
-          size="small"
-          icon={<GetAppRoundedIcon />}
-        />
-      );
-    } else if (status === 'push_needed') {
-      return (
-        <Chip
-          sx={{ mb: 1.0 }}
-          label={'Push Needed'}
-          color="warning"
-          size="small"
-          icon={<PublishRoundedIcon />}
-        />
-      );
-    } else {
-      return (
-        <Chip
-          sx={{ mb: 1.0 }}
-          label={'Divergent'}
-          color="error"
-          size="small"
-          icon={<ErrorOutlineIcon />}
-        />
-      );
+  const handlePullAssignment = async () => {
+    try {
+      await pullAssignment(lecture.id, assignment.id, 'source');
+      enqueueSnackbar('Successfully Pulled Assignment', { variant: 'success' });
+      await refetchRepoStatus();
+    } catch (err) {
+      enqueueSnackbar(`Error Pulling Assignment: ${err}`, { variant: 'error' });
     }
   };
 
-  /**
-   * Pulls changes from source repository.
-   */
-  const handlePullAssignment = () => {
-    showDialog(
-      'Pull Assignment',
-      `Do you want to pull ${assignment.name}? This updates your assignment with the state of the server and overwrites all changes.`,
-      async () => {
-        try {
-          await pullAssignment(lecture.id, assignment.id, 'source');
-          enqueueSnackbar('Successfully Pulled Assignment', {
-            variant: 'success'
-          });
-          reloadPage();
-        } catch (err) {
-          if (err instanceof Error) {
-            enqueueSnackbar('Error Pulling Assignment: ' + err.message, {
-              variant: 'error'
-            });
-          } else {
-            console.error('Error cannot interpret unknown as error', err);
-          }
-        }
-      }
-    );
+  const getRemoteStatusText = (status: RemoteFileStatus.StatusEnum) => {
+    switch (status) {
+      case RemoteFileStatus.StatusEnum.UpToDate:
+        return 'The local files are up to date with the remote repository.';
+      case RemoteFileStatus.StatusEnum.PullNeeded:
+        return 'The remote repository has new changes. Pull now to update your local files.';
+      case RemoteFileStatus.StatusEnum.PushNeeded:
+        return 'You have made changes to your local repository which you can push.';
+      case RemoteFileStatus.StatusEnum.Divergent:
+        return 'The local and remote files are divergent.';
+      case RemoteFileStatus.StatusEnum.NoRemoteRepo:
+        return 'There is no remote repository yet. Push your assignment to create it.';
+      default:
+        return '';
+    }
   };
 
   const newUntitled = async () => {
@@ -315,13 +223,70 @@ export const Files = (props: IFilesProps) => {
       type: 'notebook',
       path: `${lectureBasePath}${lecture.code}/source/${assignment.id}`
     });
-    await updateRemoteStatus();
-    await GlobalObjects.docManager.openOrReveal(res.path);
+    GlobalObjects.docManager.openOrReveal(res.path);
+  };
+
+  const getStatusChip = (status: RemoteFileStatus.StatusEnum) => {
+    // Define the statusMap with allowed `Chip` color values
+    const statusMap: Record<
+      RemoteFileStatus.StatusEnum,
+      {
+        label: string;
+        color:
+          | 'default'
+          | 'primary'
+          | 'secondary'
+          | 'error'
+          | 'warning'
+          | 'info'
+          | 'success';
+        icon: JSX.Element;
+      }
+    > = {
+      UP_TO_DATE: {
+        label: 'Up To Date',
+        color: 'success',
+        icon: <CheckIcon />
+      },
+      PULL_NEEDED: {
+        label: 'Pull Needed',
+        color: 'warning',
+        icon: <GetAppRoundedIcon />
+      },
+      PUSH_NEEDED: {
+        label: 'Push Needed',
+        color: 'warning',
+        icon: <PublishRoundedIcon />
+      },
+      DIVERGENT: {
+        label: 'Divergent',
+        color: 'error',
+        icon: <ErrorOutlineIcon />
+      },
+      NO_REMOTE_REPO: {
+        label: 'No Remote Repository',
+        color: 'primary',
+        icon: <CheckIcon />
+      }
+    };
+
+    // Fallback if the status is not in the statusMap (it should be)
+    const { label, color, icon } = statusMap[status] || {};
+
+    // Return the Chip component with appropriate props or null if status is invalid
+    return label ? (
+      <Chip
+        sx={{ mb: 1 }}
+        label={label}
+        color={color}
+        size="small"
+        icon={icon}
+      />
+    ) : null;
   };
 
   return (
     <Card
-      elevation={3}
       sx={{
         overflowX: 'auto',
         m: 3,
@@ -335,13 +300,13 @@ export const Files = (props: IFilesProps) => {
         titleTypographyProps={{ display: 'inline' }}
         action={
           <Tooltip title="Reload">
-            <IconButton aria-label="reload" onClick={() => reloadPage()}>
+            <IconButton aria-label="reload" onClick={reloadPage}>
               <ReplayIcon />
             </IconButton>
           </Tooltip>
         }
         subheader={
-          repoStatus !== null && (
+          repoStatus && (
             <Tooltip title={getRemoteStatusText(repoStatus)}>
               {getStatusChip(repoStatus)}
             </Tooltip>
@@ -360,45 +325,43 @@ export const Files = (props: IFilesProps) => {
         </Tabs>
         <Box>
           <FilesList
-            path={`${lectureBasePath}${props.lecture.code}/${selectedDir}/${props.assignment.id}`}
+            path={`${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`}
+            lecture={lecture}
+            assignment={assignment}
+            checkboxes={false}
           />
         </Box>
       </CardContent>
       <CardActions sx={{ marginTop: 'auto' }}>
-        <CommitDialog handleCommit={msg => handlePushAssignment(msg)}>
-          <Tooltip
-            title={`Commit Changes${
-              isCommitOverwrite() ? ' (Overwrites remote files!)' : ''
-            }`}
-          >
+        <CommitDialog
+          handleCommit={handlePushAssignment}
+          lecture={lecture}
+          assignment={assignment}
+        >
+          <Tooltip title="Commit Changes">
             <Button
-              sx={{ mt: -1, mr: 1 }}
               variant="outlined"
               size="small"
-              color={isCommitOverwrite() ? 'error' : 'primary'}
+              color="primary"
+              sx={{ mt: -1 }}
             >
               <PublishRoundedIcon fontSize="small" sx={{ mr: 1 }} />
               Push
             </Button>
           </Tooltip>
         </CommitDialog>
-        <Tooltip
-          title={`Pull from Remote${
-            isPullOverwrite() ? ' (Overwrites local changes!)' : ''
-          }`}
-        >
+        <Tooltip title="Pull from Remote">
           <Button
-            color={isPullOverwrite() ? 'error' : 'primary'}
-            sx={{ mt: -1 }}
-            onClick={() => handlePullAssignment()}
             variant="outlined"
             size="small"
+            onClick={handlePullAssignment}
+            sx={{ mt: -1 }}
           >
             <GetAppRoundedIcon fontSize="small" sx={{ mr: 1 }} />
             Pull
           </Button>
         </Tooltip>
-        <Tooltip title={'Create new notebook.'}>
+        <Tooltip title="Create new notebook">
           <Button
             variant="outlined"
             size="small"
@@ -406,10 +369,10 @@ export const Files = (props: IFilesProps) => {
             onClick={newUntitled}
           >
             <AddIcon fontSize="small" sx={{ mr: 1 }} />
-            Add new
+            Create Notebook
           </Button>
         </Tooltip>
-        <GitLogModal gitLogs={gitLogs} />
+        <GitLogModal lecture={lecture} assignment={assignment} />
         <Tooltip title={'Show in File-Browser'}>
           <IconButton
             sx={{ mt: -1, pt: 0, pb: 0 }}

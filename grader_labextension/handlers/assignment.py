@@ -7,23 +7,22 @@
 import json
 import shutil
 
-from tornado.httpclient import HTTPClientError
-from tornado.web import HTTPError
+from tornado.web import HTTPError, authenticated
 
 from grader_labextension.registry import register_handler
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler, cache
-from grader_labextension.services.request import RequestService
+from grader_labextension.services.request import RequestService, RequestServiceError
 import tornado
 import os
 
 
-@register_handler(path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/?")
+@register_handler(path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/?")
 class AssignmentBaseHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments.
     """
 
-    @cache(max_age=30)
+    @authenticated
     async def get(self, lecture_id: int):
         """Sends a GET request to the grader service and returns assignments of the lecture
 
@@ -33,19 +32,19 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments",
                 header=self.grader_authentication_header,
                 response_callback=self.set_service_headers
             )
 
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
         # Create directories for every assignment
         try:
@@ -77,19 +76,19 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="POST",
-                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments",
                 body=data,
                 header=self.grader_authentication_header,
             )
 
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         # if we did not get an error when creating the assignment (i.e. the user is authorized etc.) then we can
         # create the directory structure if it does not exist yet
         os.makedirs(
@@ -108,7 +107,7 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/?"
 )
 class AssignmentObjectHandler(ExtensionBaseHandler):
     """
@@ -128,16 +127,16 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="PUT",
-                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 body=data,
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         self.write(json.dumps(response))
 
-    @cache(max_age=30)
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int):
         """Sends a GET-request to the grader service to get a specific assignment
 
@@ -147,27 +146,21 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
         :type assignment_id: int
         """
 
-        query_params = RequestService.get_query_string(
-            {
-                "instructor-version": self.get_argument("instructor-version", None),
-            }
-        )
-
         try:
             response = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}{query_params}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
                 response_callback=self.set_service_headers
             )
             lecture = await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}/lectures/{lecture_id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
         os.makedirs(
             os.path.expanduser(f'{self.root_dir}/{lecture["code"]}/assignments/{response["id"]}'),
@@ -187,24 +180,25 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
         try:
             await self.request_service.request(
                 method="DELETE",
-                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
                 decode_response=False
             )
-        except HTTPClientError as e:
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            raise HTTPError(e.code, reason=e.message)
             
-        self.write("OK")
+        self.write({"status": "OK"})
 
 
 @register_handler(
-    path=r"\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/properties\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/properties\/?"
 )
 class AssignmentPropertiesHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/properties.
     """
 
+    @authenticated
     async def get(self, lecture_id: int, assignment_id: int):
         """Sends a GET-request to the grader service and returns the properties of an assignment
 
@@ -217,12 +211,12 @@ class AssignmentPropertiesHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}/lectures/{lecture_id}/assignments/{assignment_id}/properties",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/properties",
                 header=self.grader_authentication_header,
                 response_callback=self.set_service_headers
             )
-        except HTTPClientError as e:
-            self.log.error(e.response)
-            raise HTTPError(e.code, reason=e.response.reason)
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
         self.write(json.dumps(response))
 
