@@ -31,7 +31,6 @@ import { Submission } from '../../../model/submission';
 import { showDialog } from '../../util/dialog-provider';
 import AddIcon from '@mui/icons-material/Add';
 import { Link } from 'react-router-dom';
-import { openBrowser } from '../overview/util';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { queryClient } from '../../../widgets/assignmentmanage';
@@ -159,6 +158,9 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
             const row = rows.find(value => value.id === id);
             row.auto_status = 'pending';
             await autogradeSubmission(lecture, assignment, row);
+            await queryClient.invalidateQueries({
+              queryKey: ['submissionLogs', lecture.id, assignment.id, row.id]
+            });
           })
         );
         enqueueSnackbar(`Autograding ${numSelected} submissions!`, {

@@ -172,6 +172,14 @@ export const ManualGrading = () => {
       try {
         await autogradeSubmission(lecture, assignment, submission).then(() => {
           refetchSubmission();
+          queryClient.invalidateQueries({
+            queryKey: [
+              'submissionLogs',
+              lecture.id,
+              assignment.id,
+              submission.id
+            ]
+          });
         });
         enqueueSnackbar('Autograding submission!', {
           variant: 'success'

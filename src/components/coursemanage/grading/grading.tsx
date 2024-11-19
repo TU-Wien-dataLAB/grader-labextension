@@ -7,7 +7,6 @@ import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
-import Typography from '@mui/material/Typography';
 import Checkbox from '@mui/material/Checkbox';
 import { visuallyHidden } from '@mui/utils';
 import { Lecture } from '../../../model/lecture';
@@ -15,22 +14,9 @@ import { Assignment } from '../../../model/assignment';
 import { Outlet, useNavigate, useOutletContext } from 'react-router-dom';
 import { Submission } from '../../../model/submission';
 import { utcToLocalFormat } from '../../../services/datetime.service';
-import {
-  Button,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Stack
-} from '@mui/material';
+import { Chip, IconButton, Stack } from '@mui/material';
 import { SectionTitle } from '../../util/section-title';
-import { enqueueSnackbar } from 'notistack';
-import {
-  getAllSubmissions,
-  getLogs
-} from '../../../services/submissions.service';
+import { getAllSubmissions } from '../../../services/submissions.service';
 import { EnhancedTableToolbar } from './table-toolbar';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import { green } from '@mui/material/colors';
@@ -44,6 +30,7 @@ import { getAssignment } from '../../../services/assignments.service';
 import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
+import { SubmissionLogs } from '../../util/submission-logs';
 
 /**
  * Calculates chip color based on submission status.
@@ -305,33 +292,21 @@ export default function GradingTable() {
       | 'best'
   );
 
-  const [showLogs, setShowLogs] = React.useState(false);
-  const [logs, setLogs] = React.useState(undefined);
-
   const [search, setSearch] = React.useState('');
 
   React.useEffect(() => {
     updateSubmissions(shownSubmissions);
   }, []);
 
-  /**
-   * Opens log dialog which contain autograded logs from grader service.
-   * @param event the click event
-   * @param submissionId submission for which to show logs
-   */
-  const openLogs = (event: React.MouseEvent<unknown>, submissionId: number) => {
-    getLogs(lecture.id, assignment.id, submissionId).then(
-      logs => {
-        setLogs(logs);
-        setShowLogs(true);
-      },
-      error => {
-        enqueueSnackbar('No logs for submission', {
-          variant: 'error'
-        });
-      }
-    );
-    event.stopPropagation();
+  const [open, setOpen] = React.useState(false);
+  const [submissionId, setSubmissionId] = React.useState<number | null>(null);
+  const handleOpenLogs = (event: React.MouseEvent<unknown>, id: number) => {
+    setSubmissionId(id);
+    setOpen(true);
+  };
+  const handleCloseLogs = () => {
+    setSubmissionId(null);
+    setOpen(false);
   };
 
   const updateSubmissions = (filter: 'none' | 'latest' | 'best') => {
@@ -513,7 +488,10 @@ export default function GradingTable() {
                       label={row.auto_status.split('_').join(' ')}
                       color={getColor(row.auto_status)}
                       clickable={true}
-                      onClick={event => openLogs(event, row.id)}
+                      onClick={event => {
+                        event.stopPropagation(); // prevents the event from bubbling up to the TableRow
+                        handleOpenLogs(event, row.id);
+                      }}
                     />
                   </TableCell>
                   <TableCell align="left">{getManualChip(row)}</TableCell>
@@ -546,6 +524,15 @@ export default function GradingTable() {
             )}
           </TableBody>
         </Table>
+        {submissionId && (
+          <SubmissionLogs
+            lectureId={lecture.id}
+            assignmentId={assignment.id}
+            submissionId={submissionId}
+            open={open}
+            onClose={handleCloseLogs}
+          />
+        )}
       </Box>
       <TablePagination
         rowsPerPageOptions={[10, 25, 50]}
@@ -556,25 +543,6 @@ export default function GradingTable() {
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
       />
-      <Dialog
-        open={showLogs}
-        onClose={() => setShowLogs(false)}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">{'Logs'}</DialogTitle>
-        <DialogContent>
-          <Typography
-            id="alert-dialog-description"
-            sx={{ fontSize: 10, fontFamily: "'Roboto Mono', monospace" }}
-          >
-            {logs}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowLogs(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
     </Stack>
   );
 }
