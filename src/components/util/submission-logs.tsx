@@ -91,8 +91,7 @@ export const SubmissionLogs = (props: SubmissionLogsProps) => {
           maxHeight: '80%',
           margin: '5% auto',
           padding: '16px',
-          overflowY: 'auto',
-          fontFamily: "'Roboto Mono', monospace"
+          overflowY: 'auto'
         }}
       >
         <CardHeader title="Logs" />
@@ -113,7 +112,6 @@ export const SubmissionLogs = (props: SubmissionLogsProps) => {
           )}
         </CardContent>
 
-        {/* Card Actions */}
         <CardActions style={{ justifyContent: 'flex-end' }}>
           <Button variant="contained" onClick={props.onClose}>
             Close
