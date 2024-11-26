@@ -14,7 +14,7 @@ import { Assignment } from '../../../model/assignment';
 import { Outlet, useNavigate, useOutletContext } from 'react-router-dom';
 import { Submission } from '../../../model/submission';
 import { utcToLocalFormat } from '../../../services/datetime.service';
-import { Chip, IconButton, Stack } from '@mui/material';
+import { Button, Chip, IconButton, Stack, Tooltip } from '@mui/material';
 import { SectionTitle } from '../../util/section-title';
 import { getAllSubmissions } from '../../../services/submissions.service';
 import { EnhancedTableToolbar } from './table-toolbar';
@@ -31,6 +31,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { SubmissionLogs } from '../../util/submission-logs';
+import AddIcon from '@mui/icons-material/Add';
+import Link from '@mui/material/Link';
 
 /**
  * Calculates chip color based on submission status.
@@ -408,29 +410,18 @@ export default function GradingTable() {
 
   return (
     <Stack sx={{ flex: 1, ml: 5, mr: 5, overflow: 'hidden' }}>
-      <Stack
-        direction={'row'}
-        justifyContent={'flex-end'}
-        alignItems={'center'}
-        spacing={2}
-        sx={{ mb: 2 }}
-      ></Stack>
-      <EnhancedTableToolbar
-        lecture={lecture}
-        assignment={assignment}
-        rows={rows}
-        clearSelection={() => setSelected([])}
-        selected={selected}
-        shownSubmissions={shownSubmissions}
-        switchShownSubmissions={switchShownSubmissions}
-        setSearch={setSearch}
-      />
       <Box sx={{ flex: 1, overflow: 'auto' }}>
-        <Table
-          // sx={{ minWidth: 750 }}
-          aria-labelledby="tableTitle"
-          stickyHeader
-        >
+        <EnhancedTableToolbar
+          lecture={lecture}
+          assignment={assignment}
+          rows={rows}
+          clearSelection={() => setSelected([])}
+          selected={selected}
+          shownSubmissions={shownSubmissions}
+          switchShownSubmissions={switchShownSubmissions}
+          setSearch={setSearch}
+        />
+        <Table aria-labelledby="tableTitle" stickyHeader>
           <EnhancedTableHead
             numSelected={selected.length}
             order={order}
@@ -576,7 +567,24 @@ export const GradingComponent = () => {
 
   return (
     <Stack direction={'column'} sx={{ flex: 1, overflow: 'hidden' }}>
-      <SectionTitle title="Grading" />
+      <Stack
+        direction={'row'}
+        justifyContent={'space-between'}
+        alignItems={'center'}
+        sx={{ m: 2 }}
+      >
+        <SectionTitle title="Grading" />
+        <Tooltip title={'Make submissions for students manually'}>
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            component={Link as any}
+            to={'create'}
+          >
+            New Submission
+          </Button>
+        </Tooltip>
+      </Stack>
       <Outlet
         context={{
           lecture,

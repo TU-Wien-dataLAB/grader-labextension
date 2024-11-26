@@ -207,7 +207,11 @@ export const LectureComponent = () => {
   }
 
   return (
-    <Stack direction={'column'} sx={{ mt: 5, ml: 5, flex: 1 }}>
+    <Stack
+      direction={'column'}
+      overflow={'hidden'}
+      sx={{ mt: 5, ml: 5, flex: 1 }}
+    >
       <Typography variant={'h4'} sx={{ mr: 2 }}>
         {lecture.name}
         {lecture.complete ? (

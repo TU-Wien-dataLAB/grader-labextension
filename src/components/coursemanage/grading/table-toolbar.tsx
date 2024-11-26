@@ -215,22 +215,6 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
 
   return (
     <>
-      <Stack
-        direction={'row'}
-        justifyContent={'flex-end'}
-        alignItems={'center'}
-        spacing={2}
-        sx={{ mb: 1 }}
-      >
-        <Button
-          variant="outlined"
-          startIcon={<AddIcon />}
-          component={Link as any}
-          to={'create'}
-        >
-          New Submission
-        </Button>
-      </Stack>
       <Toolbar
         sx={{
           pl: { sm: 2 },

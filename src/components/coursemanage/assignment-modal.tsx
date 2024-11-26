@@ -5,12 +5,22 @@
 // LICENSE file in the root directory of this source tree.
 
 import * as React from 'react';
-import { Badge, Box, Stack, Tab, Tabs } from '@mui/material';
+import {
+  Badge,
+  Box,
+  IconButton,
+  Stack,
+  Tab,
+  Tabs,
+  Tooltip
+} from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import FolderIcon from '@mui/icons-material/Folder';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import SettingsIcon from '@mui/icons-material/Settings';
+import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
 import { Link, Outlet, useMatch, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getAllSubmissions } from '../../services/submissions.service';
@@ -59,6 +69,8 @@ export const AssignmentModalComponent = () => {
     value = 0;
   }
 
+  const [isExpanded, setIsExpanded] = React.useState(true);
+
   return (
     <Stack flexDirection={'column'} sx={{ flex: 1, overflowY: 'auto' }}>
       <Box
@@ -69,70 +81,106 @@ export const AssignmentModalComponent = () => {
           overflow: 'hidden'
         }}
       >
-        <Tabs
-          orientation="vertical"
-          value={value}
+        <Box
           sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: isExpanded ? 'flex-start' : 'center',
             borderRight: 1,
             borderColor: 'divider',
-            minWidth: '200px',
+            transition: 'min-width 0.3s ease-in-out',
             marginTop: 5
           }}
         >
-          <Tab
-            label="Overview"
-            icon={<DashboardIcon />}
-            iconPosition="start"
-            sx={{ justifyContent: 'flex-start' }}
-            {...a11yProps(0)}
-            component={Link as any}
-            to={''}
-          />
-          <Tab
-            label="Files"
-            icon={<FolderIcon />}
-            iconPosition="start"
-            sx={{ justifyContent: 'flex-start' }}
-            {...a11yProps(1)}
-            component={Link as any}
-            to={'files'}
-          />
-          <Tab
-            label="Submissions"
-            icon={
-              <Badge
-                color="secondary"
-                badgeContent={latestSubmissionsNumber}
-                showZero={latestSubmissionsNumber !== 0}
-              >
-                <FormatListNumberedIcon />
-              </Badge>
-            }
-            iconPosition="start"
-            sx={{ justifyContent: 'flex-start' }}
-            {...a11yProps(2)}
-            component={Link as any}
-            to={'submissions'}
-          />
-          <Tab
-            label="Stats"
-            icon={<QueryStatsIcon />}
-            iconPosition="start"
-            sx={{ justifyContent: 'flex-start' }}
-            {...a11yProps(3)}
-            component={Link as any}
-            to={'stats'}
-          />
-          <Tab
-            label="Settings"
-            icon={<SettingsIcon />}
-            iconPosition="start"
-            sx={{ justifyContent: 'flex-start' }}
-            {...a11yProps(4)}
-            component={Link as any}
-            to={'settings'}
-          />
-        </Tabs>
+          <Tooltip title={isExpanded ? 'Collapse' : 'Expand'}>
+            <IconButton
+              onClick={() => setIsExpanded(!isExpanded)}
+              sx={{
+                alignSelf: isExpanded ? 'flex-start' : 'center'
+              }}
+            >
+              {isExpanded ? (
+                <KeyboardDoubleArrowLeftIcon />
+              ) : (
+                <KeyboardDoubleArrowRightIcon />
+              )}
+            </IconButton>
+          </Tooltip>
+
+          <Tabs
+            orientation="vertical"
+            value={value}
+            sx={{
+              flex: 1,
+              width: '100%',
+              overflow: 'hidden'
+            }}
+          >
+            <Tab
+              label={isExpanded ? 'Overview' : ''}
+              icon={<DashboardIcon />}
+              iconPosition="start"
+              sx={{
+                justifyContent: isExpanded ? 'flex-start' : 'center'
+              }}
+              {...a11yProps(0)}
+              component={Link as any}
+              to={''}
+            />
+            <Tab
+              label={isExpanded ? 'Files' : ''}
+              icon={<FolderIcon />}
+              iconPosition="start"
+              sx={{
+                justifyContent: isExpanded ? 'flex-start' : 'center'
+              }}
+              {...a11yProps(1)}
+              component={Link as any}
+              to={'files'}
+            />
+            <Tab
+              label={isExpanded ? 'Submissions' : ''}
+              icon={
+                <Badge
+                  color="secondary"
+                  badgeContent={latestSubmissionsNumber}
+                  showZero={latestSubmissionsNumber !== 0}
+                >
+                  <FormatListNumberedIcon />
+                </Badge>
+              }
+              iconPosition="start"
+              sx={{
+                justifyContent: isExpanded ? 'flex-start' : 'center'
+              }}
+              {...a11yProps(2)}
+              component={Link as any}
+              to={'submissions'}
+            />
+            <Tab
+              label={isExpanded ? 'Stats' : ''}
+              icon={<QueryStatsIcon />}
+              iconPosition="start"
+              sx={{
+                justifyContent: isExpanded ? 'flex-start' : 'center'
+              }}
+              {...a11yProps(3)}
+              component={Link as any}
+              to={'stats'}
+            />
+            <Tab
+              label={isExpanded ? 'Settings' : ''}
+              icon={<SettingsIcon />}
+              iconPosition="start"
+              sx={{
+                justifyContent: isExpanded ? 'flex-start' : 'center'
+              }}
+              {...a11yProps(4)}
+              component={Link as any}
+              to={'settings'}
+            />
+          </Tabs>
+        </Box>
         <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
           <Outlet />
         </Box>

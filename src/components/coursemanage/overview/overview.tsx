@@ -74,7 +74,7 @@ export const OverviewComponent = () => {
   };
 
   return (
-    <Box sx={{ flex: 1, overflow: 'auto' }}>
+    <Box sx={{ m: 5, flex: 1, overflow: 'auto' }}>
       <SectionTitle title={assignment.name}></SectionTitle>
       <Box sx={{ ml: 3, mr: 3, mb: 3, mt: 3 }}>
         <Grid container spacing={3}>
