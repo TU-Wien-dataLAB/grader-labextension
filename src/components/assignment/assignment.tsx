@@ -155,7 +155,7 @@ export const AssignmentComponent = () => {
         refetchSubleft();
       });
     }
-  }, [lecture, assignment]);
+  }, [lecture, assignment, submissions.length]);
 
   if (
     isLoadingAssignment ||
