@@ -25,6 +25,7 @@ import { Link, Outlet, useMatch, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getAllSubmissions } from '../../services/submissions.service';
 import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
+import { loadBoolean, storeBoolean } from '../../services/storage.service';
 
 function a11yProps(index: any) {
   return {
@@ -69,7 +70,13 @@ export const AssignmentModalComponent = () => {
     value = 0;
   }
 
-  const [isExpanded, setIsExpanded] = React.useState(true);
+  const [isExpanded, setIsExpanded] = React.useState<boolean>(() => {
+    return loadBoolean('isExpanded') ?? true;
+  });
+
+  React.useEffect(() => {
+    storeBoolean('isExpanded', isExpanded);
+  }, [isExpanded]);
 
   return (
     <Stack flexDirection={'column'} sx={{ flex: 1, overflowY: 'auto' }}>

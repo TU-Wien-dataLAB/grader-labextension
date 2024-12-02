@@ -78,14 +78,14 @@ export const OverviewComponent = () => {
       <SectionTitle title={assignment.name}></SectionTitle>
       <Box sx={{ ml: 3, mr: 3, mb: 3, mt: 3 }}>
         <Grid container spacing={3}>
-          <Grid item xs={12} sm={12} md={6} lg={6} xl={7}>
+          <Grid item xs={12} sm={12} md={12} lg={7} xl={8}>
             <AssignmentStatus
               lecture={lecture}
               assignment={assignment}
               onAssignmentChange={onAssignmentChange}
             />
           </Grid>
-          <Grid item xs={12} sm={12} md={6} lg={6} xl={5}>
+          <Grid item xs={12} sm={12} md={12} lg={5} xl={4}>
             <OverviewCard
               lecture={lecture}
               assignment={assignment}
