@@ -14,7 +14,10 @@ import { ScoreDistribution } from './score-distribution';
 import { getLecture, getUsers } from '../../../services/lectures.service';
 import { GradeBook } from '../../../services/gradebook';
 import { AssignmentScore } from './assignment-score';
-import { getAssignment, getAssignmentProperties } from '../../../services/assignments.service';
+import {
+  getAssignment,
+  getAssignmentProperties
+} from '../../../services/assignments.service';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { useQuery } from '@tanstack/react-query';
 
@@ -38,44 +41,66 @@ export const StatsComponent = () => {
 
   const { data: lecture, isLoading: isLoadingLecture } = useQuery({
     queryKey: ['lecture', lectureId],
-    queryFn: () => getLecture(lectureId), 
-    enabled: !!lectureId, 
+    queryFn: () => getLecture(lectureId),
+    enabled: !!lectureId
   });
 
   const { data: assignment, isLoading: isLoadingAssignment } = useQuery({
     queryKey: ['assignment', assignmentId],
-    queryFn: () => getAssignment(lectureId, assignmentId), 
-    enabled: !!lectureId && !!assignmentId, 
+    queryFn: () => getAssignment(lectureId, assignmentId),
+    enabled: !!lectureId && !!assignmentId
   });
 
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['users', lectureId],
     queryFn: () => getUsers(lectureId),
-    enabled: !!lectureId, 
+    enabled: !!lectureId
   });
 
-  const { data: allSubmissions = [], isLoading: isLoadingAllSubmissions } = useQuery({
-    queryKey: ['allSubmissions', lectureId, assignmentId],
-    queryFn: () => getAllSubmissions(lectureId, assignmentId, 'none', true),
-    enabled: !!lectureId && !!assignmentId, 
-  });
+  const { data: allSubmissions = [], isLoading: isLoadingAllSubmissions } =
+    useQuery({
+      queryKey: ['allSubmissions', lectureId, assignmentId],
+      queryFn: () => getAllSubmissions(lectureId, assignmentId, 'none', true),
+      enabled: !!lectureId && !!assignmentId
+    });
 
-  const { data: latestSubmissions = [], isLoading: isLoadingLatestSubmissions } = useQuery({
+  const {
+    data: latestSubmissions = [],
+    isLoading: isLoadingLatestSubmissions
+  } = useQuery({
     queryKey: ['latestSubmissions', lectureId, assignmentId],
     queryFn: () => getAllSubmissions(lectureId, assignmentId, 'latest', true),
-    enabled: !!lectureId && !!assignmentId, 
+    enabled: !!lectureId && !!assignmentId
   });
 
   const [allSubmissionsState, setAllSubmissionsState] = React.useState([]);
-  const [latestSubmissionsState, setLatestSubmissionsState] = React.useState([]);
+  const [latestSubmissionsState, setLatestSubmissionsState] = React.useState(
+    []
+  );
   const [gb, setGb] = React.useState(null);
-  const [usersState, setUsersState] = React.useState({ students: [], tutors: [], instructors: [] });
+  const [usersState, setUsersState] = React.useState({
+    students: [],
+    tutors: [],
+    instructors: []
+  });
 
   const updateSubmissions = async () => {
-    const newAllSubmissions = await getAllSubmissions(lectureId, assignmentId, 'none', true);
-    const newLatestSubmissions = await getAllSubmissions(lectureId, assignmentId, 'latest', true);
+    const newAllSubmissions = await getAllSubmissions(
+      lectureId,
+      assignmentId,
+      'none',
+      true
+    );
+    const newLatestSubmissions = await getAllSubmissions(
+      lectureId,
+      assignmentId,
+      'latest',
+      true
+    );
     const newUsers = await getUsers(lectureId);
-    const newGb = new GradeBook(await getAssignmentProperties(lectureId, assignmentId));
+    const newGb = new GradeBook(
+      await getAssignmentProperties(lectureId, assignmentId)
+    );
 
     setAllSubmissionsState(newAllSubmissions);
     setLatestSubmissionsState(newLatestSubmissions);
@@ -109,7 +134,13 @@ export const StatsComponent = () => {
     }
   }, [lecture, assignment]);
 
-  if (isLoadingLecture || isLoadingAssignment || isLoadingUsers || isLoadingAllSubmissions || isLoadingLatestSubmissions) {   
+  if (
+    isLoadingLecture ||
+    isLoadingAssignment ||
+    isLoadingUsers ||
+    isLoadingAllSubmissions ||
+    isLoadingLatestSubmissions
+  ) {
     return (
       <div>
         <Card>

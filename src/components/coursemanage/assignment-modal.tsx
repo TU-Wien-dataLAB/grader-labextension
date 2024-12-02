@@ -112,7 +112,6 @@ export const AssignmentModalComponent = () => {
             value={value}
             sx={{
               flex: 1,
-              width: '100%',
               overflow: 'hidden'
             }}
           >
