@@ -96,7 +96,7 @@ export const AssignmentModalComponent = () => {
             <IconButton
               onClick={() => setIsExpanded(!isExpanded)}
               sx={{
-                alignSelf: isExpanded ? 'flex-start' : 'center'
+                alignSelf: isExpanded ? 'flex-end' : 'center'
               }}
             >
               {isExpanded ? (
@@ -116,69 +116,42 @@ export const AssignmentModalComponent = () => {
               overflow: 'hidden'
             }}
           >
-            <Tab
-              label={isExpanded ? 'Overview' : ''}
-              icon={<DashboardIcon />}
-              iconPosition="start"
-              sx={{
-                justifyContent: isExpanded ? 'flex-start' : 'center'
-              }}
-              {...a11yProps(0)}
-              component={Link as any}
-              to={''}
-            />
-            <Tab
-              label={isExpanded ? 'Files' : ''}
-              icon={<FolderIcon />}
-              iconPosition="start"
-              sx={{
-                justifyContent: isExpanded ? 'flex-start' : 'center'
-              }}
-              {...a11yProps(1)}
-              component={Link as any}
-              to={'files'}
-            />
-            <Tab
-              label={isExpanded ? 'Submissions' : ''}
-              icon={
-                <Badge
-                  color="secondary"
-                  badgeContent={latestSubmissionsNumber}
-                  showZero={latestSubmissionsNumber !== 0}
-                >
-                  <FormatListNumberedIcon />
-                </Badge>
-              }
-              iconPosition="start"
-              sx={{
-                justifyContent: isExpanded ? 'flex-start' : 'center'
-              }}
-              {...a11yProps(2)}
-              component={Link as any}
-              to={'submissions'}
-            />
-            <Tab
-              label={isExpanded ? 'Stats' : ''}
-              icon={<QueryStatsIcon />}
-              iconPosition="start"
-              sx={{
-                justifyContent: isExpanded ? 'flex-start' : 'center'
-              }}
-              {...a11yProps(3)}
-              component={Link as any}
-              to={'stats'}
-            />
-            <Tab
-              label={isExpanded ? 'Settings' : ''}
-              icon={<SettingsIcon />}
-              iconPosition="start"
-              sx={{
-                justifyContent: isExpanded ? 'flex-start' : 'center'
-              }}
-              {...a11yProps(4)}
-              component={Link as any}
-              to={'settings'}
-            />
+            {[
+              { label: 'Overview', icon: <DashboardIcon />, link: '' },
+              { label: 'Files', icon: <FolderIcon />, link: 'files' },
+              {
+                label: 'Submissions',
+                icon: (
+                  <Badge
+                    color="secondary"
+                    badgeContent={latestSubmissionsNumber}
+                    showZero={latestSubmissionsNumber !== 0}
+                  >
+                    <FormatListNumberedIcon />
+                  </Badge>
+                ),
+                link: 'submissions'
+              },
+              { label: 'Stats', icon: <QueryStatsIcon />, link: 'stats' },
+              { label: 'Settings', icon: <SettingsIcon />, link: 'settings' }
+            ].map((tab, index) => (
+              <Tab
+                key={index}
+                label={isExpanded ? tab.label : ''}
+                icon={tab.icon}
+                iconPosition="start"
+                sx={{
+                  justifyContent: isExpanded ? 'flex-start' : 'center',
+                  padding: isExpanded ? '8px 16px' : '4px',
+                  minWidth: isExpanded ? 160 : 48,
+                  minHeight: 48,
+                  mr: 1
+                }}
+                {...a11yProps(index)}
+                component={Link as any}
+                to={tab.link}
+              />
+            ))}
           </Tabs>
         </Box>
         <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
