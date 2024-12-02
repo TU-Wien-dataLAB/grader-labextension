@@ -345,64 +345,14 @@ export const SettingsComponent = () => {
             </Stack>
           </Stack>
         </Stack>
-        <Stack direction={'row'} spacing={2} sx={{ mt: 2 }}>
-          <Button
-            sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
-            color="primary"
-            variant="contained"
-            type="submit"
-          >
-            Save changes
-          </Button>
-          <Box sx={{ flex: '1 1 100%' }}></Box>
-          <Tooltip
-            title={
-              assignment.status === 'released' ||
-              assignment.status === 'complete'
-                ? 'Released or Completed Assignments cannot be deleted'
-                : `Delete Assignment ${assignment.name}`
-            }
-          >
-            <span>
-              {' '}
-              {/* span because of https://mui.com/material-ui/react-tooltip/#disabled-elements */}
-              <Button
-                sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
-                aria-label="delete assignment"
-                size={'small'}
-                color={'error'}
-                variant="contained"
-                disabled={
-                  assignment.status === 'released' ||
-                  assignment.status === 'complete'
-                }
-                onClick={e => {
-                  showDialog(
-                    'Delete Assignment',
-                    'Do you wish to delete this assignment?',
-                    async () => {
-                      try {
-                        await deleteAssignment(lecture.id, assignment.id);
-                        await updateMenus(true);
-                        enqueueSnackbar('Successfully Deleted Assignment', {
-                          variant: 'success'
-                        });
-                        navigate(`/lecture/${lecture.id}`);
-                      } catch (error: any) {
-                        enqueueSnackbar(error.message, {
-                          variant: 'error'
-                        });
-                      }
-                    }
-                  );
-                  e.stopPropagation();
-                }}
-              >
-                Delete Assignment
-              </Button>
-            </span>
-          </Tooltip>
-        </Stack>
+        <Button
+          sx={{ whiteSpace: 'nowrap', minWidth: 'auto', mt: 2 }}
+          color="primary"
+          variant="contained"
+          type="submit"
+        >
+          Save changes
+        </Button>
       </form>
     </Box>
   );
