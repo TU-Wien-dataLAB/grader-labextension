@@ -83,12 +83,7 @@ export const GitLogModal = (props: IGitLogProps) => {
   return (
     <React.Fragment>
       <Tooltip title={'Show Git Log'}>
-        <Button
-          onClick={handleOpen}
-          variant="outlined"
-          size="small"
-          sx={{ mt: -1 }}
-        >
+        <Button onClick={handleOpen} variant="outlined" size="small" sx={{ml: 1}}>
           <GitHubIcon fontSize="small" sx={{ mr: 1 }} />
           Git Log
         </Button>

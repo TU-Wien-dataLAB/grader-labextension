@@ -24,10 +24,12 @@ import {
   CardContent,
   CardHeader,
   Chip,
+  Divider,
   IconButton,
-  Tab,
-  Tabs,
-  Tooltip
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography
 } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
 import TerminalIcon from '@mui/icons-material/Terminal';
@@ -132,6 +134,9 @@ export const Files = ({
    * @param dir dir which should be switched to
    */
   const handleSwitchDir = async (dir: 'source' | 'release') => {
+    if (dir === selectedDir) {
+      return;
+    }
     if (dir === 'release') {
       await generateAssignment(lecture.id, assignment)
         .then(() => {
@@ -288,15 +293,17 @@ export const Files = ({
   return (
     <Card
       sx={{
-        overflowX: 'auto',
+        overflow: 'hidden',
         m: 3,
         flex: 1,
+        borderRadius: 2,
+        boxShadow: 3,
         display: 'flex',
         flexDirection: 'column'
       }}
     >
       <CardHeader
-        title="Files"
+        title="Manage Assignment Files"
         titleTypographyProps={{ display: 'inline' }}
         action={
           <Tooltip title="Reload">
@@ -314,91 +321,146 @@ export const Files = ({
         }
         subheaderTypographyProps={{ display: 'inline', ml: 2 }}
       />
-      <CardContent sx={{ overflow: 'auto' }}>
-        <Tabs
-          variant="fullWidth"
+      <Divider />
+      <Box
+        sx={{
+          display: 'flex',
+          width: '100%',
+          spacing: 2,
+          alignItems: 'center'
+        }}
+      >
+        <ToggleButtonGroup
           value={selectedDir}
+          exclusive
           onChange={(e, dir) => handleSwitchDir(dir)}
+          aria-label="View toggle"
+          sx={{ flex: 1, display: 'flex', padding: 2 }}
         >
-          <Tab label="Source" value="source" />
-          <Tab label="Release" value="release" />
-        </Tabs>
-        <Box>
-          <FilesList
-            path={`${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`}
-            lecture={lecture}
-            assignment={assignment}
-            checkboxes={false}
-          />
-        </Box>
-      </CardContent>
-      <CardActions sx={{ marginTop: 'auto' }}>
-        <CommitDialog
-          handleCommit={handlePushAssignment}
+          <ToggleButton
+            value="source"
+            aria-label="Source code view"
+            disabled={selectedDir === 'source'}
+            sx={{
+              flex: 1,
+              '&.Mui-selected': {
+                color: 'primary.main',
+                fontWeight: 'bold'
+              }
+            }}
+          >
+            Source Code
+          </ToggleButton>
+          <ToggleButton
+            value="release"
+            aria-label="Student version view"
+            disabled={selectedDir === 'release'}
+            sx={{
+              flex: 1,
+              '&.Mui-selected': {
+                color: 'primary.main',
+                fontWeight: 'bold'
+              }
+            }}
+          >
+            Student Version
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
+      <Divider />
+
+      <CardContent sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
+        <FilesList
+          path={`${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`}
           lecture={lecture}
           assignment={assignment}
-        >
-          <Tooltip title="Commit Changes">
+          checkboxes={false}
+        />
+      </CardContent>
+
+      <Divider />
+
+      <CardActions
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          padding: 2
+        }}
+      >
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <CommitDialog
+            handleCommit={handlePushAssignment}
+            lecture={lecture}
+            assignment={assignment}
+          >
+            <Tooltip title="Commit changes to the repository">
+              <Button
+                variant={
+                  repoStatus === 'PUSH_NEEDED' ? 'contained' : 'outlined'
+                }
+                size="small"
+                color={repoStatus === 'PUSH_NEEDED' ? 'warning' : 'primary'}
+              >
+                <PublishRoundedIcon fontSize="small" sx={{ mr: 1 }} />
+                Push Changes
+              </Button>
+            </Tooltip>
+          </CommitDialog>
+          <Tooltip title="Pull the latest changes from the repository">
             <Button
-              variant="outlined"
+              variant={repoStatus === 'PULL_NEEDED' ? 'contained' : 'outlined'}
               size="small"
-              color="primary"
-              sx={{ mt: -1 }}
+              color={repoStatus === 'PULL_NEEDED' ? 'warning' : 'primary'}
+              onClick={handlePullAssignment}
             >
-              <PublishRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-              Push
+              <GetAppRoundedIcon fontSize="small" sx={{ mr: 1 }} />
+              Pull Changes
             </Button>
           </Tooltip>
-        </CommitDialog>
-        <Tooltip title="Pull from Remote">
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handlePullAssignment}
-            sx={{ mt: -1 }}
-          >
-            <GetAppRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-            Pull
-          </Button>
-        </Tooltip>
-        <Tooltip title="Create new notebook">
-          <Button
-            variant="outlined"
-            size="small"
-            sx={{ mt: -1 }}
-            onClick={newUntitled}
-          >
-            <AddIcon fontSize="small" sx={{ mr: 1 }} />
-            Create Notebook
-          </Button>
-        </Tooltip>
-        <GitLogModal lecture={lecture} assignment={assignment} />
-        <Tooltip title={'Show in File-Browser'}>
-          <IconButton
-            sx={{ mt: -1, pt: 0, pb: 0 }}
-            color={'primary'}
-            onClick={() =>
-              openBrowser(
-                `${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`
-              )
-            }
-          >
-            <OpenInBrowserIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={'Open in Terminal'}>
-          <IconButton
-            sx={{ mt: -1, pt: 0, pb: 0 }}
-            color={'primary'}
-            onClick={() =>
-              openTerminal(
-                `${serverRoot}/${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`
-              )
-            }
-          >
-            <TerminalIcon />
-          </IconButton>
-        </Tooltip>
+        </Box>
+
+        <Box
+          sx={{
+            alignItems: 'center'
+          }}
+        >
+          <Tooltip title="Create a new Jupyter Notebook">
+            <Button variant="outlined" size="small" onClick={newUntitled}>
+              <AddIcon fontSize="small" sx={{ mr: 1 }} />
+              New Notebook
+            </Button>
+          </Tooltip>
+
+          <GitLogModal lecture={lecture} assignment={assignment} />
+
+          <Tooltip title="Open the current folder in the file browser">
+            <IconButton
+              color="primary"
+              onClick={() =>
+                openBrowser(
+                  `${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`
+                )
+              }
+            >
+              <OpenInBrowserIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Open the current folder in the terminal">
+            <IconButton
+              color="primary"
+              onClick={() =>
+                openTerminal(
+                  `${serverRoot}/${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`
+                )
+              }
+            >
+              <TerminalIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </CardActions>
     </Card>
   );
