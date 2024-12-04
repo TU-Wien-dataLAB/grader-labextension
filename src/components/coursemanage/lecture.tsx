@@ -13,7 +13,8 @@ import {
   TableRow,
   Typography,
   Tooltip,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
 import * as React from 'react';
 import { Assignment } from '../../model/assignment';
@@ -37,6 +38,7 @@ import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 import { useQuery } from '@tanstack/react-query';
 import { AssignmentDetail } from '../../model/assignmentDetail';
 import { queryClient } from '../../widgets/assignmentmanage';
+import CheckIcon from '@mui/icons-material/Check';
 
 interface IAssignmentTableProps {
   lecture: Lecture;
@@ -229,16 +231,13 @@ export const LectureComponent = () => {
       <Typography variant={'h4'} sx={{ mr: 2 }}>
         {lecture.name}
         {lecture.complete ? (
-          <Typography
-            sx={{
-              display: 'inline-block',
-              ml: 0.75,
-              fontSize: 16,
-              color: red[400]
-            }}
-          >
-            complete
-          </Typography>
+          <Chip
+            sx={{ ml: 1 }}
+            label={'Complete'}
+            color="error"
+            size="small"
+            icon={<CheckIcon />}
+          />
         ) : null}
       </Typography>
       <Stack

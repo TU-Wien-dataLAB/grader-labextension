@@ -36,7 +36,9 @@ import {
   Snackbar,
   Modal,
   Alert,
-  AlertTitle
+  AlertTitle,
+  FormControl,
+  Switch
 } from '@mui/material';
 import { Assignment } from '../../model/assignment';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
@@ -119,11 +121,15 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
   const formik = useFormik({
     initialValues: {
       name: props.lecture.name,
-      complete: props.lecture.complete
+      active: !props.lecture.complete
     },
     validationSchema: validationSchemaLecture,
     onSubmit: values => {
-      const updatedLecture: Lecture = Object.assign(props.lecture, values);
+      const updatedLecture: Lecture = {
+        ...props.lecture,
+        ...values,
+        complete: !values.active
+      };
       props.handleSubmit(updatedLecture);
       setOpen(false);
     }
@@ -131,6 +137,7 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
 
   const { open, handleClose } = props;
   const [openDialog, setOpen] = React.useState(false);
+
   const openDialogFunction = () => {
     setOpen(true);
   };
@@ -140,15 +147,13 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
       <EditLectureNameTooltip
         title={
           props.lecture.code === props.lecture.name ? (
-            <React.Fragment>
+            <>
               <Typography color="inherit">Edit Lecture</Typography>
-              {'Note: '}{' '}
               <em>
-                {
-                  'Lecture name is currently the same as lecture code. You should edit it to make it more readable.'
-                }
+                "Lecture name matches the code. Consider making it more
+                descriptive."
               </em>
-            </React.Fragment>
+            </>
           ) : (
             'Edit Lecture'
           )
@@ -159,46 +164,73 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
             e.stopPropagation();
             openDialogFunction();
           }}
-          onMouseDown={event => event.stopPropagation()}
           aria-label="edit"
         >
           <SettingsIcon />
         </IconButton>
       </EditLectureNameTooltip>
+
       <Dialog
         open={open || openDialog}
         onBackdropClick={() => {
           setOpen(false);
           handleClose();
         }}
+        fullWidth
+        maxWidth="sm"
       >
         <DialogTitle>Edit Lecture</DialogTitle>
         <form onSubmit={formik.handleSubmit}>
           <DialogContent>
-            <Stack spacing={2}>
-              <TextField
-                variant="outlined"
-                fullWidth
-                id="name"
-                name="name"
-                label="Lecture Name"
-                value={formik.values.name}
-                onChange={formik.handleChange}
-                error={formik.touched.name && Boolean(formik.errors.name)}
-                helperText={formik.touched.name && formik.errors.name}
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    value={formik.values.complete}
-                    checked={formik.values.complete}
-                    onChange={e => {
-                      formik.setFieldValue('complete', e.target.checked);
-                    }}
-                  />
-                }
-                label="Complete"
-              />
+            <Stack spacing={4}>
+              <Stack spacing={1}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Rename Lecture
+                </Typography>
+                <TextField
+                  variant="outlined"
+                  fullWidth
+                  id="name"
+                  name="name"
+                  label="Lecture Name"
+                  value={formik.values.name}
+                  onChange={formik.handleChange}
+                  error={formik.touched.name && Boolean(formik.errors.name)}
+                  helperText={formik.touched.name && formik.errors.name}
+                />
+                {props.lecture.code === props.lecture.name && (
+                  <Typography variant="body2" color="text.secondary">
+                    The current name matches the lecture code. Consider updating
+                    updating it to something more descriptive.
+                  </Typography>
+                )}
+              </Stack>
+
+              <Stack spacing={1}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Lecture Status
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formik.values.active}
+                      onChange={e => {
+                        formik.setFieldValue('active', e.target.checked);
+                      }}
+                    />
+                  }
+                  label={
+                    formik.values.active
+                      ? 'Lecture is Active'
+                      : 'Lecture is Complete'
+                  }
+                />
+                <Typography variant="body2" color="text.secondary">
+                  {formik.values.active
+                    ? 'This lecture is live, and students can actively participate in it.'
+                    : "This lecture is inactive and removed from your and your students' active lectures list."}
+                </Typography>
+              </Stack>
             </Stack>
           </DialogContent>
           <DialogActions>
@@ -212,14 +244,8 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
             >
               Cancel
             </Button>
-
-            <Button
-              color="primary"
-              variant="contained"
-              type="submit"
-              onClick={handleClose}
-            >
-              Submit
+            <Button color="primary" variant="contained" type="submit">
+              Save
             </Button>
           </DialogActions>
         </form>

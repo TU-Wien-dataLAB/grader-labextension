@@ -12,7 +12,8 @@ import {
   Stack,
   TableCell,
   TableRow,
-  Typography
+  Typography,
+  Chip
 } from '@mui/material';
 import { red, blue, green, grey } from '@mui/material/colors';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -37,6 +38,7 @@ import {
 } from '../../services/assignments.service';
 import { showDialog } from '../util/dialog-provider';
 import EditOffIcon from '@mui/icons-material/EditOff';
+import CheckIcon from '@mui/icons-material/Check';
 import { getFiles, lectureBasePath } from '../../services/file.service';
 import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../services/lectures.service';
@@ -380,16 +382,13 @@ export const LectureComponent = () => {
       <Typography variant={'h4'} sx={{ mb: 2 }}>
         {lecture.name}
         {lecture.complete ? (
-          <Typography
-            sx={{
-              display: 'inline-block',
-              ml: 0.75,
-              fontSize: 16,
-              color: red[400]
-            }}
-          >
-            complete
-          </Typography>
+          <Chip
+            sx={{ ml: 1 }}
+            label={'Complete'}
+            color="error"
+            size="small"
+            icon={<CheckIcon />}
+          />
         ) : null}
       </Typography>
       <Stack>
