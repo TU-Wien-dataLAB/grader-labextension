@@ -337,34 +337,46 @@ export const Files = ({
           aria-label="View toggle"
           sx={{ flex: 1, display: 'flex', padding: 2 }}
         >
-          <ToggleButton
-            value="source"
-            aria-label="Source code view"
-            disabled={selectedDir === 'source'}
-            sx={{
-              flex: 1,
-              '&.Mui-selected': {
-                color: 'primary.main',
-                fontWeight: 'bold'
-              }
-            }}
+          <Tooltip
+            title={
+              'Source code version of notebooks with grading cells. Add notebooks or files to the file browser, and they will appear in the file list below. You can edit your notebooks, add grading cells, assign points, and create tests for your students.'
+            }
           >
-            Source Code
-          </ToggleButton>
-          <ToggleButton
-            value="release"
-            aria-label="Student version view"
-            disabled={selectedDir === 'release'}
-            sx={{
-              flex: 1,
-              '&.Mui-selected': {
-                color: 'primary.main',
-                fontWeight: 'bold'
-              }
-            }}
+            <ToggleButton
+              value="source"
+              aria-label="Source code view"
+              disabled={selectedDir === 'source'}
+              sx={{
+                flex: 1,
+                '&.Mui-selected': {
+                  color: 'primary.main',
+                  fontWeight: 'bold'
+                }
+              }}
+            >
+              Source Code
+            </ToggleButton>
+          </Tooltip>
+          <Tooltip
+            title={
+              'Clicking this button displays a preview of the student version of the source notebooks. The notebooks will be shown in the file list below the way students will see them.'
+            }
           >
-            Student Version
-          </ToggleButton>
+            <ToggleButton
+              value="release"
+              aria-label="Student version view"
+              disabled={selectedDir === 'release'}
+              sx={{
+                flex: 1,
+                '&.Mui-selected': {
+                  color: 'primary.main',
+                  fontWeight: 'bold'
+                }
+              }}
+            >
+              Student Version
+            </ToggleButton>
+          </Tooltip>
         </ToggleButtonGroup>
       </Box>
 
