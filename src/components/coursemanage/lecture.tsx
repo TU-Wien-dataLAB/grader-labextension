@@ -57,96 +57,110 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
 
   return (
     <>
-      <GraderTable<Assignment>
-        headers={headers}
-        rows={props.rows}
-        rowFunc={row => {
-          return (
-            <TableRow
-              key={row.name}
-              component={ButtonTr}
-              onClick={() =>
-                navigate(`/lecture/${props.lecture.id}/assignment/${row.id}`)
-              }
-            >
-              <TableCell component="th" scope="row">
-                <Typography variant={'subtitle2'} sx={{ fontSize: 16 }}>
-                  {row.name}
-                </Typography>
-              </TableCell>
-              <TableCell>{row.points}</TableCell>
-              <TableCell>
-                <DeadlineComponent
-                  component={'chip'}
-                  due_date={row.due_date}
-                  compact={true}
-                />
-              </TableCell>
-              <TableCell>{row.status}</TableCell>
-              <TableCell>
-                <IconButton aria-label="detail view" size={'small'}>
-                  <SearchIcon />
-                </IconButton>
-              </TableCell>
-              <TableCell>
-                <Tooltip
-                  title={
-                    row.status === 'released' || row.status === 'complete'
-                      ? 'Released or Completed Assignments cannot be deleted'
-                      : `Delete Assignment ${row.name}`
-                  }
-                >
-                  <span>
-                    {' '}
-                    {/* span because of https://mui.com/material-ui/react-tooltip/#disabled-elements */}
-                    <IconButton
-                      aria-label="delete assignment"
-                      size={'small'}
-                      disabled={
-                        row.status === 'released' || row.status === 'complete'
-                      }
-                      onClick={e => {
-                        showDialog(
-                          'Delete Assignment',
-                          'Do you wish to delete this assignment?',
-                          async () => {
-                            try {
-                              await deleteAssignment(props.lecture.id, row.id);
-                              await updateMenus(true);
-                              enqueueSnackbar(
-                                'Successfully Deleted Assignment',
-                                {
-                                  variant: 'success'
-                                }
-                              );
-                              props.refreshAssignments();
-                            } catch (error: any) {
-                              enqueueSnackbar(error.message, {
-                                variant: 'error'
-                              });
+      {props.rows.length === 0 ? (
+        <Typography
+          variant="body1"
+          align="center"
+          color="text.secondary"
+          sx={{ mt: 2 }}
+        >
+          No assignments available. Please add one.
+        </Typography>
+      ) : (
+        <GraderTable<Assignment>
+          headers={headers}
+          rows={props.rows}
+          rowFunc={row => {
+            return (
+              <TableRow
+                key={row.name}
+                component={ButtonTr}
+                onClick={() =>
+                  navigate(`/lecture/${props.lecture.id}/assignment/${row.id}`)
+                }
+              >
+                <TableCell component="th" scope="row">
+                  <Typography variant={'subtitle2'} sx={{ fontSize: 16 }}>
+                    {row.name}
+                  </Typography>
+                </TableCell>
+                <TableCell>{row.points}</TableCell>
+                <TableCell>
+                  <DeadlineComponent
+                    component={'chip'}
+                    due_date={row.due_date}
+                    compact={true}
+                  />
+                </TableCell>
+                <TableCell>{row.status}</TableCell>
+                <TableCell>
+                  <IconButton aria-label="detail view" size={'small'}>
+                    <SearchIcon />
+                  </IconButton>
+                </TableCell>
+                <TableCell>
+                  <Tooltip
+                    title={
+                      row.status === 'released' || row.status === 'complete'
+                        ? 'Released or Completed Assignments cannot be deleted'
+                        : `Delete Assignment ${row.name}`
+                    }
+                  >
+                    <span>
+                      {' '}
+                      {/* span because of https://mui.com/material-ui/react-tooltip/#disabled-elements */}
+                      <IconButton
+                        aria-label="delete assignment"
+                        size={'small'}
+                        disabled={
+                          row.status === 'released' || row.status === 'complete'
+                        }
+                        onClick={e => {
+                          showDialog(
+                            'Delete Assignment',
+                            'Do you wish to delete this assignment?',
+                            async () => {
+                              try {
+                                await deleteAssignment(
+                                  props.lecture.id,
+                                  row.id
+                                );
+                                await updateMenus(true);
+                                enqueueSnackbar(
+                                  'Successfully Deleted Assignment',
+                                  {
+                                    variant: 'success'
+                                  }
+                                );
+                                props.refreshAssignments();
+                              } catch (error: any) {
+                                enqueueSnackbar(error.message, {
+                                  variant: 'error'
+                                });
+                              }
                             }
-                          }
-                        );
-                        e.stopPropagation();
-                      }}
-                    >
-                      <CloseIcon
-                        sx={{
-                          color:
-                            row.status === 'released' ||
-                            row.status === 'complete'
-                              ? grey[500]
-                              : red[500]
+                          );
+                          e.stopPropagation();
                         }}
-                      />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </TableCell>
-            </TableRow>
-          );
-        }}
-      />
+                      >
+                        <CloseIcon
+                          sx={{
+                            color:
+                              row.status === 'released' ||
+                              row.status === 'complete'
+                                ? grey[500]
+                                : red[500]
+                          }}
+                        />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            );
+          }}
+        />
+      )}
     </>
   );
 };
