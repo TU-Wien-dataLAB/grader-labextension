@@ -151,7 +151,14 @@ export const StatsComponent = () => {
   }
 
   return (
-    <Box sx={{ flex: 1, overflow: 'auto' }}>
+    <Box
+      sx={{
+        flex: 1,
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
       <SectionTitle title={`${assignment.name} Stats`}>
         <Box sx={{ ml: 2 }} display="inline-block">
           <Tooltip title="Reload">
@@ -161,18 +168,46 @@ export const StatsComponent = () => {
           </Tooltip>
         </Box>
       </SectionTitle>
-      <Box sx={{ ml: 3, mr: 3, mb: 3, mt: 3 }}>
-        <Grid container spacing={2} alignItems="stretch">
-          <Grid xs={12}>
-            <SubmissionTimeSeries
-              lecture={lecture}
-              assignment={assignment}
-              allSubmissions={allSubmissionsState}
-              latestSubmissions={latestSubmissionsState}
-              users={usersState}
-            />
-          </Grid>
-          <Grid md={12} lg={4}>
+      <Box
+        sx={{
+          ml: 3,
+          mr: 3,
+          mb: 3,
+          mt: 3,
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gap: '24px'
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gridColumn: '1 / -1'
+          }}
+        >
+          <SubmissionTimeSeries
+            lecture={lecture}
+            assignment={assignment}
+            allSubmissions={allSubmissionsState}
+            latestSubmissions={latestSubmissionsState}
+            users={usersState}
+          />
+        </Box>
+
+        <Box
+          sx={{
+            display: 'flex',
+            gap: '24px',
+            flexWrap: 'wrap'
+          }}
+        >
+          <Box
+            sx={{
+              flex: '1 1 calc(33.333% - 24px)',
+              minWidth: '300px'
+            }}
+          >
             <GradingProgress
               lecture={lecture}
               assignment={assignment}
@@ -180,8 +215,13 @@ export const StatsComponent = () => {
               latestSubmissions={latestSubmissionsState}
               users={usersState}
             />
-          </Grid>
-          <Grid md={12} lg={4}>
+          </Box>
+          <Box
+            sx={{
+              flex: '1 1 calc(33.333% - 24px)',
+              minWidth: '300px'
+            }}
+          >
             <StudentSubmissions
               lecture={lecture}
               assignment={assignment}
@@ -189,20 +229,32 @@ export const StatsComponent = () => {
               latestSubmissions={latestSubmissionsState}
               users={usersState}
             />
-          </Grid>
-          <Grid md={12} lg={4}>
+          </Box>
+          <Box
+            sx={{
+              flex: '1 1 calc(33.333% - 24px)',
+              minWidth: '300px'
+            }}
+          >
             <AssignmentScore gb={gb} />
-          </Grid>
-          <Grid xs={12}>
-            <ScoreDistribution
-              lecture={lecture}
-              assignment={assignment}
-              allSubmissions={allSubmissionsState}
-              latestSubmissions={latestSubmissionsState}
-              users={usersState}
-            />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gridColumn: '1 / -1'
+          }}
+        >
+          <ScoreDistribution
+            lecture={lecture}
+            assignment={assignment}
+            allSubmissions={allSubmissionsState}
+            latestSubmissions={latestSubmissionsState}
+            users={usersState}
+          />
+        </Box>
       </Box>
     </Box>
   );

@@ -97,6 +97,8 @@ export const OverviewComponent = () => {
       >
         <Box
           sx={{
+            gridColumn: 'span 2',
+            flex: 2,
             display: 'flex',
             flexDirection: 'column'
           }}
@@ -107,8 +109,11 @@ export const OverviewComponent = () => {
             onAssignmentChange={onAssignmentChange}
           />
         </Box>
+
         <Box
           sx={{
+            gridColumn: 'span 1',
+            flex: 1,
             display: 'flex',
             flexDirection: 'column'
           }}
