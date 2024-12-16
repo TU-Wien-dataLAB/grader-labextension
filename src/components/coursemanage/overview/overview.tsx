@@ -74,26 +74,52 @@ export const OverviewComponent = () => {
   };
 
   return (
-    <Box sx={{ m: 5, flex: 1, overflow: 'auto' }}>
-      <SectionTitle title={assignment.name}></SectionTitle>
-      <Box sx={{ ml: 3, mr: 3, mb: 3, mt: 3 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={12} md={12} lg={7} xl={8}>
-            <AssignmentStatus
-              lecture={lecture}
-              assignment={assignment}
-              onAssignmentChange={onAssignmentChange}
-            />
-          </Grid>
-          <Grid item xs={12} sm={12} md={12} lg={5} xl={4}>
-            <OverviewCard
-              lecture={lecture}
-              assignment={assignment}
-              latestSubmissions={latestSubmissionsNumber}
-              students={students}
-            />
-          </Grid>
-        </Grid>
+    <Box
+      sx={{
+        m: 5,
+        flex: 1,
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      <SectionTitle title={assignment.name} />
+      <Box
+        sx={{
+          ml: 3,
+          mr: 3,
+          mb: 3,
+          mt: 5,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '24px'
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <AssignmentStatus
+            lecture={lecture}
+            assignment={assignment}
+            onAssignmentChange={onAssignmentChange}
+          />
+        </Box>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <OverviewCard
+            lecture={lecture}
+            assignment={assignment}
+            latestSubmissions={latestSubmissionsNumber}
+            students={students}
+          />
+        </Box>
       </Box>
     </Box>
   );
