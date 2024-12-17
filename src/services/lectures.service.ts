@@ -55,3 +55,12 @@ export function getUsers(
     students: string[];
   }>(HTTPMethod.GET, `/api/lectures/${lectureId}/users`, null, reload);
 }
+
+export async function getAllLectureSubmissions(
+  lectureId: number,
+  filter: 'latest' | 'best' = 'best',
+  format: 'json' | 'csv' = 'csv'
+): Promise<any> {
+  const url = `/api/lectures/${lectureId}/submissions?filter=${filter}&format=${format}`;
+  return request<any>(HTTPMethod.GET, url, null);
+}

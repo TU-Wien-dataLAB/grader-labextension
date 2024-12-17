@@ -123,8 +123,17 @@ class RequestService(SingletonConfigurable):
         try:
             response: HTTPResponse = await self.http_client.fetch(request=request)
             self.log.info(f"Received response with status {response.code} from {response.effective_url}")
+
             if decode_response:
-                response_data = json.loads(response.body)
+                # Check the Content-Type of the response
+                content_type = response.headers.get("Content-Type", "")
+                if "application/json" in content_type:
+                    response_data = json.loads(response.body)
+                elif "text/csv" in content_type or "text/plain" in content_type:
+                    response_data = response.body.decode("utf-8")
+                else:
+                    # Fallback: return as plain text
+                    response_data = response.body.decode("utf-8")
             else:
                 response_data = response
 

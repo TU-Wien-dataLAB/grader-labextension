@@ -17,6 +17,7 @@ class LectureBaseHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures.
     """
+
     @authenticated
     async def get(self):
         """Sends a GET-request to the grader service and returns the autorized lectures
@@ -59,6 +60,7 @@ class LectureObjectHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}.
     """
+
     @authenticated
     async def put(self, lecture_id: int):
         """Sends a PUT-request to the grader service to update a lecture
@@ -126,6 +128,7 @@ class LectureStudentsHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/users.
     """
+
     @authenticated
     async def get(self, lecture_id: int):
         """
@@ -145,3 +148,57 @@ class LectureStudentsHandler(ExtensionBaseHandler):
             raise HTTPError(e.code, reason=e.message)
 
         self.write(json.dumps(response))
+
+
+def get_content_type_from_response(response):
+    """
+    Extract Content-Type from raw response string containing headers.
+    """
+    lines = response.split("\n")  # Split the response into lines
+    for line in lines:
+        if "Content-Type" in line:  # Look for the Content-Type header
+            key, value = line.split(":", 1)  # Split key and value
+            return value.strip()  # Return the Content-Type value, stripped of whitespace
+    return ""  # Default if Content-Type is not found
+
+
+@register_handler(path=r"api\/lectures\/(?P<lecture_id>\d*)\/submissions\/?")
+class SubmissionLectureHandler(ExtensionBaseHandler):
+    """"
+    Tornado Handler class for http requests to /lectures/{lecture_id}/submissions
+    """
+
+    @authenticated
+    async def get(self, lecture_id: int):
+        """Return the submissions of a specific lecture.
+
+         Two query parameter:
+         1 - filter
+         latest: only get the latest submissions of users.
+         best: only get the best submissions by score of users.
+
+         2 - format:
+         csv: return list as comma separated values
+         json: return list as JSON
+
+         :param lecture_id: id of the lecture
+         :type lecture_id: int
+         :raises HTTPError: throws err if user is not authorized or
+         the assignment was not found
+         """
+        query_params = RequestService.get_query_string({
+            "filter": self.get_argument("filter", "best"),
+            "format": self.get_argument("format", "json")
+        })
+        try:
+            response = await self.request_service.request(
+                "GET",
+                f"{self.service_base_url}api/lectures/{lecture_id}/submissions{query_params}",
+                header=self.grader_authentication_header,
+                response_callback=self.set_service_headers
+            )
+
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
+        self.write(response)

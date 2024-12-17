@@ -18,7 +18,6 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
-  DialogContentText,
   IconButton,
   Checkbox,
   FormControlLabel,
@@ -29,7 +28,6 @@ import {
   Card,
   CardActionArea,
   Box,
-  InputAdornment,
   TooltipProps,
   tooltipClasses,
   Typography,
@@ -50,8 +48,6 @@ import TypeEnum = Assignment.TypeEnum;
 import AutomaticGradingEnum = Assignment.AutomaticGradingEnum;
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import AddIcon from '@mui/icons-material/Add';
-import { Simulate } from 'react-dom/test-utils';
-import error = Simulate.error;
 import { enqueueSnackbar } from 'notistack';
 import { showDialog } from './dialog-provider';
 import styled from '@mui/system/styled';
@@ -66,6 +62,9 @@ import {
 } from '../../services/file.service';
 import InfoIcon from '@mui/icons-material/Info';
 import { queryClient } from '../../widgets/assignmentmanage';
+import { getAllLectureSubmissions } from '../../services/lectures.service';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import { saveAs } from 'file-saver';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -768,5 +767,119 @@ export const ReleaseDialog = (props: IReleaseDialogProps) => {
         </DialogActions>
       </Dialog>
     </div>
+  );
+};
+
+interface IExportDialogProps {
+  lecture: Lecture;
+}
+
+export const ExportGradesForLectureDialog = ({
+  lecture
+}: IExportDialogProps) => {
+  const [openDialog, setOpenDialog] = React.useState(false);
+  const [filter, setFilter] = React.useState<'latest' | 'best'>('best');
+  const [format, setFormat] = React.useState<'json' | 'csv'>('json');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleExport = async () => {
+    setLoading(true);
+    try {
+      const response = await getAllLectureSubmissions(
+        lecture.id,
+        filter,
+        format
+      );
+
+      if (format === 'csv') {
+        const blob = new Blob([response as string], {
+          type: 'text/csv;charset=utf-8;'
+        });
+        saveAs(blob, `${filter}_submissions_${lecture.name}.csv`);
+
+        enqueueSnackbar('CSV export completed successfully!', {
+          variant: 'success'
+        });
+      } else {
+        const blob = new Blob([JSON.stringify(response, null, 2)], {
+          type: 'application/json;charset=utf-8;'
+        });
+        saveAs(blob, `${filter}_submissions_${lecture.name}.json`);
+
+        enqueueSnackbar('JSON export completed successfully!', {
+          variant: 'success'
+        });
+      }
+    } catch (error: any) {
+      console.error('Error exporting submissions:', error);
+      enqueueSnackbar(error.message || 'Failed to export submissions.', {
+        variant: 'error'
+      });
+    } finally {
+      setLoading(false);
+      setOpenDialog(false);
+    }
+  };
+
+  return (
+    <>
+      <Tooltip title="Export grades of all assignments in this lecture in one file.">
+        <IconButton
+          aria-label="Export grades"
+          size="small"
+          sx={{ ml: 2 }}
+          onClick={() => setOpenDialog(true)}
+        >
+          <TrendingUpIcon />
+        </IconButton>
+      </Tooltip>
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth>
+        <DialogTitle>Export Grades</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Filter</InputLabel>
+            <Select
+              value={filter}
+              onChange={e => setFilter(e.target.value as 'latest' | 'best')}
+              label="Filter"
+            >
+              <MenuItem value="latest">Latest Submissions</MenuItem>
+              <MenuItem value="best">Best Submissions</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Format</InputLabel>
+            <Select
+              value={format}
+              onChange={e => setFormat(e.target.value as 'json' | 'csv')}
+              label="Format"
+            >
+              <MenuItem value="json">JSON</MenuItem>
+              <MenuItem value="csv">CSV</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() => setOpenDialog(false)}
+            color="primary"
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleExport}
+            color="primary"
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? 'Exporting...' : 'Export'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };

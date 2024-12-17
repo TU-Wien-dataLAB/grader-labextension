@@ -111,7 +111,6 @@ export function getAllSubmissions(
   return request<Submission[]>(HTTPMethod.GET, url, null, reload);
 }
 
-
 export function getFeedback(
   lecture: Lecture,
   assignment: Assignment,
@@ -229,5 +228,10 @@ export async function getSubmissionCount(
   assignmentId: number
 ): Promise<{ submission_count: number }> {
   const url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/count`;
-  return request<{ submission_count: number }>(HTTPMethod.GET, url, null, false);
+  return request<{ submission_count: number }>(
+    HTTPMethod.GET,
+    url,
+    null,
+    false
+  );
 }

@@ -23,7 +23,11 @@ import {
   deleteAssignment,
   getAllAssignments
 } from '../../services/assignments.service';
-import { CreateDialog, EditLectureDialog } from '../util/dialog';
+import {
+  CreateDialog,
+  EditLectureDialog,
+  ExportGradesForLectureDialog
+} from '../util/dialog';
 import { getLecture, updateLecture } from '../../services/lectures.service';
 import { red, grey } from '@mui/material/colors';
 import { enqueueSnackbar } from 'notistack';
@@ -230,6 +234,7 @@ export const LectureComponent = () => {
     >
       <Typography variant={'h4'} sx={{ mr: 2 }}>
         {lecture.name}
+        <ExportGradesForLectureDialog lecture={lecture} />
         {lecture.complete ? (
           <Chip
             sx={{ ml: 1 }}
