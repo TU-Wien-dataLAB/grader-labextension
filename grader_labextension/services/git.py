@@ -170,7 +170,7 @@ class GitService(Configurable):
 
     def undo_commit(self, n: int = 1) -> None:
         self.log.info(f"Undoing {n} commit(s)")
-        self._run_command(f"git reset --hard HEAD~{n}", cwd=self.path)
+        self._run_command(f"git reset --mixed HEAD~{n}", cwd=self.path)
         self._run_command(f"git gc", cwd=self.path)
 
     def revert(self, commit_hash: str):
