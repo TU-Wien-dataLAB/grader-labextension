@@ -63,7 +63,7 @@ import {
 import InfoIcon from '@mui/icons-material/Info';
 import { queryClient } from '../../widgets/assignmentmanage';
 import { getAllLectureSubmissions } from '../../services/lectures.service';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
 import { saveAs } from 'file-saver';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
@@ -215,6 +215,29 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
                       checked={formik.values.active}
                       onChange={e => {
                         formik.setFieldValue('active', e.target.checked);
+                      }}
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: formik.values.active
+                            ? 'primary.main'
+                            : 'error.main'
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                          {
+                            backgroundColor: formik.values.active
+                              ? 'primary.main'
+                              : 'error.main'
+                          },
+                        '& .MuiSwitch-switchBase': {
+                          color: !formik.values.active
+                            ? 'error.main'
+                            : undefined
+                        },
+                        '& .MuiSwitch-track': {
+                          backgroundColor: !formik.values.active
+                            ? 'error.main'
+                            : undefined
+                        }
                       }}
                     />
                   }
@@ -824,19 +847,27 @@ export const ExportGradesForLectureDialog = ({
   return (
     <>
       <Tooltip title="Export grades of all assignments in this lecture in one file.">
-        <IconButton
-          aria-label="Export grades"
-          size="small"
-          sx={{ ml: 2 }}
+        <Button
+          variant="contained"
+          startIcon={<FileUploadIcon />}
           onClick={() => setOpenDialog(true)}
+          sx={{ ml: 2 }}
         >
-          <TrendingUpIcon />
-        </IconButton>
+          Export Grades
+        </Button>
       </Tooltip>
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth>
         <DialogTitle>Export Grades</DialogTitle>
         <DialogContent>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ fontSize: '0.875rem' }}
+          >
+            Which grades of student submissions do you wish to export? You can
+            either export best or latest grades.
+          </Typography>
           <FormControl fullWidth margin="normal">
             <InputLabel>Filter</InputLabel>
             <Select
@@ -849,6 +880,14 @@ export const ExportGradesForLectureDialog = ({
             </Select>
           </FormControl>
 
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ fontSize: '0.875rem', mt: 2 }}
+          >
+            Choose the format of the export file. You can either export grades
+            in CSV or JSON file.
+          </Typography>
           <FormControl fullWidth margin="normal">
             <InputLabel>Format</InputLabel>
             <Select

@@ -107,7 +107,7 @@ class SubmissionPropertiesHandler(ExtensionBaseHandler):
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
-        self.write(json.dumps(response))
+        self.write(response)
 
     async def put(self, lecture_id: int, assignment_id: int, submission_id: int):
         """ Sends a PUT-request to the grader service to update the properties of a submission
