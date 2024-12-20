@@ -234,7 +234,6 @@ export const LectureComponent = () => {
     >
       <Typography variant={'h4'} sx={{ mr: 2 }}>
         {lecture.name}
-        <ExportGradesForLectureDialog lecture={lecture} />
         {lecture.complete ? (
           <Chip
             sx={{ ml: 1 }}
@@ -271,13 +270,14 @@ export const LectureComponent = () => {
           ) : null}
         </Stack>
 
-        <Stack direction="row" alignItems="center" spacing={2}>
+        <Stack direction="row" alignItems="center" spacing={2} sx={{ mr: 2 }}>
           <CreateDialog
             lecture={lecture}
             handleSubmit={async () => {
               await refreshAssignments();
             }}
           />
+          <ExportGradesForLectureDialog lecture={lecture} />
           <EditLectureDialog
             lecture={lecture}
             handleSubmit={handleUpdateLecture}
