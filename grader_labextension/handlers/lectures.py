@@ -5,11 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
+import os
 from grader_labextension.registry import register_handler
-from grader_labextension.handlers.base_handler import ExtensionBaseHandler, cache
+from grader_labextension.handlers.base_handler import ExtensionBaseHandler
+from grader_labextension.services.request import RequestService, RequestServiceError
 import tornado
 from tornado.web import authenticated, HTTPError
-from grader_labextension.services.request import RequestService, RequestServiceError
+import urllib.parse
 
 
 @register_handler(path=r"api\/lectures\/?")
@@ -201,4 +203,27 @@ class SubmissionLectureHandler(ExtensionBaseHandler):
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
-        self.write(response)
+
+        lecture = await self.get_lecture(lecture_id)
+        dir_path = os.path.join(self.root_dir, lecture["code"])
+        os.makedirs(dir_path, exist_ok=True)
+
+        parsed_query_params = urllib.parse.parse_qs(query_params.lstrip('?'))
+        filter_value = parsed_query_params.get("filter", ["none"])[0]
+        format_value = parsed_query_params.get("format", ["json"])[0]
+
+        file_path = os.path.join(dir_path, f"{lecture['name']}_{filter_value}_submissions.{format_value}")
+        if format_value == "csv":
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(response)
+        elif format_value == "json":
+            json_content = json.dumps(response, indent=2) if isinstance(response, dict) else response
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(json_content)
+        else:
+            raise HTTPError(400, reason="Invalid format specified")
+        self.write({
+            "status": "OK",
+            "message": f"File saved successfully: {file_path}",
+            "file_path": file_path
+        })

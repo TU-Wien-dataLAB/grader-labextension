@@ -77,7 +77,6 @@
         "@tanstack/react-query": "^5.27.5",
         "@types/d3-shape": "^3.1.1",
         "date-fns": "^3.2.0",
-        "file-saver": "^2.0.5",
         "formik": "^2.4.1",
         "is-plain-object": "^5.0.0",
         "moment": "^2.29.4",

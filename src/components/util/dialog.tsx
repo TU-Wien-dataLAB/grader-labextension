@@ -58,15 +58,15 @@ import { FilesList } from './file-list';
 import {
   extractRelativePaths,
   getFiles,
-  lectureBasePath
+  lectureBasePath, openFile
 } from '../../services/file.service';
 import InfoIcon from '@mui/icons-material/Info';
 import { queryClient } from '../../widgets/assignmentmanage';
 import { getAllLectureSubmissions } from '../../services/lectures.service';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
-import { saveAs } from 'file-saver';
 import { ltiSyncSubmissions } from '../../services/submissions.service';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
+import { openBrowser } from '../coursemanage/overview/util';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -810,27 +810,16 @@ export const ExportGradesForLectureDialog = ({
   const handleExport = async () => {
     setLoading(true);
     try {
-      const response = await getAllLectureSubmissions(
-        lecture.id,
-        filter,
-        format
+      await getAllLectureSubmissions(lecture.id, filter, format);
+      await openFile(
+        `${lectureBasePath}${lecture.code}/${lecture.name}_${filter}_submissions.${format}`
       );
-
+      await openBrowser(`${lectureBasePath}${lecture.code}`);
       if (format === 'csv') {
-        const blob = new Blob([response as string], {
-          type: 'text/csv;charset=utf-8;'
-        });
-        saveAs(blob, `${filter}_submissions_${lecture.name}.csv`);
-
         enqueueSnackbar('CSV export completed successfully!', {
           variant: 'success'
         });
       } else {
-        const blob = new Blob([JSON.stringify(response, null, 2)], {
-          type: 'application/json;charset=utf-8;'
-        });
-        saveAs(blob, `${filter}_submissions_${lecture.name}.json`);
-
         enqueueSnackbar('JSON export completed successfully!', {
           variant: 'success'
         });
