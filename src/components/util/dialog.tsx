@@ -65,6 +65,8 @@ import { queryClient } from '../../widgets/assignmentmanage';
 import { getAllLectureSubmissions } from '../../services/lectures.service';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import { saveAs } from 'file-saver';
+import { ltiSyncSubmissions } from '../../services/submissions.service';
+import CloudSyncIcon from '@mui/icons-material/CloudSync';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -916,6 +918,106 @@ export const ExportGradesForLectureDialog = ({
             disabled={loading}
           >
             {loading ? 'Exporting...' : 'Export'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+};
+
+interface ISyncSubmissionGrades {
+  lecture: Lecture;
+  assignment: Assignment;
+}
+
+export const SyncSubmissionGradesDialog = ({
+  lecture,
+  assignment
+}: ISyncSubmissionGrades) => {
+  const [openDialog, setOpenDialog] = React.useState(false);
+  const [filter, setFilter] = React.useState<'latest' | 'best'>('best');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleSyncSubmission = async () => {
+    setLoading(true);
+    try {
+      await ltiSyncSubmissions(lecture.id, assignment.id).then(response => {
+        enqueueSnackbar(
+          'Successfully matched ' +
+            response.syncable_users +
+            ' submissions with learning platform',
+          { variant: 'success' }
+        );
+        enqueueSnackbar(
+          'Successfully synced latest submissions with feedback of ' +
+            response.synced_user +
+            ' users',
+          { variant: 'success' }
+        );
+      });
+    } catch (error: any) {
+      enqueueSnackbar(
+        'Error while trying to sync submissions: ' + error.message,
+        { variant: 'error' }
+      );
+    } finally {
+      setLoading(false);
+      setOpenDialog(false);
+    }
+  };
+
+  return (
+    <>
+      <Tooltip title="Sync grades of this assignment to Moodle.">
+        <Button
+          size="small"
+          startIcon={<CloudSyncIcon />}
+          sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
+          onClick={() => setOpenDialog(true)}
+        >
+          LTI Sync Grades
+        </Button>
+      </Tooltip>
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth>
+        <DialogTitle>LTI Sync Grades</DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ fontSize: '0.875rem' }}
+          >
+            Which submission grades do you wish to sync to Moodle? You can
+            either sync best or latest grades.
+          </Typography>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Filter</InputLabel>
+            <Select
+              value={filter}
+              onChange={e => setFilter(e.target.value as 'latest' | 'best')}
+              label="Filter"
+            >
+              <MenuItem value="latest">Latest Submissions</MenuItem>
+              <MenuItem value="best">Best Submissions</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() => setOpenDialog(false)}
+            color="primary"
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSyncSubmission}
+            color="primary"
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? 'Syncing...' : 'Sync'}
           </Button>
         </DialogActions>
       </Dialog>

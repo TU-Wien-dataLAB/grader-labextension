@@ -15,9 +15,7 @@ import {
 } from '@mui/material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import ReplayIcon from '@mui/icons-material/Replay';
-import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import * as React from 'react';
-import { ltiSyncSubmissions } from '../../../services/submissions.service';
 import { Assignment } from '../../../model/assignment';
 import { Lecture } from '../../../model/lecture';
 import { enqueueSnackbar } from 'notistack';
@@ -29,11 +27,11 @@ import {
 import { lectureBasePath, openFile } from '../../../services/file.service';
 import { Submission } from '../../../model/submission';
 import { showDialog } from '../../util/dialog-provider';
-import AddIcon from '@mui/icons-material/Add';
-import { Link } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { queryClient } from '../../../widgets/assignmentmanage';
+import { SyncSubmissionGradesDialog } from '../../util/dialog';
+import { openBrowser } from '../overview/util';
 
 export const autogradeSubmissionsDialog = async handleAgree => {
   showDialog(
@@ -106,40 +104,15 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
     }
   };
 
-  const handleSyncSubmission = async () => {
-    showDialog(
-      'LTI Sync Submission',
-      'Do you wish to sync Submissions?',
-      async () => {
-        await ltiSyncSubmissions(lecture.id, assignment.id)
-          .then(response => {
-            enqueueSnackbar(
-              'Successfully matched ' +
-                response.syncable_users +
-                ' submissions with learning platform',
-              { variant: 'success' }
-            );
-            enqueueSnackbar(
-              'Successfully synced latest submissions with feedback of ' +
-                response.synced_user +
-                ' users',
-              { variant: 'success' }
-            );
-          })
-          .catch(error => {
-            enqueueSnackbar(
-              'Error while trying to sync submissions: ' + error.message,
-              { variant: 'error' }
-            );
-          });
-      }
-    );
-  };
-
   const handleExportSubmissions = async () => {
     try {
       await saveSubmissions(lecture, assignment, shownSubmissions);
-      await openFile(`${lectureBasePath}${lecture.code}/submissions.csv`);
+      await openFile(
+        `${lectureBasePath}${lecture.code}/assignments/${assignment.id}/${assignment.name}_${shownSubmissions}_submissions.csv`
+      );
+      await openBrowser(
+        `${lectureBasePath}${lecture.code}/assignments/${assignment.id}`
+      );
       enqueueSnackbar('Successfully exported submissions', {
         variant: 'success'
       });
@@ -317,14 +290,10 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
             >
               {`Export ${optionName()} Submissions`}
             </Button>
-            <Button
-              size="small"
-              startIcon={<CloudSyncIcon />}
-              sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
-              onClick={handleSyncSubmission}
-            >
-              LTI Sync Grades
-            </Button>
+            <SyncSubmissionGradesDialog
+              lecture={lecture}
+              assignment={assignment}
+            />
             <ToggleButtonGroup
               size="small"
               color="primary"
