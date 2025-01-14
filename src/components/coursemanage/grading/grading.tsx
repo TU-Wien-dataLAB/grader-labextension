@@ -280,10 +280,15 @@ export default function GradingTable() {
     setManualGradeSubmission: React.Dispatch<React.SetStateAction<Submission>>;
   };
 
-  const [order, setOrder] = React.useState<Order>('asc');
-  const [orderBy, setOrderBy] = React.useState<keyof Submission>('id');
+  const [order, setOrder] = React.useState<Order>(() => {
+    const savedOrder = loadString('order');
+    return savedOrder === 'asc' || savedOrder === 'desc' ? savedOrder : 'asc';
+  });
+  const [orderBy, setOrderBy] = React.useState<keyof Submission>(() => {
+    return (loadString('grader-order-by') as keyof Submission) || 'id';
+  });
   const [selected, setSelected] = React.useState<readonly number[]>([]);
-  const [page, setPage] = React.useState(0);
+  const [page, setPage] = React.useState(loadNumber('grader-page') || 0);
   const [rowsPerPage, setRowsPerPage] = React.useState(
     loadNumber('grading-rows-per-page') || 10
   );
@@ -294,11 +299,12 @@ export default function GradingTable() {
       | 'best'
   );
 
-  const [search, setSearch] = React.useState('');
+  const [search, setSearch] = React.useState(loadString('grader-search') || '');
 
   React.useEffect(() => {
+    storeString('grader-search', search);
     updateSubmissions(shownSubmissions);
-  }, []);
+  }, [search]);
 
   const [open, setOpen] = React.useState(false);
   const [submissionId, setSubmissionId] = React.useState<number | null>(null);
@@ -338,7 +344,9 @@ export default function GradingTable() {
   ) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
+    storeString('order', isAsc ? 'desc' : 'asc');
     setOrderBy(property);
+    storeString('grader-order-by', property as string);
   };
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -373,6 +381,7 @@ export default function GradingTable() {
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
+    storeNumber('grader-page', newPage);
   };
 
   const handleChangeRowsPerPage = (
@@ -382,6 +391,7 @@ export default function GradingTable() {
     setRowsPerPage(n);
     storeNumber('grading-rows-per-page', n);
     setPage(0);
+    storeNumber('grader-page', 0);
   };
 
   const isSelected = (id: number) => selected.indexOf(id) !== -1;

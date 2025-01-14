@@ -32,6 +32,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { queryClient } from '../../../widgets/assignmentmanage';
 import { SyncSubmissionGradesDialog } from '../../util/dialog';
 import { openBrowser } from '../overview/util';
+import { loadString, storeString } from '../../../services/storage.service';
 
 export const autogradeSubmissionsDialog = async handleAgree => {
   showDialog(
@@ -76,21 +77,27 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
   } = props;
   const numSelected = selected.length;
 
-  const [searchTerm, setSearchTerm] = React.useState('');
-
-  let searchTimeout = null;
+  const [searchTerm, setSearchTerm] = React.useState(
+    () => loadString('grader-search') || ''
+  );
+  const searchTimeout = React.useRef<NodeJS.Timeout | null>(null);
 
   const handleSearch = event => {
-    setSearchTerm(event.target.value);
-    // debounce search term
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      setSearch(event.target.value.toLowerCase());
+    const value = event.target.value;
+    setSearchTerm(value);
+
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+    searchTimeout.current = setTimeout(() => {
+      storeString('grader-search', value.toLowerCase());
+      setSearch(value.toLowerCase());
     }, 250);
   };
 
   const handleClear = () => {
     setSearchTerm('');
+    storeString('grader-search', '');
     setSearch('');
   };
 
