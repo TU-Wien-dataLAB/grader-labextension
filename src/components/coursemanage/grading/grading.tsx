@@ -301,10 +301,16 @@ export default function GradingTable() {
 
   const [search, setSearch] = React.useState(loadString('grader-search') || '');
 
+  const tableContainerRef = React.useRef<HTMLDivElement>(null); // track the table container
+
   React.useEffect(() => {
     storeString('grader-search', search);
     updateSubmissions(shownSubmissions);
-  }, [search]);
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTop =
+        loadNumber('table-scroll-position') || 0;
+    }
+  }, []);
 
   const [open, setOpen] = React.useState(false);
   const [submissionId, setSubmissionId] = React.useState<number | null>(null);
@@ -420,7 +426,7 @@ export default function GradingTable() {
 
   return (
     <Stack sx={{ flex: 1, ml: 5, mr: 5, overflow: 'hidden' }}>
-      <Box sx={{ flex: 1, overflow: 'auto' }}>
+      <Box ref={tableContainerRef} sx={{ flex: 1, overflow: 'auto' }}>
         <EnhancedTableToolbar
           lecture={lecture}
           assignment={assignment}
@@ -448,7 +454,13 @@ export default function GradingTable() {
               return (
                 <TableRow
                   hover
-                  onClick={event => {
+                  onClick={() => {
+                    if (tableContainerRef.current) {
+                      storeNumber(
+                        'table-scroll-position',
+                        tableContainerRef.current.scrollTop
+                      ); // Save scroll position
+                    }
                     setManualGradeSubmission(row);
                     navigate('manual');
                   }}
