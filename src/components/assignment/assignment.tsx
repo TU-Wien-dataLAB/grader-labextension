@@ -124,7 +124,7 @@ export const AssignmentComponent = () => {
       await refetchSubmissions();
       const response = await getSubmissionCount(lectureId, assignmentId);
       const remainingSubmissions =
-        assignment.max_submissions - response.submission_count;
+        assignment.settings.max_submissions - response.submission_count;
       return remainingSubmissions <= 0 ? 0 : remainingSubmissions;
     }
   });
@@ -267,15 +267,15 @@ export const AssignmentComponent = () => {
   };
 
   const isDeadlineOver = () => {
-    if (!assignment.due_date) {
+    if (!assignment.settings.deadline) {
       return false;
     }
-    const time = new Date(assignment.due_date).getTime();
+    const time = new Date(assignment.settings.deadline).getTime();
     return time < Date.now();
   };
 
   const isLateSubmissionOver = () => {
-    if (!assignment.due_date) {
+    if (!assignment.settings.deadline) {
       return false;
     }
     const late_submission = assignment.settings.late_submission || [
@@ -286,7 +286,7 @@ export const AssignmentComponent = () => {
       return false;
     }
 
-    const late = moment(assignment.due_date)
+    const late = moment(assignment.settings.deadline)
       .add(moment.duration(late_submission[late_submission.length - 1].period))
       .toDate()
       .getTime();
@@ -299,8 +299,8 @@ export const AssignmentComponent = () => {
 
   const isMaxSubmissionReached = () => {
     return (
-      assignment.max_submissions !== null &&
-      assignment.max_submissions <= submissions.length
+      assignment.settings.max_submissions !== null &&
+      assignment.settings.max_submissions <= submissions.length
     );
   };
 
@@ -328,7 +328,7 @@ export const AssignmentComponent = () => {
         </Box>
         <Box sx={{ mt: 2, ml: 2 }}>
           <DeadlineDetail
-            due_date={assignment.due_date}
+            due_date={assignment.settings.deadline}
             late_submissions={assignment.settings.late_submission || []}
           />
         </Box>
@@ -351,7 +351,7 @@ export const AssignmentComponent = () => {
           </Stack>
           <Files lecture={lecture} assignment={assignment} files={fileList} />
           <Stack direction={'row'} spacing={1} sx={{ m: 1, ml: 2 }}>
-            {assignment.type === 'group' && (
+            {assignment.settings.assignment_type === 'group' && (
               <Tooltip title={'Push Changes'}>
                 <Button
                   variant="outlined"
@@ -364,7 +364,7 @@ export const AssignmentComponent = () => {
               </Tooltip>
             )}
 
-            {assignment.type === 'group' && (
+            {assignment.settings.assignment_type === 'group' && (
               <Tooltip title={'Pull from Remote'}>
                 <Button
                   variant="outlined"
@@ -439,7 +439,7 @@ export const AssignmentComponent = () => {
       <Box sx={{ mt: 4 }}>
         <Typography variant={'h6'} sx={{ ml: 2, mt: 3 }}>
           Submissions
-          {assignment.max_submissions !== null ? (
+          {assignment.settings.max_submissions !== null ? (
             hasPermissions() ? (
               <Stack direction={'row'}>
                 <SubmissionsLeftChip subLeft={subLeft} />

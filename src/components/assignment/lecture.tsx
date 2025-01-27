@@ -96,9 +96,9 @@ const EditButton = (props: IEditProps) => {
       </IconButton>
     );
   }
-  const time = new Date(props.assignment.due_date).getTime();
+  const time = new Date(props.assignment.settings.deadline).getTime();
   if (
-    (props.assignment.due_date !== null && time < Date.now()) ||
+    (props.assignment.settings.deadline !== null && time < Date.now()) ||
     props.status === Assignment.StatusEnum.Complete
   ) {
     return <EditOffIcon sx={{ color: grey[500] }} />;
@@ -202,7 +202,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                 <TableCell style={{ width: headerWidth(headers, 'Deadline') }}>
                   <DeadlineComponent
                     component={'chip'}
-                    due_date={row.due_date}
+                    due_date={row.settings.deadline}
                     compact={true}
                   />
                 </TableCell>

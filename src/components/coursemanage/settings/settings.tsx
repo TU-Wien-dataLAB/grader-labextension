@@ -81,9 +81,9 @@ export const SettingsComponent = () => {
     enabled: !!lecture && !!assignmentId
   });
 
-  const [checked, setChecked] = React.useState(assignment.due_date !== null);
+  const [checked, setChecked] = React.useState(assignment.settings.deadline !== null);
   const [checkedLimit, setCheckedLimit] = React.useState(
-    Boolean(assignment.max_submissions)
+    Boolean(assignment.settings.max_submissions)
   );
 
   const validateLateSubmissions = (values: FormikValues) => {
@@ -158,11 +158,11 @@ export const SettingsComponent = () => {
     initialValues: {
       name: assignment.name,
       due_date:
-        assignment.due_date !== null ? new Date(assignment.due_date) : null,
-      type: assignment.type,
-      automatic_grading: assignment.automatic_grading,
-      max_submissions: assignment.max_submissions || null,
-      allow_files: assignment.allow_files || false,
+        assignment.settings.deadline !== null ? new Date(assignment.settings.deadline) : null,
+      type: assignment.settings.assignment_type,
+      autograde_type: assignment.settings.autograde_type,
+      max_submissions: assignment.settings.max_submissions || null,
+      allowed_files: assignment.settings.allowed_files || [],
       settings: { late_submission: assignment.settings.late_submission || [] }
     },
     validationSchema: validationSchema,
@@ -290,7 +290,7 @@ export const SettingsComponent = () => {
           <TextField
             select
             id="assignment-type-select"
-            value={formik.values.automatic_grading}
+            value={formik.values.autograde_type}
             label="Auto-Grading Behaviour"
             placeholder="Grading"
             onChange={e => {
@@ -305,7 +305,8 @@ export const SettingsComponent = () => {
           <FormControlLabel
             control={
               <Checkbox
-                checked={formik.values.allow_files}
+                //FIXME set default type to build: formik.values.allowed_files
+                checked={false}
                 onChange={async e => {
                   console.log(e.target.checked);
                   await formik.setFieldValue('allow_files', e.target.checked);

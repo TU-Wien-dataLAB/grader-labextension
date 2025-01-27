@@ -259,9 +259,10 @@ class LtiSyncHandler(ExtensionBaseHandler):
         # get submissions with score and lti customized username
         try:
             response = await self.request_service.request(
-                method="GET",
+                method="PUT",
                 endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/lti",
-                header=self.grader_authentication_header)
+                header=self.grader_authentication_header,
+                body={})
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
