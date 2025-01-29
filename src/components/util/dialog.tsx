@@ -44,8 +44,8 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { createAssignment } from '../../services/assignments.service';
 import { Lecture } from '../../model/lecture';
-import TypeEnum = Assignment.TypeEnum;
-import AutomaticGradingEnum = Assignment.AutomaticGradingEnum;
+import AutogradeTypeEnum = AssignmentSettings.AutogradeTypeEnum;
+import AssignementTypeEnum = AssignmentSettings.AssignmentTypeEnum;
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import AddIcon from '@mui/icons-material/Add';
 import { enqueueSnackbar } from 'notistack';
@@ -67,6 +67,7 @@ import FileUploadIcon from '@mui/icons-material/FileUpload';
 import { ltiSyncSubmissions } from '../../services/submissions.service';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import { openBrowser } from '../coursemanage/overview/util';
+import { AssignmentSettings } from '../../model/assignmentSettings';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -314,11 +315,10 @@ export const CreateDialog = (props: ICreateDialogProps) => {
   const formik = useFormik({
     initialValues: {
       name: 'Assignment',
-      due_date: null,
-      type: 'user',
-      automatic_grading: 'auto' as AutomaticGradingEnum,
+      deadline: null,
+      assignment_type: 'user' as AssignementTypeEnum,
+      autograde_type: 'auto' as AutogradeTypeEnum,
       max_submissions: undefined as number,
-      allow_files: false
     },
     validationSchema: validationSchema,
     onSubmit: values => {
@@ -330,11 +330,13 @@ export const CreateDialog = (props: ICreateDialogProps) => {
       }
       const newAssignment: Assignment = {
         name: values.name,
-        due_date: values.due_date,
-        type: values.type as TypeEnum,
-        automatic_grading: values.automatic_grading as AutomaticGradingEnum,
-        max_submissions: values.max_submissions,
-        allow_files: values.allow_files
+        status: "created",
+        settings: {allowed_files: [],
+                   deadline: values.deadline,
+                   assignment_type: values.assignment_type as AssignementTypeEnum,
+                   max_submissions: values.max_submissions,
+                   autograde_type: values.autograde_type as AutogradeTypeEnum
+        }
       };
       createAssignment(props.lecture.id, newAssignment).then(
         async a => {
@@ -408,12 +410,12 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 <FormControlLabel
                   control={
                     <Checkbox
-                      value={false}
+                      value={formik.values.deadline !== null}
                       onChange={async e => {
                         if (e.target.checked) {
-                          await formik.setFieldValue('due_date', new Date());
+                          await formik.setFieldValue('deadline', new Date());
                         } else {
-                          await formik.setFieldValue('due_date', null);
+                          await formik.setFieldValue('deadline', null);
                         }
                       }}
                     />
@@ -423,9 +425,9 @@ export const CreateDialog = (props: ICreateDialogProps) => {
 
                 <DateTimePicker
                   ampm={false}
-                  disabled={formik.values.due_date === null}
+                  disabled={formik.values.deadline === null}
                   label="DateTimePicker"
-                  value={formik.values?.due_date}
+                  value={formik.values?.deadline}
                   onChange={date => {
                     formik.setFieldValue('due_date', date);
                     if (new Date(date).getTime() < Date.now()) {
@@ -494,7 +496,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
               <TextField
                 select
                 id="assignment-type-select"
-                value={formik.values.automatic_grading}
+                value={formik.values.autograde_type}
                 label="Auto-Grading Behaviour"
                 placeholder="Grading"
                 onChange={e => {
@@ -505,38 +507,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 <MenuItem value={'auto'}>Automatic Grading</MenuItem>
                 <MenuItem value={'full_auto'}>Fully Automatic Grading</MenuItem>
               </TextField>
-
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formik.values.allow_files}
-                    onChange={async e => {
-                      console.log(e.target.checked);
-                      await formik.setFieldValue(
-                        'allow_files',
-                        e.target.checked
-                      );
-                    }}
-                  />
-                }
-                label="Allow file upload by students"
-              />
-
-              {/* Not included in release 1.0
-                <InputLabel id="demo-simple-select-label">Type</InputLabel>
-                <Select
-                labelId="assignment-type-select-label"
-                id="assignment-type-select"
-                value={formik.values.type}
-                label="Type"
-                onChange={e => {
-                formik.setFieldValue('type', e.target.value);
-              }}
-                >
-                <MenuItem value={'user'}>User</MenuItem>
-                <MenuItem value={'group'}>Group</MenuItem>
-                </Select>
-              */}
             </Stack>
           </DialogContent>
           <DialogActions>

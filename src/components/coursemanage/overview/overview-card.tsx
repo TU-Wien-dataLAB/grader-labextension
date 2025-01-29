@@ -20,6 +20,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import ChecklistIcon from '@mui/icons-material/Checklist';
 import GradeIcon from '@mui/icons-material/Grade';
 import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
+import { AssignmentSettings } from '../../../model/assignmentSettings';
 
 export interface IOverviewCardProps {
   lecture: Lecture;
@@ -30,14 +31,13 @@ export interface IOverviewCardProps {
 
 export const OverviewCard = (props: IOverviewCardProps) => {
   const gradingBehaviour =
-    props.assignment.automatic_grading === Assignment.AutomaticGradingEnum.Auto
+    props.assignment.settings.autograde_type === AssignmentSettings.AutogradeTypeEnum.Auto
       ? 'Automatic Grading'
-      : props.assignment.automatic_grading ===
-          Assignment.AutomaticGradingEnum.FullAuto
+      : props.assignment.settings.autograde_type === AssignmentSettings.AutogradeTypeEnum.FullAuto
         ? 'Fully Automatic Grading'
         : 'No Automatic Grading';
 
-  const assignmentType = props.assignment.type === 'user' ? 'User' : 'Group';
+  const assignmentType = props.assignment.settings.assignment_type === 'user' ? 'User' : 'Group';
 
   return (
     <Paper

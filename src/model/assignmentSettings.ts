@@ -11,6 +11,25 @@ import { SubmissionPeriod } from './submissionPeriod';
 
 
 export interface AssignmentSettings { 
+    deadline?: string;
+    assignment_type?: AssignmentSettings.AssignmentTypeEnum;
+    max_submissions?: number;
+    allowed_files?: Array<string>;
     late_submission?: Array<SubmissionPeriod>;
+    autograde_type?: AssignmentSettings.AutogradeTypeEnum;
 }
+export namespace AssignmentSettings {
+    export type AssignmentTypeEnum = 'user' | 'group';
+    export const AssignmentTypeEnum = {
+        User: 'user' as AssignmentTypeEnum,
+        Group: 'group' as AssignmentTypeEnum
+    };
+    export type AutogradeTypeEnum = 'auto' | 'full_auto' | 'unassisted';
+    export const AutogradeTypeEnum = {
+        Auto: 'auto' as AutogradeTypeEnum,
+        FullAuto: 'full_auto' as AutogradeTypeEnum,
+        Unassisted: 'unassisted' as AutogradeTypeEnum
+    };
+}
+
 

@@ -36,12 +36,13 @@ import {
 import { FormikValues } from 'formik/dist/types';
 import moment from 'moment';
 import { red } from '@mui/material/colors';
-import { showDialog } from '../../util/dialog-provider';
+import { AllowedFilePatterns } from './allowed-files-form';
 import { updateMenus } from '../../../menu';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { getLecture } from '../../../services/lectures.service';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient } from '../../../widgets/assignmentmanage';
+import { AssignmentSettings } from '../../../model/assignmentSettings';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -72,121 +73,136 @@ export const SettingsComponent = () => {
   const { data: lecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
     queryFn: () => getLecture(lectureId),
-    enabled: !!lectureId
+    enabled: !!lectureId,
   });
 
   const { data: assignment } = useQuery<Assignment>({
     queryKey: ['assignment', assignmentId],
     queryFn: () => getAssignment(lectureId, assignmentId),
-    enabled: !!lecture && !!assignmentId
+    enabled: !!lecture && !!assignmentId,
   });
 
-  const [checked, setChecked] = React.useState(assignment.due_date !== null);
+  const [checked, setChecked] = React.useState(
+    assignment.settings.deadline !== null
+  );
   const [checkedLimit, setCheckedLimit] = React.useState(
-    Boolean(assignment.max_submissions)
+    Boolean(assignment.settings.max_submissions)
   );
 
   const validateLateSubmissions = (values: FormikValues) => {
     const late_submissions: ILateSubmissionInfo[] = getLateSubmissionInfo(
       values.settings.late_submission
     );
-    const error = { late_submission: { days: {}, hours: {}, scaling: {} } };
+    const error = { settings: { late_submission: { days: {}, hours: {}, scaling: {} } } };
     let nErrors = 0;
+
+    // Validation logic for late submissions
     for (let i = 0; i < late_submissions.length; i++) {
       const info = late_submissions[i];
       if (!Number.isInteger(info.days)) {
-        error.late_submission.days[i] = 'days have to be whole numbers';
+        error.settings.late_submission.days[i] = 'Days have to be whole numbers';
         nErrors++;
       }
       if (!Number.isInteger(info.hours)) {
-        error.late_submission.hours[i] = 'hours have to be whole numbers';
+        error.settings.late_submission.hours[i] = 'Hours have to be whole numbers';
         nErrors++;
       }
       if (info.days < 0) {
-        error.late_submission.days[i] = 'days cannot be negative';
+        error.settings.late_submission.days[i] = 'Days cannot be negative';
         nErrors++;
       }
       if (info.hours < 0) {
-        error.late_submission.hours[i] = 'hours cannot be negative';
+        error.settings.late_submission.hours[i] = 'Hours cannot be negative';
         nErrors++;
       }
       if (info.scaling <= 0 || info.scaling >= 1) {
-        error.late_submission.scaling[i] =
-          'scaling has to be between 0 and 1 exclusive';
+        error.settings.late_submission.scaling[i] =
+          'Scaling has to be between 0 and 1 exclusive';
         nErrors++;
       }
-      if (parseFloat(info.scaling.toFixed(3)) !== info.scaling) {
-        error.late_submission.scaling[i] =
-          'scaling can only be specified up to 3 decimal points';
+      if (
+        parseFloat(info.scaling.toFixed(3)) !== info.scaling
+      ) {
+        error.settings.late_submission.scaling[i] =
+          'Scaling can only be specified up to 3 decimal points';
         nErrors++;
       }
       if (
         moment.duration({ days: info.days, hours: info.hours }) <=
         moment.duration(0)
       ) {
-        error.late_submission.days[i] = 'period cannot be 0';
-        error.late_submission.hours[i] = 'period cannot be 0';
+        error.settings.late_submission.days[i] = 'Period cannot be 0';
+        error.settings.late_submission.hours[i] = 'Period cannot be 0';
         nErrors++;
       }
       if (i > 0) {
         const prevInfo = late_submissions[i - 1];
         if (
           moment.duration({ days: info.days, hours: info.hours }) <=
-          moment.duration({
-            days: prevInfo.days,
-            hours: prevInfo.hours
-          })
+          moment.duration({ days: prevInfo.days, hours: prevInfo.hours })
         ) {
-          error.late_submission.days[i] = 'periods have to be increasing';
-          error.late_submission.hours[i] = 'periods have to be increasing';
+          error.settings.late_submission.days[i] = 'Periods have to be increasing';
+          error.settings.late_submission.hours[i] = 'Periods have to be increasing';
           nErrors++;
         }
         if (info.scaling >= prevInfo.scaling) {
-          error.late_submission.scaling[i] = 'scaling has to decrease';
+          error.settings.late_submission.scaling[i] = 'Scaling has to decrease';
           nErrors++;
         }
       }
     }
-    if (nErrors === 0) {
-      // error object has to be empty, otherwise submit is blocked
-      return {};
-    }
-    return error;
+
+    return nErrors === 0 ? {} : error;
   };
 
   const formik = useFormik({
     initialValues: {
       name: assignment.name,
-      due_date:
-        assignment.due_date !== null ? new Date(assignment.due_date) : null,
-      type: assignment.type,
-      automatic_grading: assignment.automatic_grading,
-      max_submissions: assignment.max_submissions || null,
-      allow_files: assignment.allow_files || false,
-      settings: { late_submission: assignment.settings.late_submission || [] }
+      settings: {
+        late_submission: assignment.settings.late_submission || [],
+        max_submissions: assignment.settings.max_submissions || null,
+        autograde_type: assignment.settings.autograde_type,
+        deadline:
+          assignment.settings.deadline !== null
+            ? new Date(assignment.settings.deadline)
+            : null,
+        allowed_files:
+          assignment.settings.allowed_files === null
+            ? []
+            : assignment.settings.allowed_files,
+      },
     },
     validationSchema: validationSchema,
-    onSubmit: values => {
-      if (values.max_submissions !== null) {
-        values.max_submissions = +values.max_submissions;
-      }
-      const updatedAssignment: Assignment = Object.assign(assignment, values);
+    onSubmit: (values) => {
+      const updatedAssignment: Assignment = {
+        ...assignment,
+        name: values.name,
+        settings: {
+          ...assignment.settings,
+          ...values.settings,
+          deadline: values.settings.deadline
+            ? new Date(values.settings.deadline).toISOString()
+            : null, // Convert Date to string or null
+        },
+      };
+
       updateAssignment(lecture.id, updatedAssignment).then(
-        async response => {
+        async () => {
           await updateMenus(true);
           await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+          await queryClient.invalidateQueries({ queryKey: ['assignment',assignmentId] });
           enqueueSnackbar('Successfully Updated Assignment', {
-            variant: 'success'
+            variant: 'success',
           });
         },
         (error: Error) => {
           enqueueSnackbar(error.message, {
-            variant: 'error'
+            variant: 'error',
           });
         }
       );
     },
-    validate: validateLateSubmissions
+    validate: validateLateSubmissions,
   });
 
   return (
@@ -211,12 +227,12 @@ export const SettingsComponent = () => {
               control={
                 <Checkbox
                   checked={checked}
-                  onChange={async e => {
+                  onChange={async (e) => {
                     setChecked(e.target.checked);
                     if (!e.target.checked) {
-                      await formik.setFieldValue('due_date', null);
+                      await formik.setFieldValue('settings.deadline', null);
                     } else {
-                      await formik.setFieldValue('due_date', new Date());
+                      await formik.setFieldValue('settings.deadline', new Date());
                     }
                   }}
                 />
@@ -227,12 +243,12 @@ export const SettingsComponent = () => {
               ampm={false}
               label="DateTimePicker"
               disabled={!checked}
-              value={formik.values.due_date}
+              value={formik.values.settings.deadline}
               onChange={(date: Date) => {
-                formik.setFieldValue('due_date', date);
+                formik.setFieldValue('settings.deadline', date);
                 if (new Date(date).getTime() < Date.now()) {
-                  enqueueSnackbar('You selected date in past!', {
-                    variant: 'warning'
+                  enqueueSnackbar('You selected a date in the past!', {
+                    variant: 'warning',
                   });
                 }
               }}
@@ -243,12 +259,12 @@ export const SettingsComponent = () => {
             control={
               <Checkbox
                 checked={checkedLimit}
-                onChange={async e => {
+                onChange={async (e) => {
                   setCheckedLimit(e.target.checked);
                   if (!e.target.checked) {
-                    await formik.setFieldValue('max_submissions', null);
+                    await formik.setFieldValue('settings.max_submissions', null);
                   } else {
-                    await formik.setFieldValue('max_submissions', 1);
+                    await formik.setFieldValue('settings.max_submissions', 1);
                   }
                 }}
               />
@@ -260,21 +276,22 @@ export const SettingsComponent = () => {
             variant="outlined"
             fullWidth
             disabled={!checkedLimit}
-            type={'number'}
+            type="number"
             id="max-submissions"
-            name="max_submissions"
+            name="settings.max_submissions"
             placeholder="Submissions"
-            value={formik.values.max_submissions || null}
+            value={formik.values.settings.max_submissions || null}
             InputProps={{ inputProps: { min: 1 } }}
-            onChange={e => {
-              formik.setFieldValue('max_submissions', +e.target.value);
+            onChange={(e) => {
+              formik.setFieldValue('settings.max_submissions', +e.target.value);
             }}
             helperText={
-              formik.touched.max_submissions && formik.errors.max_submissions
+              formik.touched.settings?.max_submissions &&
+              formik.errors.settings?.max_submissions
             }
             error={
-              Boolean(formik.values.max_submissions) &&
-              formik.values.max_submissions < 1
+              Boolean(formik.values.settings.max_submissions) &&
+              formik.values.settings.max_submissions < 1
             }
           />
 
@@ -282,7 +299,7 @@ export const SettingsComponent = () => {
             Auto-Grading Behaviour
             <Tooltip title={gradingBehaviourHelp}>
               <HelpOutlineOutlinedIcon
-                fontSize={'small'}
+                fontSize="small"
                 sx={{ ml: 1.5, mt: 1.0 }}
               />
             </Tooltip>
@@ -290,55 +307,43 @@ export const SettingsComponent = () => {
           <TextField
             select
             id="assignment-type-select"
-            value={formik.values.automatic_grading}
+            value={formik.values.settings.autograde_type}
             label="Auto-Grading Behaviour"
             placeholder="Grading"
-            onChange={e => {
-              formik.setFieldValue('automatic_grading', e.target.value);
+            onChange={(e) => {
+              formik.setFieldValue('settings.autograde_type', e.target.value);
             }}
           >
-            <MenuItem value={'auto'}>Automatic Grading</MenuItem>
-            <MenuItem value={'full_auto'}>Fully Automatic Grading</MenuItem>
-            <MenuItem value={'unassisted'}>No Automatic Grading</MenuItem>
+            <MenuItem value="auto">Automatic Grading</MenuItem>
+            <MenuItem value="full_auto">Fully Automatic Grading</MenuItem>
+            <MenuItem value="unassisted">No Automatic Grading</MenuItem>
           </TextField>
 
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={formik.values.allow_files}
-                onChange={async e => {
-                  console.log(e.target.checked);
-                  await formik.setFieldValue('allow_files', e.target.checked);
-                }}
-              />
+          <AllowedFilePatterns
+            patterns={formik.values.settings.allowed_files || []}
+            onChange={(updatedPatterns) =>
+              formik.setFieldValue('settings.allowed_files', updatedPatterns)
             }
-            label="Allow file upload by students"
           />
 
-          <Stack direction={'column'} spacing={2}>
+          <Stack direction="column" spacing={2}>
             <InputLabel>
               Late Submissions
               <Tooltip
-                title={
-                  'Late submissions are defined by a period (in days and hours) and a scaling factor. ' +
-                  'When a submission falls in the late submission periods you specified, the scaling factor of the ' +
-                  'last period that still matches the submission time is used to calculate the points of the submission by multiplying the total points by ' +
-                  'that scaling factor. After the last late submission period is over, the submission is rejected precisely ' +
-                  'the same way as if no late submission periods were specified.'
-                }
+                title="Late submissions are defined by a period (in days and hours)..."
               >
                 <HelpOutlineOutlinedIcon
-                  fontSize={'small'}
+                  fontSize="small"
                   sx={{ ml: 1.5, mt: 1.0 }}
                 />
               </Tooltip>
             </InputLabel>
-            <Stack direction={'column'} spacing={2} sx={{ pl: 3 }}>
-              {formik.values.due_date !== null ? (
+            <Stack direction="column" spacing={2} sx={{ pl: 3 }}>
+              {formik.values.settings.deadline !== null ? (
                 <LateSubmissionForm formik={formik} />
               ) : (
                 <Typography sx={{ color: red[500] }}>
-                  Deadline not set! To configure late submissions set a deadline
+                  Deadline not set! To configure late submissions, set a deadline
                   first!
                 </Typography>
               )}

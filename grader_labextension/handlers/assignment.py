@@ -10,8 +10,8 @@ import shutil
 from tornado.web import HTTPError, authenticated
 
 from grader_labextension.registry import register_handler
-from grader_labextension.handlers.base_handler import ExtensionBaseHandler, cache
-from grader_labextension.services.request import RequestService, RequestServiceError
+from grader_labextension.handlers.base_handler import ExtensionBaseHandler
+from grader_labextension.services.request import RequestServiceError
 import tornado
 import os
 

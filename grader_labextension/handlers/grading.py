@@ -10,7 +10,7 @@ from grader_labextension.registry import register_handler
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler
 from tornado.httpclient import HTTPResponse
 from tornado.web import HTTPError, authenticated
-from grader_labextension.services.git import GitService
+from grader_labextension.services.git import GitError, GitService
 import urllib.parse
 import os
 
@@ -157,11 +157,14 @@ class GradingManualHandler(ExtensionBaseHandler):
 
 
         os.makedirs(git_service.path, exist_ok=True)
-
-        if not git_service.is_git():
-            git_service.init()
-        git_service.set_remote("autograde", sub_id=sub_id)
-        git_service.pull("autograde", branch=f"submission_{submission['commit_hash']}")
+        try:
+            if not git_service.is_git():
+                git_service.init()
+            git_service.set_remote("autograde", sub_id=sub_id)
+            git_service.pull("autograde", branch=f"submission_{submission['commit_hash']}")
+        except GitError as e:
+            self.log.error(f"Giterror: {e.error}")
+            raise HTTPError(e.code, reason=e.error)
 
 
 @register_handler(

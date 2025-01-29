@@ -301,7 +301,7 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
       </Stepper>
       <Typography sx={{ mt: 5, fontSize: 24 }}> Deadline </Typography>
       <DeadlineComponent
-        due_date={props.assignment.due_date}
+        due_date={props.assignment.settings.deadline}
         compact={false}
         component={'chip'}
         sx={{ mt: 2 }}
