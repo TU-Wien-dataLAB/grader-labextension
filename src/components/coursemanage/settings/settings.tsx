@@ -190,6 +190,7 @@ export const SettingsComponent = () => {
         async () => {
           await updateMenus(true);
           await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+          await queryClient.invalidateQueries({ queryKey: ['assignment',assignmentId] });
           enqueueSnackbar('Successfully Updated Assignment', {
             variant: 'success',
           });
