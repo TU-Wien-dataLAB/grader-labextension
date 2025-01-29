@@ -21,7 +21,7 @@ export const AllowedFilePatterns = ({ patterns, onChange }) => {
       <Box>
         <InputLabel>
           Whitelist File Patterns
-          <Tooltip title=" Add patterns to allow student to submit additional files. Specify allowed file patterns (e.g., submission.py, *.txt, output_dir/*.pdf) using glob patterns.">
+          <Tooltip title=" Add patterns to allow additional submissions files. Specify allowed file patterns (e.g., submission.py, *.txt, output_dir/*.pdf) using glob patterns.">
             <HelpIcon fontSize="small" sx={{ ml: 1.5, mt: 1 }} />
           </Tooltip>
         </InputLabel>

@@ -11,7 +11,7 @@ import Checkbox from '@mui/material/Checkbox';
 import { visuallyHidden } from '@mui/utils';
 import { Lecture } from '../../../model/lecture';
 import { Assignment } from '../../../model/assignment';
-import { Outlet, useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, Outlet, useNavigate, useOutletContext } from 'react-router-dom';
 import { Submission } from '../../../model/submission';
 import { utcToLocalFormat } from '../../../services/datetime.service';
 import { Button, Chip, IconButton, Stack, Tooltip } from '@mui/material';
@@ -32,7 +32,6 @@ import { getLecture } from '../../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { SubmissionLogs } from '../../util/submission-logs';
 import AddIcon from '@mui/icons-material/Add';
-import Link from '@mui/material/Link';
 
 /**
  * Calculates chip color based on submission status.
@@ -586,6 +585,7 @@ export const GradingComponent = () => {
 
   const lecture = lectureData;
   const assignment = assignmentData;
+  const submissionsLink = `/lecture/${lecture.id}/assignment/${assignment.id}/submissions`;
 
   return (
     <Stack direction={'column'} sx={{ flex: 1, overflow: 'hidden' }}>
@@ -601,7 +601,7 @@ export const GradingComponent = () => {
             variant="outlined"
             startIcon={<AddIcon />}
             component={Link as any}
-            to={'create'}
+            to={submissionsLink + '/create'}
           >
             New Submission
           </Button>

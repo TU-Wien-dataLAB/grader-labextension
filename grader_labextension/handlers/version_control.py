@@ -349,7 +349,7 @@ class PushHandler(ExtensionBaseHandler):
             await self._handle_release_repo(git_service, lecture, assignment, lecture_id, assignment_id, selected_files)
 
         # Perform Git operations
-        await self._perform_git_operations(git_service, repo, commit_message, selected_files)
+        await self._perform_git_operations(git_service, repo, commit_message, selected_files, sub_id)
 
         # Handle submission for 'assignment' repo
         if submit and repo == "assignment":
@@ -499,12 +499,12 @@ class PushHandler(ExtensionBaseHandler):
             self.log.error(f"Cannot find gradebook file: {gradebook_path}")
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Cannot find gradebook file: {gradebook_path}")
 
-    async def _perform_git_operations(self, git_service: GitService, repo: str, commit_message: str, selected_files):
+    async def _perform_git_operations(self, git_service: GitService, repo: str, commit_message: str, selected_files, sub_id=None):
         try:
             if not git_service.is_git():
                 git_service.init()
                 git_service.set_author(author=self.user_name)
-            git_service.set_remote(f"grader_{repo}")
+            git_service.set_remote(f"grader_{repo}", sub_id)
         except GitError as e:
             self.log.error("git error during git initiation process:" + e.error)
             raise HTTPError(e.code, reason=e.error)
