@@ -319,7 +319,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
       assignment_type: 'user' as AssignementTypeEnum,
       autograde_type: 'auto' as AutogradeTypeEnum,
       max_submissions: undefined as number,
-      allow_files: false
     },
     validationSchema: validationSchema,
     onSubmit: values => {
@@ -331,8 +330,8 @@ export const CreateDialog = (props: ICreateDialogProps) => {
       }
       const newAssignment: Assignment = {
         name: values.name,
-        //FIXME old style
-        settings: {allowed_files: ["*"],
+        status: "created",
+        settings: {allowed_files: [],
                    deadline: values.deadline,
                    assignment_type: values.assignment_type as AssignementTypeEnum,
                    max_submissions: values.max_submissions,
@@ -411,12 +410,12 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 <FormControlLabel
                   control={
                     <Checkbox
-                      value={false}
+                      value={formik.values.deadline !== null}
                       onChange={async e => {
                         if (e.target.checked) {
-                          await formik.setFieldValue('due_date', new Date());
+                          await formik.setFieldValue('deadline', new Date());
                         } else {
-                          await formik.setFieldValue('due_date', null);
+                          await formik.setFieldValue('deadline', null);
                         }
                       }}
                     />
@@ -508,38 +507,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 <MenuItem value={'auto'}>Automatic Grading</MenuItem>
                 <MenuItem value={'full_auto'}>Fully Automatic Grading</MenuItem>
               </TextField>
-
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formik.values.allow_files}
-                    onChange={async e => {
-                      console.log(e.target.checked);
-                      await formik.setFieldValue(
-                        'allow_files',
-                        e.target.checked
-                      );
-                    }}
-                  />
-                }
-                label="Allow file upload by students"
-              />
-
-              {/* Not included in release 1.0
-                <InputLabel id="demo-simple-select-label">Type</InputLabel>
-                <Select
-                labelId="assignment-type-select-label"
-                id="assignment-type-select"
-                value={formik.values.settings.assignment_type}
-                label="Type"
-                onChange={e => {
-                formik.setFieldValue('type', e.target.value);
-              }}
-                >
-                <MenuItem value={'user'}>User</MenuItem>
-                <MenuItem value={'group'}>Group</MenuItem>
-                </Select>
-              */}
             </Stack>
           </DialogContent>
           <DialogActions>
