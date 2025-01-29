@@ -218,5 +218,5 @@ class AssignmentPropertiesHandler(ExtensionBaseHandler):
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
-        self.write(json.dumps(response))
+        self.write(response)
 

@@ -14,7 +14,10 @@ import { ScoreDistribution } from './score-distribution';
 import { getLecture, getUsers } from '../../../services/lectures.service';
 import { GradeBook } from '../../../services/gradebook';
 import { AssignmentScore } from './assignment-score';
-import { getAssignment, getAssignmentProperties } from '../../../services/assignments.service';
+import {
+  getAssignment,
+  getAssignmentProperties
+} from '../../../services/assignments.service';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { useQuery } from '@tanstack/react-query';
 
@@ -38,44 +41,66 @@ export const StatsComponent = () => {
 
   const { data: lecture, isLoading: isLoadingLecture } = useQuery({
     queryKey: ['lecture', lectureId],
-    queryFn: () => getLecture(lectureId), 
-    enabled: !!lectureId, 
+    queryFn: () => getLecture(lectureId),
+    enabled: !!lectureId
   });
 
   const { data: assignment, isLoading: isLoadingAssignment } = useQuery({
     queryKey: ['assignment', assignmentId],
-    queryFn: () => getAssignment(lectureId, assignmentId), 
-    enabled: !!lectureId && !!assignmentId, 
+    queryFn: () => getAssignment(lectureId, assignmentId),
+    enabled: !!lectureId && !!assignmentId
   });
 
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['users', lectureId],
     queryFn: () => getUsers(lectureId),
-    enabled: !!lectureId, 
+    enabled: !!lectureId
   });
 
-  const { data: allSubmissions = [], isLoading: isLoadingAllSubmissions } = useQuery({
-    queryKey: ['allSubmissions', lectureId, assignmentId],
-    queryFn: () => getAllSubmissions(lectureId, assignmentId, 'none', true),
-    enabled: !!lectureId && !!assignmentId, 
-  });
+  const { data: allSubmissions = [], isLoading: isLoadingAllSubmissions } =
+    useQuery({
+      queryKey: ['allSubmissions', lectureId, assignmentId],
+      queryFn: () => getAllSubmissions(lectureId, assignmentId, 'none', true),
+      enabled: !!lectureId && !!assignmentId
+    });
 
-  const { data: latestSubmissions = [], isLoading: isLoadingLatestSubmissions } = useQuery({
+  const {
+    data: latestSubmissions = [],
+    isLoading: isLoadingLatestSubmissions
+  } = useQuery({
     queryKey: ['latestSubmissions', lectureId, assignmentId],
     queryFn: () => getAllSubmissions(lectureId, assignmentId, 'latest', true),
-    enabled: !!lectureId && !!assignmentId, 
+    enabled: !!lectureId && !!assignmentId
   });
 
   const [allSubmissionsState, setAllSubmissionsState] = React.useState([]);
-  const [latestSubmissionsState, setLatestSubmissionsState] = React.useState([]);
+  const [latestSubmissionsState, setLatestSubmissionsState] = React.useState(
+    []
+  );
   const [gb, setGb] = React.useState(null);
-  const [usersState, setUsersState] = React.useState({ students: [], tutors: [], instructors: [] });
+  const [usersState, setUsersState] = React.useState({
+    students: [],
+    tutors: [],
+    instructors: []
+  });
 
   const updateSubmissions = async () => {
-    const newAllSubmissions = await getAllSubmissions(lectureId, assignmentId, 'none', true);
-    const newLatestSubmissions = await getAllSubmissions(lectureId, assignmentId, 'latest', true);
+    const newAllSubmissions = await getAllSubmissions(
+      lectureId,
+      assignmentId,
+      'none',
+      true
+    );
+    const newLatestSubmissions = await getAllSubmissions(
+      lectureId,
+      assignmentId,
+      'latest',
+      true
+    );
     const newUsers = await getUsers(lectureId);
-    const newGb = new GradeBook(await getAssignmentProperties(lectureId, assignmentId));
+    const newGb = new GradeBook(
+      await getAssignmentProperties(lectureId, assignmentId)
+    );
 
     setAllSubmissionsState(newAllSubmissions);
     setLatestSubmissionsState(newLatestSubmissions);
@@ -109,7 +134,13 @@ export const StatsComponent = () => {
     }
   }, [lecture, assignment]);
 
-  if (isLoadingLecture || isLoadingAssignment || isLoadingUsers || isLoadingAllSubmissions || isLoadingLatestSubmissions) {   
+  if (
+    isLoadingLecture ||
+    isLoadingAssignment ||
+    isLoadingUsers ||
+    isLoadingAllSubmissions ||
+    isLoadingLatestSubmissions
+  ) {
     return (
       <div>
         <Card>
@@ -120,7 +151,14 @@ export const StatsComponent = () => {
   }
 
   return (
-    <Box sx={{ flex: 1, overflow: 'auto' }}>
+    <Box
+      sx={{
+        flex: 1,
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
       <SectionTitle title={`${assignment.name} Stats`}>
         <Box sx={{ ml: 2 }} display="inline-block">
           <Tooltip title="Reload">
@@ -130,18 +168,46 @@ export const StatsComponent = () => {
           </Tooltip>
         </Box>
       </SectionTitle>
-      <Box sx={{ ml: 3, mr: 3, mb: 3, mt: 3 }}>
-        <Grid container spacing={2} alignItems="stretch">
-          <Grid xs={12}>
-            <SubmissionTimeSeries
-              lecture={lecture}
-              assignment={assignment}
-              allSubmissions={allSubmissionsState}
-              latestSubmissions={latestSubmissionsState}
-              users={usersState}
-            />
-          </Grid>
-          <Grid md={12} lg={4}>
+      <Box
+        sx={{
+          ml: 3,
+          mr: 3,
+          mb: 3,
+          mt: 3,
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gap: '24px'
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gridColumn: '1 / -1'
+          }}
+        >
+          <SubmissionTimeSeries
+            lecture={lecture}
+            assignment={assignment}
+            allSubmissions={allSubmissionsState}
+            latestSubmissions={latestSubmissionsState}
+            users={usersState}
+          />
+        </Box>
+
+        <Box
+          sx={{
+            display: 'flex',
+            gap: '24px',
+            flexWrap: 'wrap'
+          }}
+        >
+          <Box
+            sx={{
+              flex: '1 1 calc(33.333% - 24px)',
+              minWidth: '300px'
+            }}
+          >
             <GradingProgress
               lecture={lecture}
               assignment={assignment}
@@ -149,8 +215,13 @@ export const StatsComponent = () => {
               latestSubmissions={latestSubmissionsState}
               users={usersState}
             />
-          </Grid>
-          <Grid md={12} lg={4}>
+          </Box>
+          <Box
+            sx={{
+              flex: '1 1 calc(33.333% - 24px)',
+              minWidth: '300px'
+            }}
+          >
             <StudentSubmissions
               lecture={lecture}
               assignment={assignment}
@@ -158,20 +229,32 @@ export const StatsComponent = () => {
               latestSubmissions={latestSubmissionsState}
               users={usersState}
             />
-          </Grid>
-          <Grid md={12} lg={4}>
+          </Box>
+          <Box
+            sx={{
+              flex: '1 1 calc(33.333% - 24px)',
+              minWidth: '300px'
+            }}
+          >
             <AssignmentScore gb={gb} />
-          </Grid>
-          <Grid xs={12}>
-            <ScoreDistribution
-              lecture={lecture}
-              assignment={assignment}
-              allSubmissions={allSubmissionsState}
-              latestSubmissions={latestSubmissionsState}
-              users={usersState}
-            />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gridColumn: '1 / -1'
+          }}
+        >
+          <ScoreDistribution
+            lecture={lecture}
+            assignment={assignment}
+            allSubmissions={allSubmissionsState}
+            latestSubmissions={latestSubmissionsState}
+            users={usersState}
+          />
+        </Box>
       </Box>
     </Box>
   );

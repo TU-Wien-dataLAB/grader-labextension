@@ -74,26 +74,57 @@ export const OverviewComponent = () => {
   };
 
   return (
-    <Box sx={{ flex: 1, overflow: 'auto' }}>
-      <SectionTitle title={assignment.name}></SectionTitle>
-      <Box sx={{ ml: 3, mr: 3, mb: 3, mt: 3 }}>
-        <Grid container spacing={3}>
-          <Grid item md={12} xs={7} lg={6} xl={7}>
-            <AssignmentStatus
-              lecture={lecture}
-              assignment={assignment}
-              onAssignmentChange={onAssignmentChange}
-            />
-          </Grid>
-          <Grid item md={12} xs={12} lg={6} xl={5}>
-            <OverviewCard
-              lecture={lecture}
-              assignment={assignment}
-              latestSubmissions={latestSubmissionsNumber}
-              students={students}
-            />
-          </Grid>
-        </Grid>
+    <Box
+      sx={{
+        m: 5,
+        flex: 1,
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      <SectionTitle title={assignment.name} />
+      <Box
+        sx={{
+          ml: 3,
+          mr: 3,
+          mb: 3,
+          mt: 5,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '24px'
+        }}
+      >
+        <Box
+          sx={{
+            gridColumn: 'span 2',
+            flex: 2,
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <AssignmentStatus
+            lecture={lecture}
+            assignment={assignment}
+            onAssignmentChange={onAssignmentChange}
+          />
+        </Box>
+
+        <Box
+          sx={{
+            gridColumn: 'span 1',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <OverviewCard
+            lecture={lecture}
+            assignment={assignment}
+            latestSubmissions={latestSubmissionsNumber}
+            students={students}
+          />
+        </Box>
       </Box>
     </Box>
   );

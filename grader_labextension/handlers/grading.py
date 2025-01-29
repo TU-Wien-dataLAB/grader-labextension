@@ -11,6 +11,7 @@ from grader_labextension.handlers.base_handler import ExtensionBaseHandler
 from tornado.httpclient import HTTPResponse
 from tornado.web import HTTPError, authenticated
 from grader_labextension.services.git import GitService
+import urllib.parse
 import os
 
 
@@ -48,10 +49,13 @@ class ExportGradesHandler(ExtensionBaseHandler):
             raise HTTPError(e.code, reason=e.message)
 
         lecture = await self.get_lecture(lecture_id)
-        dir_path = os.path.join(self.root_dir, lecture["code"])
+        assignment = await self.get_assignment(lecture_id, assignment_id)
+        dir_path = os.path.join(self.root_dir, lecture["code"], "assignments", str(assignment["id"]))
         os.makedirs(dir_path, exist_ok=True)
         csv_content = response.body.decode("utf-8")
-        file_path = os.path.join(dir_path, "submissions.csv")
+        parsed_query_params = urllib.parse.parse_qs(query_params.lstrip('?'))
+        filter_value = parsed_query_params.get("filter", ["none"])[0]
+        file_path = os.path.join(dir_path, f"{assignment['name']}_{filter_value}_submissions.csv")
         with open(file_path, "w") as f:
             f.write(csv_content)
 

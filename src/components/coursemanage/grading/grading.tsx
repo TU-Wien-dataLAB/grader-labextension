@@ -14,7 +14,7 @@ import { Assignment } from '../../../model/assignment';
 import { Outlet, useNavigate, useOutletContext } from 'react-router-dom';
 import { Submission } from '../../../model/submission';
 import { utcToLocalFormat } from '../../../services/datetime.service';
-import { Chip, IconButton, Stack } from '@mui/material';
+import { Button, Chip, IconButton, Stack, Tooltip } from '@mui/material';
 import { SectionTitle } from '../../util/section-title';
 import { getAllSubmissions } from '../../../services/submissions.service';
 import { EnhancedTableToolbar } from './table-toolbar';
@@ -31,6 +31,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { SubmissionLogs } from '../../util/submission-logs';
+import AddIcon from '@mui/icons-material/Add';
+import Link from '@mui/material/Link';
 
 /**
  * Calculates chip color based on submission status.
@@ -278,10 +280,15 @@ export default function GradingTable() {
     setManualGradeSubmission: React.Dispatch<React.SetStateAction<Submission>>;
   };
 
-  const [order, setOrder] = React.useState<Order>('asc');
-  const [orderBy, setOrderBy] = React.useState<keyof Submission>('id');
+  const [order, setOrder] = React.useState<Order>(() => {
+    const savedOrder = loadString('order');
+    return savedOrder === 'asc' || savedOrder === 'desc' ? savedOrder : 'asc';
+  });
+  const [orderBy, setOrderBy] = React.useState<keyof Submission>(() => {
+    return (loadString('grader-order-by') as keyof Submission) || 'id';
+  });
   const [selected, setSelected] = React.useState<readonly number[]>([]);
-  const [page, setPage] = React.useState(0);
+  const [page, setPage] = React.useState(loadNumber('grader-page') || 0);
   const [rowsPerPage, setRowsPerPage] = React.useState(
     loadNumber('grading-rows-per-page') || 10
   );
@@ -292,10 +299,17 @@ export default function GradingTable() {
       | 'best'
   );
 
-  const [search, setSearch] = React.useState('');
+  const [search, setSearch] = React.useState(loadString('grader-search') || '');
+
+  const tableContainerRef = React.useRef<HTMLDivElement>(null); // track the table container
 
   React.useEffect(() => {
+    storeString('grader-search', search);
     updateSubmissions(shownSubmissions);
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTop =
+        loadNumber('table-scroll-position') || 0;
+    }
   }, []);
 
   const [open, setOpen] = React.useState(false);
@@ -336,7 +350,9 @@ export default function GradingTable() {
   ) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
+    storeString('order', isAsc ? 'desc' : 'asc');
     setOrderBy(property);
+    storeString('grader-order-by', property as string);
   };
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -371,6 +387,7 @@ export default function GradingTable() {
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
+    storeNumber('grader-page', newPage);
   };
 
   const handleChangeRowsPerPage = (
@@ -380,6 +397,7 @@ export default function GradingTable() {
     setRowsPerPage(n);
     storeNumber('grading-rows-per-page', n);
     setPage(0);
+    storeNumber('grader-page', 0);
   };
 
   const isSelected = (id: number) => selected.indexOf(id) !== -1;
@@ -408,29 +426,18 @@ export default function GradingTable() {
 
   return (
     <Stack sx={{ flex: 1, ml: 5, mr: 5, overflow: 'hidden' }}>
-      <Stack
-        direction={'row'}
-        justifyContent={'flex-end'}
-        alignItems={'center'}
-        spacing={2}
-        sx={{ mb: 2 }}
-      ></Stack>
-      <EnhancedTableToolbar
-        lecture={lecture}
-        assignment={assignment}
-        rows={rows}
-        clearSelection={() => setSelected([])}
-        selected={selected}
-        shownSubmissions={shownSubmissions}
-        switchShownSubmissions={switchShownSubmissions}
-        setSearch={setSearch}
-      />
-      <Box sx={{ flex: 1, overflow: 'auto' }}>
-        <Table
-          // sx={{ minWidth: 750 }}
-          aria-labelledby="tableTitle"
-          stickyHeader
-        >
+      <Box ref={tableContainerRef} sx={{ flex: 1, overflow: 'auto' }}>
+        <EnhancedTableToolbar
+          lecture={lecture}
+          assignment={assignment}
+          rows={rows}
+          clearSelection={() => setSelected([])}
+          selected={selected}
+          shownSubmissions={shownSubmissions}
+          switchShownSubmissions={switchShownSubmissions}
+          setSearch={setSearch}
+        />
+        <Table aria-labelledby="tableTitle" stickyHeader>
           <EnhancedTableHead
             numSelected={selected.length}
             order={order}
@@ -447,7 +454,13 @@ export default function GradingTable() {
               return (
                 <TableRow
                   hover
-                  onClick={event => {
+                  onClick={() => {
+                    if (tableContainerRef.current) {
+                      storeNumber(
+                        'table-scroll-position',
+                        tableContainerRef.current.scrollTop
+                      ); // Save scroll position
+                    }
                     setManualGradeSubmission(row);
                     navigate('manual');
                   }}
@@ -576,7 +589,24 @@ export const GradingComponent = () => {
 
   return (
     <Stack direction={'column'} sx={{ flex: 1, overflow: 'hidden' }}>
-      <SectionTitle title="Grading" />
+      <Stack
+        direction={'row'}
+        justifyContent={'space-between'}
+        alignItems={'center'}
+        sx={{ m: 2 }}
+      >
+        <SectionTitle title="Grading" />
+        <Tooltip title={'Make submissions for students manually'}>
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            component={Link as any}
+            to={'create'}
+          >
+            New Submission
+          </Button>
+        </Tooltip>
+      </Stack>
       <Outlet
         context={{
           lecture,

@@ -99,7 +99,9 @@ export const getRoutes = () => {
             id={'assignment'}
             path={'assignment/:aid/*'}
             element={<AssignmentModalComponent />}
-            loader={({ params }) => loadAssignment(+params.lid, +params.aid, queryClient)}
+            loader={({ params }) =>
+              loadAssignment(+params.lid, +params.aid, queryClient)
+            }
             handle={{
               // functions in handle have to handle undefined data (error page is displayed afterwards)
               crumb: data => data?.name,

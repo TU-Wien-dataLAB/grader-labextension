@@ -61,8 +61,7 @@ import { lectureSubPaths } from './services/file.service';
 import IModel = Contents.IModel;
 import { updateMenus } from './menu';
 import { loadString } from './services/storage.service';
-import { HTTPError } from './services/request.service';
-import { ErrorRounded } from '@mui/icons-material';
+
 
 export namespace AssignmentsCommandIDs {
   export const create = 'assignments:create';
