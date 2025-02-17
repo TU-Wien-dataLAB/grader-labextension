@@ -21,7 +21,6 @@ const FolderItem = ({
   missingFiles,
   inContained,
   openFile,
-  allowFiles,
   checkboxes,
   onFileSelectChange,
   checkStatus
@@ -82,7 +81,6 @@ const FolderItem = ({
                   missingFiles={missingFiles || []}
                   inContained={inContained}
                   openFile={openFile}
-                  allowFiles={allowFiles}
                   checkboxes={checkboxes}
                   onFileSelectChange={onFileSelectChange}
                   checkStatus={checkStatus}
@@ -96,7 +94,6 @@ const FolderItem = ({
                   missingFiles={missingFiles || []}
                   inContained={inContained}
                   openFile={openFile}
-                  allowFiles={allowFiles}
                   checkboxes={checkboxes}
                   onFileSelectChange={onFileSelectChange}
                   checkStatus={checkStatus}

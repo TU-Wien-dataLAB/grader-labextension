@@ -89,8 +89,6 @@ export const FilesList = (props: IFileListProps) => {
             missingFiles={missingFiles || []}
             inContained={inContained}
             openFile={openFile}
-            //FIXME set default to build: props.assignment?.settings.allowed_files
-            allowFiles={false}
             checkboxes={props.checkboxes}
             onFileSelectChange={handleFileSelectChange}
             checkStatus={props.checkStatus}
@@ -106,8 +104,6 @@ export const FilesList = (props: IFileListProps) => {
             missingFiles={missingFiles || []}
             inContained={inContained}
             openFile={openFile}
-            //FIXME set default to build: props.assignment?.settings.allowed_files
-            allowFiles={false}
             checkboxes={props.checkboxes}
             onFileSelectChange={handleFileSelectChange}
             checkStatus={props.checkStatus}
