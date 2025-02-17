@@ -116,7 +116,7 @@ export const EditSubmission = () => {
   };
 
   return (
-    <Stack direction={'column'} sx={{ flex: '1 1 100%' }}>
+    <Stack direction={'column'} sx={{ flex: '1 1 100%', overflow: 'auto' }}>
       <Box sx={{ m: 2, mt: 5 }}>
         <Stack direction="row" spacing={2} sx={{ ml: 2 }}>
           <Stack sx={{ mt: 0.5 }}>
