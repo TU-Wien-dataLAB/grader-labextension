@@ -900,7 +900,7 @@ export const SyncSubmissionGradesDialog = ({
   const handleSyncSubmission = async () => {
     setLoading(true);
     try {
-      await ltiSyncSubmissions(lecture.id, assignment.id).then(response => {
+      await ltiSyncSubmissions(lecture.id, assignment.id, filter).then(response => {
         enqueueSnackbar(
           'Successfully matched ' +
             response.syncable_users +

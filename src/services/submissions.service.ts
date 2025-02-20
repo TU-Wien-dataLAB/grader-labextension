@@ -11,16 +11,13 @@ import { request, HTTPMethod } from './request.service';
 
 export function submitAssignment(
   lecture: Lecture,
-  assignment: Assignment,
-  submit = false
-) {
+  assignment: Assignment) {
   let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/push/assignment`;
-  if (submit) {
-    const searchParams = new URLSearchParams({
-      submit: String(submit)
-    });
-    url += '?' + searchParams;
-  }
+  const searchParams = new URLSearchParams({
+    submit: 'true'
+  });
+  url += '?' + searchParams;
+  
   return request<Submission>(HTTPMethod.PUT, url, null);
 }
 
@@ -189,13 +186,19 @@ export function updateSubmission(
 
 export function ltiSyncSubmissions(
   lectureId: number,
-  assignmentId: number
+  assignmentId: number,
+  option: string,
+  submissionIds: number[] = []
 ): Promise<{ syncable_users: number; synced_user: number }> {
-  const url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/lti`;
+  let url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/lti`;
+  const searchParams = new URLSearchParams({
+    option: option
+  });
+  url += '?' + searchParams;
   return request<{ syncable_users: number; synced_user: number }>(
     HTTPMethod.PUT,
     url,
-    null
+    {"submission_ids": submissionIds}
   );
 }
 

@@ -121,6 +121,9 @@ export const StatsComponent = () => {
   }, [latestSubmissions]);
 
   React.useEffect(() => {
+    if (usersData === null) {
+      return;
+    }
     if (Object.keys(usersData).length > 0) {
       setUsersState(usersData);
     }

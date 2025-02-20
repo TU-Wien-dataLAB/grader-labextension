@@ -213,7 +213,7 @@ export const AssignmentComponent = () => {
       'Submit Assignment',
       'This action will submit your current notebooks!',
       async () => {
-        await submitAssignment(lecture, assignment, true).then(
+        await submitAssignment(lecture, assignment).then(
           () => {
             refetchSubleft().then(() => {
               const active_step = calculateActiveStep(submissions);

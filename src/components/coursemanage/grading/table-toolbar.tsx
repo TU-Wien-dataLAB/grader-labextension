@@ -33,6 +33,7 @@ import { queryClient } from '../../../widgets/assignmentmanage';
 import { SyncSubmissionGradesDialog } from '../../util/dialog';
 import { openBrowser } from '../overview/util';
 import { loadString, storeString } from '../../../services/storage.service';
+import { ltiSyncSubmissions } from '../../../services/submissions.service';
 
 export const autogradeSubmissionsDialog = async handleAgree => {
   showDialog(
@@ -181,6 +182,17 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
       clearSelection();
     });
   };
+  
+  const handleLTISyncGrades = () => {
+    ltiSyncSubmissions(lecture.id, assignment.id, 'selection', [...selected]).then(
+      response => {
+        enqueueSnackbar('Successfully Synced Selected Grades', { variant: 'success' })
+      },
+      error => {
+        enqueueSnackbar('Error Syncing Grades',{ variant: 'error' })
+    }
+    )
+  }
 
   const checkAutogradeStatus = () => {
     let available = true;
@@ -282,10 +294,18 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
                   disabled={!checkAutogradeStatus()}
                   onClick={handleGenerateFeedback}
                 >
-                  {'Generate Feedback'}
+                  Generate Feedback
                 </Button>
               </span>
             </Tooltip>
+            <Button
+                key={'lti'}
+                sx={{ whiteSpace: 'nowrap', minWidth: 'auto'}}
+                disabled={!checkAutogradeStatus()}
+                onClick={handleLTISyncGrades}
+                >
+                  LTI Sync Grades
+                </Button>
           </ButtonGroup>
         ) : (
           <Stack direction="row" spacing={2}>
