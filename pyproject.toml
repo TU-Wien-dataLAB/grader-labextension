@@ -26,7 +26,7 @@ dependencies = [
     "urllib3>=1.26.6",
     "traitlets>=5.0.5",
     "tornado>=6.2",
-    "grader-service>=0.7.0-a4,<0.8",
+    "grader-service>=0.7.0,<0.8",
     "hatch>=1.7",
     "hatch-jupyter-builder>=0.5",
     "hatch-nodejs-version",
