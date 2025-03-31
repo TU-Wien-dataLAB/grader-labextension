@@ -328,7 +328,7 @@ export const AssignmentComponent = () => {
         </Box>
         <Box sx={{ mt: 2, ml: 2 }}>
           <DeadlineDetail
-            due_date={assignment.settings.deadline}
+            deadline={assignment.settings.deadline}
             late_submissions={assignment.settings.late_submission || []}
           />
         </Box>

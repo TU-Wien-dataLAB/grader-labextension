@@ -202,7 +202,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                 <TableCell style={{ width: headerWidth(headers, 'Deadline') }}>
                   <DeadlineComponent
                     component={'chip'}
-                    due_date={row.settings.deadline}
+                    deadline={row.settings.deadline}
                     compact={true}
                   />
                 </TableCell>

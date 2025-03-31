@@ -56,7 +56,7 @@ const validationSchema = yup.object({
     .min(4, 'Name should be 4-50 character length')
     .max(50, 'Name should be 4-50 character length')
     .required('Name is required'),
-  due_date: yup.date().nullable(),
+  deadline: yup.date().nullable(),
   type: yup.mixed().oneOf(['user', 'group']),
   automatic_grading: yup.mixed().oneOf(['unassisted', 'auto', 'full_auto']),
   max_submissions: yup

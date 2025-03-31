@@ -30,7 +30,7 @@ import { GlobalObjects } from '../../index';
 import { useQuery } from '@tanstack/react-query';
 
 export interface IDeadlineProps {
-  due_date: string | null;
+  deadline: string | null;
   compact: boolean;
   component: 'chip' | 'card';
   sx?: SxProps<Theme>;
@@ -136,8 +136,8 @@ const deadlineColor = (date: Date): 'default' | 'warning' | 'error' => {
 
 export const DeadlineComponent = (props: IDeadlineProps) => {
   const [date, setDate] = React.useState(
-    props.due_date !== null
-      ? moment.utc(props.due_date).local().toDate()
+    props.deadline !== null
+      ? moment.utc(props.deadline).local().toDate()
       : undefined
   );
   const [displayDate, setDisplayDate] = React.useState(
@@ -150,8 +150,8 @@ export const DeadlineComponent = (props: IDeadlineProps) => {
 
   React.useEffect(() => {
     const d =
-      props.due_date !== null
-        ? moment.utc(props.due_date).local().toDate()
+      props.deadline !== null
+        ? moment.utc(props.deadline).local().toDate()
         : undefined;
     setDate(d);
     setDisplayDate(getDisplayDate(d, props.compact));
@@ -202,12 +202,12 @@ export const DeadlineComponent = (props: IDeadlineProps) => {
 };
 
 interface IDeadlineDetailProps {
-  due_date: string | null;
+  deadline: string | null;
   late_submissions: SubmissionPeriod[];
 }
 
 export function DeadlineDetail(props: IDeadlineDetailProps) {
-  if (props.due_date === null) {
+  if (props.deadline === null) {
     return null;
   }
   const [open, setOpen] = React.useState(true);
@@ -215,7 +215,7 @@ export function DeadlineDetail(props: IDeadlineDetailProps) {
   const {data: date = undefined } = useQuery({
     queryKey: ['date'],
     queryFn: () => {
-      props.due_date != null ? moment.utc(props.due_date).local().toDate() : undefined
+      props.deadline != null ? moment.utc(props.deadline).local().toDate() : undefined
     }
   });
 
@@ -241,8 +241,8 @@ export function DeadlineDetail(props: IDeadlineDetailProps) {
 
   React.useEffect(() => {
     const d =
-      props.due_date !== null
-        ? moment.utc(props.due_date).local().toDate()
+      props.deadline !== null
+        ? moment.utc(props.deadline).local().toDate()
         : undefined;
     setDisplayDuration(getDisplayDate(d, false));
     updateTimeoutInterval(d);
@@ -272,7 +272,7 @@ export function DeadlineDetail(props: IDeadlineDetailProps) {
           <ListItemIcon>
             <AlarmIcon color={color === 'default' ? 'action' : color} />
           </ListItemIcon>
-          <ListItemText primary={utcToLocalFormat(props.due_date)} />
+          <ListItemText primary={utcToLocalFormat(props.deadline)} />
           <ListItemText
             primary={
               <Typography color={'text.secondary'}>
@@ -301,7 +301,7 @@ export function DeadlineDetail(props: IDeadlineDetailProps) {
           <ListItemIcon>
             <AlarmIcon color={color === 'default' ? 'action' : color} />
           </ListItemIcon>
-          <ListItemText primary={utcToLocalFormat(props.due_date)} />
+          <ListItemText primary={utcToLocalFormat(props.deadline)} />
           <ListItemText
             primary={
               <Typography color={'text.secondary'}>

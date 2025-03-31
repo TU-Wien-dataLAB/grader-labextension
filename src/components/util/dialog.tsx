@@ -81,7 +81,7 @@ const validationSchema = yup.object({
     .min(4, 'Name should be 4-50 character length')
     .max(50, 'Name should be 4-50 character length')
     .required('Name is required'),
-  due_date: yup
+  deadline: yup
     .date()
     .min(new Date(), 'Deadline must be set in the future')
     .nullable(),
@@ -429,7 +429,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                   label="DateTimePicker"
                   value={formik.values?.deadline}
                   onChange={date => {
-                    formik.setFieldValue('due_date', date);
+                    formik.setFieldValue('deadline', date);
                     if (new Date(date).getTime() < Date.now()) {
                       handleOpenSnackBar();
                     }

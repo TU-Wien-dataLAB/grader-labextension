@@ -94,7 +94,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                 <TableCell>
                   <DeadlineComponent
                     component={'chip'}
-                    due_date={row.settings.deadline}
+                    deadline={row.settings.deadline}
                     compact={true}
                   />
                 </TableCell>
