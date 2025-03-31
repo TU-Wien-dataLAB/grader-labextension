@@ -65,7 +65,7 @@ const getActiveStep = (status: Assignment.StatusEnum) => {
 export const AssignmentStatus = (props: IAssignmentStatusProps) => {
   const { data: assignment = props.assignment, refetch: refetchAssignment } =
     useQuery({
-      queryKey: ['assignment'],
+      queryKey: ['assignment', props.assignment.id],
       queryFn: () => getAssignment(props.lecture.id, props.assignment.id, true)
     });
 
