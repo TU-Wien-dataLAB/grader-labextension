@@ -23,10 +23,8 @@ import { getAssignment } from '../../../services/assignments.service';
 import { getAllLectures } from '../../../services/lectures.service';
 import { DataWidget } from './data-widget/data-widget';
 import { GradeWidget } from './grade-widget/grade-widget';
-import { GlobalObjects } from '../../..';
-import { Box, Button, Grid, Stack, Typography } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import { AntSwitch } from '../create-assignment/creation-switch';
-import { Validator } from '../create-assignment/validator';
 import { lectureSubPaths } from '../../../services/file.service';
 
 export class GradingModeSwitch extends React.Component<IModeSwitchProps> {

@@ -7,39 +7,25 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { AssignmentSettings } from './assignmentSettings';
 import { Submission } from './submission';
 
 
 export interface AssignmentDetail { 
     id?: number;
     name?: string;
-    type?: AssignmentDetail.TypeEnum;
-    due_date?: string;
+    settings?: AssignmentSettings;
     status?: AssignmentDetail.StatusEnum;
     points?: number;
-    automatic_grading?: AssignmentDetail.AutomaticGradingEnum;
-    max_submissions?: number;
-    allow_files?: boolean;
     submissions?: Array<Submission>;
 }
 export namespace AssignmentDetail {
-    export type TypeEnum = 'user' | 'group';
-    export const TypeEnum = {
-        User: 'user' as TypeEnum,
-        Group: 'group' as TypeEnum
-    };
     export type StatusEnum = 'created' | 'pushed' | 'released' | 'complete';
     export const StatusEnum = {
         Created: 'created' as StatusEnum,
         Pushed: 'pushed' as StatusEnum,
         Released: 'released' as StatusEnum,
         Complete: 'complete' as StatusEnum
-    };
-    export type AutomaticGradingEnum = 'unassisted' | 'auto' | 'full_auto';
-    export const AutomaticGradingEnum = {
-        Unassisted: 'unassisted' as AutomaticGradingEnum,
-        Auto: 'auto' as AutomaticGradingEnum,
-        FullAuto: 'full_auto' as AutomaticGradingEnum
     };
 }
 

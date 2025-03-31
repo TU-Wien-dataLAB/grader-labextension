@@ -134,7 +134,7 @@ export const Feedback = () => {
                   height: 35
                 }}
               >
-                {assignment.type}
+                {assignment.settings.assignment_type}
               </Typography>
             </Typography>
             <Typography

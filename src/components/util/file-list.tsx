@@ -89,7 +89,6 @@ export const FilesList = (props: IFileListProps) => {
             missingFiles={missingFiles || []}
             inContained={inContained}
             openFile={openFile}
-            allowFiles={props.assignment?.allow_files}
             checkboxes={props.checkboxes}
             onFileSelectChange={handleFileSelectChange}
             checkStatus={props.checkStatus}
@@ -105,7 +104,6 @@ export const FilesList = (props: IFileListProps) => {
             missingFiles={missingFiles || []}
             inContained={inContained}
             openFile={openFile}
-            allowFiles={props.assignment?.allow_files}
             checkboxes={props.checkboxes}
             onFileSelectChange={handleFileSelectChange}
             checkStatus={props.checkStatus}

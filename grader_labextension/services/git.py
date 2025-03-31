@@ -91,14 +91,15 @@ class GitService(Configurable):
             origin (str): The remote name.
             sub_id (str): Optional query parameter for feedback pull.
         """
-        self.log.info(f"Setting remote {origin} for {self.path}")
-        url = posixpath.join(self.git_remote_url, self.lecture_code, str(self.assignment_id), self.repo_type)
-
+        
+        url_path = posixpath.join(self.git_remote_url, self.lecture_code, str(self.assignment_id), self.repo_type)
+        url = self._build_remote_url(url_path, sub_id)
+        self.log.info(f"Setting remote {origin} for {self.path} to {url}")
         try:
-            self._run_command(f"git remote add {origin} {self._build_remote_url(url, sub_id)}", cwd=self.path)
+            self._run_command(f"git remote add {origin} {url}", cwd=self.path)
         except GitError:
             self.log.warning(f"Remote {origin} already exists. Updating URL.")
-            self._run_command(f"git remote set-url {origin} {self._build_remote_url(url, sub_id)}", cwd=self.path)
+            self._run_command(f"git remote set-url {origin} {url}", cwd=self.path)
 
     def _build_remote_url(self, base_url: str, sub_id: str = None) -> str:
         """Build the complete remote URL for the git repository.

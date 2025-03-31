@@ -35,7 +35,6 @@ interface IFileItemProps {
   inContained: (file: string) => boolean;
   missingFiles?: File[];
   openFile: (path: string) => void;
-  allowFiles?: boolean;
   checkboxes: boolean;
   onFileSelectChange?: (filePath: string, isSelected: boolean) => void;
   checkStatus?: boolean; // check if file is up to date with remote git repo
@@ -45,9 +44,7 @@ const FileItem = ({
   file,
   lecture,
   assignment,
-  inContained,
   openFile,
-  allowFiles,
   missingFiles,
   checkboxes,
   onFileSelectChange,
@@ -149,8 +146,6 @@ const FileItem = ({
     });
   };
 
-  const extraFileHelp =
-    'This file is not part of the assignment and will be removed when grading! Did you rename a notebook file or add it manually?';
   const missingFileHelp =
     'This file should be part of your assignment! Did you delete it?';
 
@@ -187,23 +182,6 @@ const FileItem = ({
                   </Stack>
                 </Tooltip>
               )}
-              {
-                <Stack direction={'row'} spacing={2}>
-                  {!inContained(getRelativePath(file.path, 'assignments')) &&
-                    !allowFiles && (
-                      <Tooltip title={extraFileHelp}>
-                        <Stack direction={'row'} spacing={2} flex={0}>
-                          <WarningIcon color={'warning'} fontSize={'small'} />
-                          <Typography
-                            sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
-                          >
-                            Extra File
-                          </Typography>
-                        </Stack>
-                      </Tooltip>
-                    )}
-                </Stack>
-              }
             </Stack>
           }
         />

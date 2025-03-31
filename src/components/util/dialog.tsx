@@ -18,7 +18,6 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
-  DialogContentText,
   IconButton,
   Checkbox,
   FormControlLabel,
@@ -29,14 +28,15 @@ import {
   Card,
   CardActionArea,
   Box,
-  InputAdornment,
   TooltipProps,
   tooltipClasses,
   Typography,
   Snackbar,
   Modal,
   Alert,
-  AlertTitle
+  AlertTitle,
+  FormControl,
+  Switch
 } from '@mui/material';
 import { Assignment } from '../../model/assignment';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
@@ -44,12 +44,10 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { createAssignment } from '../../services/assignments.service';
 import { Lecture } from '../../model/lecture';
-import TypeEnum = Assignment.TypeEnum;
-import AutomaticGradingEnum = Assignment.AutomaticGradingEnum;
+import AutogradeTypeEnum = AssignmentSettings.AutogradeTypeEnum;
+import AssignementTypeEnum = AssignmentSettings.AssignmentTypeEnum;
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import AddIcon from '@mui/icons-material/Add';
-import { Simulate } from 'react-dom/test-utils';
-import error = Simulate.error;
 import { enqueueSnackbar } from 'notistack';
 import { showDialog } from './dialog-provider';
 import styled from '@mui/system/styled';
@@ -57,9 +55,19 @@ import MuiAlert, { AlertProps } from '@mui/material/Alert';
 import { updateMenus } from '../../menu';
 import { GraderLoadingButton } from './loading-button';
 import { FilesList } from './file-list';
-import { extractRelativePaths, getFiles, lectureBasePath } from '../../services/file.service';
+import {
+  extractRelativePaths,
+  getFiles,
+  lectureBasePath, openFile
+} from '../../services/file.service';
 import InfoIcon from '@mui/icons-material/Info';
 import { queryClient } from '../../widgets/assignmentmanage';
+import { getAllLectureSubmissions } from '../../services/lectures.service';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
+import { ltiSyncSubmissions } from '../../services/submissions.service';
+import CloudSyncIcon from '@mui/icons-material/CloudSync';
+import { openBrowser } from '../coursemanage/overview/util';
+import { AssignmentSettings } from '../../model/assignmentSettings';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -115,11 +123,15 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
   const formik = useFormik({
     initialValues: {
       name: props.lecture.name,
-      complete: props.lecture.complete
+      active: !props.lecture.complete
     },
     validationSchema: validationSchemaLecture,
     onSubmit: values => {
-      const updatedLecture: Lecture = Object.assign(props.lecture, values);
+      const updatedLecture: Lecture = {
+        ...props.lecture,
+        ...values,
+        complete: !values.active
+      };
       props.handleSubmit(updatedLecture);
       setOpen(false);
     }
@@ -127,25 +139,23 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
 
   const { open, handleClose } = props;
   const [openDialog, setOpen] = React.useState(false);
+
   const openDialogFunction = () => {
     setOpen(true);
   };
-
 
   return (
     <div>
       <EditLectureNameTooltip
         title={
           props.lecture.code === props.lecture.name ? (
-            <React.Fragment>
+            <>
               <Typography color="inherit">Edit Lecture</Typography>
-              {'Note: '}{' '}
               <em>
-                {
-                  'Lecture name is currently the same as lecture code. You should edit it to make it more readable.'
-                }
+                "Lecture name matches the code. Consider making it more
+                descriptive."
               </em>
-            </React.Fragment>
+            </>
           ) : (
             'Edit Lecture'
           )
@@ -156,41 +166,96 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
             e.stopPropagation();
             openDialogFunction();
           }}
-          onMouseDown={event => event.stopPropagation()}
           aria-label="edit"
         >
           <SettingsIcon />
         </IconButton>
       </EditLectureNameTooltip>
-      <Dialog open={open || openDialog}
-              onBackdropClick={() => { setOpen(false); handleClose(); }}>
+
+      <Dialog
+        open={open || openDialog}
+        onBackdropClick={() => {
+          setOpen(false);
+          handleClose();
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>Edit Lecture</DialogTitle>
         <form onSubmit={formik.handleSubmit}>
           <DialogContent>
-            <Stack spacing={2}>
-              <TextField
-                variant="outlined"
-                fullWidth
-                id="name"
-                name="name"
-                label="Lecture Name"
-                value={formik.values.name}
-                onChange={formik.handleChange}
-                error={formik.touched.name && Boolean(formik.errors.name)}
-                helperText={formik.touched.name && formik.errors.name}
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    value={formik.values.complete}
-                    checked={formik.values.complete}
-                    onChange={e => {
-                      formik.setFieldValue('complete', e.target.checked);
-                    }}
-                  />
-                }
-                label="Complete"
-              />
+            <Stack spacing={4}>
+              <Stack spacing={1}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Rename Lecture
+                </Typography>
+                <TextField
+                  variant="outlined"
+                  fullWidth
+                  id="name"
+                  name="name"
+                  label="Lecture Name"
+                  value={formik.values.name}
+                  onChange={formik.handleChange}
+                  error={formik.touched.name && Boolean(formik.errors.name)}
+                  helperText={formik.touched.name && formik.errors.name}
+                />
+                {props.lecture.code === props.lecture.name && (
+                  <Typography variant="body2" color="text.secondary">
+                    The current name matches the lecture code. Consider updating
+                    updating it to something more descriptive.
+                  </Typography>
+                )}
+              </Stack>
+
+              <Stack spacing={1}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Lecture Status
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formik.values.active}
+                      onChange={e => {
+                        formik.setFieldValue('active', e.target.checked);
+                      }}
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: formik.values.active
+                            ? 'primary.main'
+                            : 'error.main'
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                          {
+                            backgroundColor: formik.values.active
+                              ? 'primary.main'
+                              : 'error.main'
+                          },
+                        '& .MuiSwitch-switchBase': {
+                          color: !formik.values.active
+                            ? 'error.main'
+                            : undefined
+                        },
+                        '& .MuiSwitch-track': {
+                          backgroundColor: !formik.values.active
+                            ? 'error.main'
+                            : undefined
+                        }
+                      }}
+                    />
+                  }
+                  label={
+                    formik.values.active
+                      ? 'Lecture is Active'
+                      : 'Lecture is Complete'
+                  }
+                />
+                <Typography variant="body2" color="text.secondary">
+                  {formik.values.active
+                    ? 'This lecture is live, and students can actively participate in it.'
+                    : "This lecture is inactive and removed from your and your students' active lectures list."}
+                </Typography>
+              </Stack>
             </Stack>
           </DialogContent>
           <DialogActions>
@@ -204,14 +269,8 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
             >
               Cancel
             </Button>
-
-            <Button
-              color="primary"
-              variant="contained"
-              type="submit"
-              onClick={handleClose}
-            >
-              Submit
+            <Button color="primary" variant="contained" type="submit">
+              Save
             </Button>
           </DialogActions>
         </form>
@@ -256,11 +315,10 @@ export const CreateDialog = (props: ICreateDialogProps) => {
   const formik = useFormik({
     initialValues: {
       name: 'Assignment',
-      due_date: null,
-      type: 'user',
-      automatic_grading: 'auto' as AutomaticGradingEnum,
+      deadline: null,
+      assignment_type: 'user' as AssignementTypeEnum,
+      autograde_type: 'auto' as AutogradeTypeEnum,
       max_submissions: undefined as number,
-      allow_files: false
     },
     validationSchema: validationSchema,
     onSubmit: values => {
@@ -272,11 +330,13 @@ export const CreateDialog = (props: ICreateDialogProps) => {
       }
       const newAssignment: Assignment = {
         name: values.name,
-        due_date: values.due_date,
-        type: values.type as TypeEnum,
-        automatic_grading: values.automatic_grading as AutomaticGradingEnum,
-        max_submissions: values.max_submissions,
-        allow_files: values.allow_files
+        status: "created",
+        settings: {allowed_files: [],
+                   deadline: values.deadline,
+                   assignment_type: values.assignment_type as AssignementTypeEnum,
+                   max_submissions: values.max_submissions,
+                   autograde_type: values.autograde_type as AutogradeTypeEnum
+        }
       };
       createAssignment(props.lecture.id, newAssignment).then(
         async a => {
@@ -350,12 +410,12 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 <FormControlLabel
                   control={
                     <Checkbox
-                      value={false}
+                      value={formik.values.deadline !== null}
                       onChange={async e => {
                         if (e.target.checked) {
-                          await formik.setFieldValue('due_date', new Date());
+                          await formik.setFieldValue('deadline', new Date());
                         } else {
-                          await formik.setFieldValue('due_date', null);
+                          await formik.setFieldValue('deadline', null);
                         }
                       }}
                     />
@@ -365,9 +425,9 @@ export const CreateDialog = (props: ICreateDialogProps) => {
 
                 <DateTimePicker
                   ampm={false}
-                  disabled={formik.values.due_date === null}
+                  disabled={formik.values.deadline === null}
                   label="DateTimePicker"
-                  value={formik.values?.due_date}
+                  value={formik.values?.deadline}
                   onChange={date => {
                     formik.setFieldValue('due_date', date);
                     if (new Date(date).getTime() < Date.now()) {
@@ -436,7 +496,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
               <TextField
                 select
                 id="assignment-type-select"
-                value={formik.values.automatic_grading}
+                value={formik.values.autograde_type}
                 label="Auto-Grading Behaviour"
                 placeholder="Grading"
                 onChange={e => {
@@ -447,38 +507,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 <MenuItem value={'auto'}>Automatic Grading</MenuItem>
                 <MenuItem value={'full_auto'}>Fully Automatic Grading</MenuItem>
               </TextField>
-
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formik.values.allow_files}
-                    onChange={async e => {
-                      console.log(e.target.checked);
-                      await formik.setFieldValue(
-                        'allow_files',
-                        e.target.checked
-                      );
-                    }}
-                  />
-                }
-                label="Allow file upload by students"
-              />
-
-              {/* Not included in release 1.0
-                <InputLabel id="demo-simple-select-label">Type</InputLabel>
-                <Select
-                labelId="assignment-type-select-label"
-                id="assignment-type-select"
-                value={formik.values.type}
-                label="Type"
-                onChange={e => {
-                formik.setFieldValue('type', e.target.value);
-              }}
-                >
-                <MenuItem value={'user'}>User</MenuItem>
-                <MenuItem value={'group'}>Group</MenuItem>
-                </Select>
-              */}
             </Stack>
           </DialogContent>
           <DialogActions>
@@ -516,26 +544,30 @@ const InfoModal = () => {
         <InfoIcon />
       </IconButton>
       <Modal open={open} onClose={handleClose}>
-        <Box 
-        sx={{ position: 'absolute' as const,
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '80%',
-              bgcolor: 'background.paper',
-              boxShadow: 3,
-              pt: 2,
-              px: 4,
-              pb: 3
-            }}
+        <Box
+          sx={{
+            position: 'absolute' as const,
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '80%',
+            bgcolor: 'background.paper',
+            boxShadow: 3,
+            pt: 2,
+            px: 4,
+            pb: 3
+          }}
         >
           <h2>Selecting Files to Push</h2>
           <Alert severity="info" sx={{ m: 2 }}>
             <AlertTitle>Info</AlertTitle>
-            If you have made changes to multiple files in your source directory and wish to push only specific 
-            files to the remote repository, you can toggle the 'Select files to commit' button. This allows you to
-            choose the files you want to push. Your students will then be able to view only the changes in files you have selected.
-            If you do not use this option, all changed files from the source repository will be pushed, and students will see all the changes.
+            If you have made changes to multiple files in your source directory
+            and wish to push only specific files to the remote repository, you
+            can toggle the 'Select files to commit' button. This allows you to
+            choose the files you want to push. Your students will then be able
+            to view only the changes in files you have selected. If you do not
+            use this option, all changed files from the source repository will
+            be pushed, and students will see all the changes.
           </Alert>
           <Button onClick={handleClose}>Close</Button>
         </Box>
@@ -543,7 +575,6 @@ const InfoModal = () => {
     </React.Fragment>
   );
 };
-
 
 export interface ICommitDialogProps {
   handleCommit: (msg: string, selectedFiles?: string[]) => void;
@@ -604,20 +635,25 @@ export const CommitDialog = (props: ICommitDialogProps) => {
         <Stack direction={'row'} justifyContent={'space-between'}>
           <DialogTitle>Commit Files</DialogTitle>
           <InfoModal />
-        </Stack>  
+        </Stack>
         <DialogContent>
-        <Button onClick={toggleFilesList} sx={{ mb: 2 }}>
-            {filesListVisible ? <KeyboardArrowUpIcon /> : <KeyboardArrowRightIcon />}
+          <Button onClick={toggleFilesList} sx={{ mb: 2 }}>
+            {filesListVisible ? (
+              <KeyboardArrowUpIcon />
+            ) : (
+              <KeyboardArrowRightIcon />
+            )}
             Choose files to commit
           </Button>
           {filesListVisible && (
-            <FilesList  
-            path={path} 
-            lecture={props.lecture}
-            assignment={props.assignment}
-            checkboxes={true} 
-            onFileSelectChange={handleFileSelectChange} 
-            checkStatus={true}/>
+            <FilesList
+              path={path}
+              lecture={props.lecture}
+              assignment={props.assignment}
+              checkboxes={true}
+              onFileSelectChange={handleFileSelectChange}
+              checkStatus={true}
+            />
           )}
           <TextField
             sx={{ mt: 2, width: '100%' }}
@@ -726,5 +762,224 @@ export const ReleaseDialog = (props: IReleaseDialogProps) => {
         </DialogActions>
       </Dialog>
     </div>
+  );
+};
+
+interface IExportDialogProps {
+  lecture: Lecture;
+}
+
+export const ExportGradesForLectureDialog = ({
+  lecture
+}: IExportDialogProps) => {
+  const [openDialog, setOpenDialog] = React.useState(false);
+  const [filter, setFilter] = React.useState<'latest' | 'best'>('best');
+  const [format, setFormat] = React.useState<'json' | 'csv'>('json');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleExport = async () => {
+    setLoading(true);
+    try {
+      await getAllLectureSubmissions(lecture.id, filter, format);
+      await openFile(
+        `${lectureBasePath}${lecture.code}/${lecture.name}_${filter}_submissions.${format}`
+      );
+      await openBrowser(`${lectureBasePath}${lecture.code}`);
+      if (format === 'csv') {
+        enqueueSnackbar('CSV export completed successfully!', {
+          variant: 'success'
+        });
+      } else {
+        enqueueSnackbar('JSON export completed successfully!', {
+          variant: 'success'
+        });
+      }
+    } catch (error: any) {
+      console.error('Error exporting submissions:', error);
+      enqueueSnackbar(error.message || 'Failed to export submissions.', {
+        variant: 'error'
+      });
+    } finally {
+      setLoading(false);
+      setOpenDialog(false);
+    }
+  };
+
+  return (
+    <>
+      <Tooltip title="Export grades of all assignments in this lecture in one file.">
+        <Button
+          variant="contained"
+          startIcon={<FileUploadIcon />}
+          onClick={() => setOpenDialog(true)}
+          sx={{ ml: 2 }}
+        >
+          Export Grades
+        </Button>
+      </Tooltip>
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth>
+        <DialogTitle>Export Grades</DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ fontSize: '0.875rem' }}
+          >
+            Which grades of student submissions do you wish to export? You can
+            either export best or latest grades.
+          </Typography>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Filter</InputLabel>
+            <Select
+              value={filter}
+              onChange={e => setFilter(e.target.value as 'latest' | 'best')}
+              label="Filter"
+            >
+              <MenuItem value="latest">Latest Submissions</MenuItem>
+              <MenuItem value="best">Best Submissions</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ fontSize: '0.875rem', mt: 2 }}
+          >
+            Choose the format of the export file. You can either export grades
+            in CSV or JSON file.
+          </Typography>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Format</InputLabel>
+            <Select
+              value={format}
+              onChange={e => setFormat(e.target.value as 'json' | 'csv')}
+              label="Format"
+            >
+              <MenuItem value="json">JSON</MenuItem>
+              <MenuItem value="csv">CSV</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() => setOpenDialog(false)}
+            color="primary"
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleExport}
+            color="primary"
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? 'Exporting...' : 'Export'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+};
+
+interface ISyncSubmissionGrades {
+  lecture: Lecture;
+  assignment: Assignment;
+}
+
+export const SyncSubmissionGradesDialog = ({
+  lecture,
+  assignment
+}: ISyncSubmissionGrades) => {
+  const [openDialog, setOpenDialog] = React.useState(false);
+  const [filter, setFilter] = React.useState<'latest' | 'best'>('best');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleSyncSubmission = async () => {
+    setLoading(true);
+    try {
+      await ltiSyncSubmissions(lecture.id, assignment.id, filter).then(response => {
+        enqueueSnackbar(
+          'Successfully matched ' +
+            response.syncable_users +
+            ' submissions with learning platform',
+          { variant: 'success' }
+        );
+        enqueueSnackbar(
+          'Successfully synced latest submissions with feedback of ' +
+            response.synced_user +
+            ' users',
+          { variant: 'success' }
+        );
+      });
+    } catch (error: any) {
+      enqueueSnackbar(
+        'Error while trying to sync submissions: ' + error.message,
+        { variant: 'error' }
+      );
+    } finally {
+      setLoading(false);
+      setOpenDialog(false);
+    }
+  };
+
+  return (
+    <>
+      <Tooltip title="Sync grades of this assignment to Moodle.">
+        <Button
+          size="small"
+          startIcon={<CloudSyncIcon />}
+          sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
+          onClick={() => setOpenDialog(true)}
+        >
+          LTI Sync Grades
+        </Button>
+      </Tooltip>
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth>
+        <DialogTitle>LTI Sync Grades</DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ fontSize: '0.875rem' }}
+          >
+            Which submission grades do you wish to sync to Moodle? You can
+            either sync best or latest grades.
+          </Typography>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Filter</InputLabel>
+            <Select
+              value={filter}
+              onChange={e => setFilter(e.target.value as 'latest' | 'best')}
+              label="Filter"
+            >
+              <MenuItem value="latest">Latest Submissions</MenuItem>
+              <MenuItem value="best">Best Submissions</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() => setOpenDialog(false)}
+            color="primary"
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSyncSubmission}
+            color="primary"
+            variant="contained"
+            disabled={loading}
+          >
+            {loading ? 'Syncing...' : 'Sync'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };

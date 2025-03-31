@@ -15,9 +15,7 @@ import {
 } from '@mui/material';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import ReplayIcon from '@mui/icons-material/Replay';
-import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import * as React from 'react';
-import { ltiSyncSubmissions } from '../../../services/submissions.service';
 import { Assignment } from '../../../model/assignment';
 import { Lecture } from '../../../model/lecture';
 import { enqueueSnackbar } from 'notistack';
@@ -29,12 +27,13 @@ import {
 import { lectureBasePath, openFile } from '../../../services/file.service';
 import { Submission } from '../../../model/submission';
 import { showDialog } from '../../util/dialog-provider';
-import AddIcon from '@mui/icons-material/Add';
-import { Link } from 'react-router-dom';
-import { openBrowser } from '../overview/util';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { queryClient } from '../../../widgets/assignmentmanage';
+import { SyncSubmissionGradesDialog } from '../../util/dialog';
+import { openBrowser } from '../overview/util';
+import { loadString, storeString } from '../../../services/storage.service';
+import { ltiSyncSubmissions } from '../../../services/submissions.service';
 
 export const autogradeSubmissionsDialog = async handleAgree => {
   showDialog(
@@ -79,21 +78,27 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
   } = props;
   const numSelected = selected.length;
 
-  const [searchTerm, setSearchTerm] = React.useState('');
-
-  let searchTimeout = null;
+  const [searchTerm, setSearchTerm] = React.useState(
+    () => loadString('grader-search') || ''
+  );
+  const searchTimeout = React.useRef<NodeJS.Timeout | null>(null);
 
   const handleSearch = event => {
-    setSearchTerm(event.target.value);
-    // debounce search term
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      setSearch(event.target.value.toLowerCase());
+    const value = event.target.value;
+    setSearchTerm(value);
+
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+    searchTimeout.current = setTimeout(() => {
+      storeString('grader-search', value.toLowerCase());
+      setSearch(value.toLowerCase());
     }, 250);
   };
 
   const handleClear = () => {
     setSearchTerm('');
+    storeString('grader-search', '');
     setSearch('');
   };
 
@@ -107,40 +112,15 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
     }
   };
 
-  const handleSyncSubmission = async () => {
-    showDialog(
-      'LTI Sync Submission',
-      'Do you wish to sync Submissions?',
-      async () => {
-        await ltiSyncSubmissions(lecture.id, assignment.id)
-          .then(response => {
-            enqueueSnackbar(
-              'Successfully matched ' +
-                response.syncable_users +
-                ' submissions with learning platform',
-              { variant: 'success' }
-            );
-            enqueueSnackbar(
-              'Successfully synced latest submissions with feedback of ' +
-                response.synced_user +
-                ' users',
-              { variant: 'success' }
-            );
-          })
-          .catch(error => {
-            enqueueSnackbar(
-              'Error while trying to sync submissions: ' + error.message,
-              { variant: 'error' }
-            );
-          });
-      }
-    );
-  };
-
   const handleExportSubmissions = async () => {
     try {
       await saveSubmissions(lecture, assignment, shownSubmissions);
-      await openFile(`${lectureBasePath}${lecture.code}/submissions.csv`);
+      await openFile(
+        `${lectureBasePath}${lecture.code}/assignments/${assignment.id}/${assignment.name}_${shownSubmissions}_submissions.csv`
+      );
+      await openBrowser(
+        `${lectureBasePath}${lecture.code}/assignments/${assignment.id}`
+      );
       enqueueSnackbar('Successfully exported submissions', {
         variant: 'success'
       });
@@ -159,6 +139,9 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
             const row = rows.find(value => value.id === id);
             row.auto_status = 'pending';
             await autogradeSubmission(lecture, assignment, row);
+            await queryClient.invalidateQueries({
+              queryKey: ['submissionLogs', lecture.id, assignment.id, row.id]
+            });
           })
         );
         enqueueSnackbar(`Autograding ${numSelected} submissions!`, {
@@ -199,6 +182,17 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
       clearSelection();
     });
   };
+  
+  const handleLTISyncGrades = () => {
+    ltiSyncSubmissions(lecture.id, assignment.id, 'selection', [...selected]).then(
+      response => {
+        enqueueSnackbar('Successfully Synced Selected Grades', { variant: 'success' })
+      },
+      error => {
+        enqueueSnackbar('Error Syncing Grades',{ variant: 'error' })
+    }
+    )
+  }
 
   const checkAutogradeStatus = () => {
     let available = true;
@@ -213,22 +207,6 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
 
   return (
     <>
-      <Stack
-        direction={'row'}
-        justifyContent={'flex-end'}
-        alignItems={'center'}
-        spacing={2}
-        sx={{ mb: 1 }}
-      >
-        <Button
-          variant="outlined"
-          startIcon={<AddIcon />}
-          component={Link as any}
-          to={'create'}
-        >
-          New Submission
-        </Button>
-      </Stack>
       <Toolbar
         sx={{
           pl: { sm: 2 },
@@ -316,10 +294,18 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
                   disabled={!checkAutogradeStatus()}
                   onClick={handleGenerateFeedback}
                 >
-                  {'Generate Feedback'}
+                  Generate Feedback
                 </Button>
               </span>
             </Tooltip>
+            <Button
+                key={'lti'}
+                sx={{ whiteSpace: 'nowrap', minWidth: 'auto'}}
+                disabled={!checkAutogradeStatus()}
+                onClick={handleLTISyncGrades}
+                >
+                  LTI Sync Grades
+                </Button>
           </ButtonGroup>
         ) : (
           <Stack direction="row" spacing={2}>
@@ -331,14 +317,10 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
             >
               {`Export ${optionName()} Submissions`}
             </Button>
-            <Button
-              size="small"
-              startIcon={<CloudSyncIcon />}
-              sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
-              onClick={handleSyncSubmission}
-            >
-              LTI Sync Grades
-            </Button>
+            <SyncSubmissionGradesDialog
+              lecture={lecture}
+              assignment={assignment}
+            />
             <ToggleButtonGroup
               size="small"
               color="primary"

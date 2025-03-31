@@ -107,7 +107,7 @@ class SubmissionPropertiesHandler(ExtensionBaseHandler):
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
-        self.write(json.dumps(response))
+        self.write(response)
 
     async def put(self, lecture_id: int, assignment_id: int, submission_id: int):
         """ Sends a PUT-request to the grader service to update the properties of a submission
@@ -256,12 +256,17 @@ class LtiSyncHandler(ExtensionBaseHandler):
         return request
 
     async def put(self, lecture_id: int, assignment_id: int):
-        # get submissions with score and lti customized username
+        query_params = RequestService.get_query_string(
+            {
+                "option": self.get_argument("option", "selection"),
+            }
+        )
         try:
             response = await self.request_service.request(
-                method="GET",
-                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/lti",
-                header=self.grader_authentication_header)
+                method="PUT",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/lti/{query_params}",
+                header=self.grader_authentication_header,
+                body=self.request.body.decode("utf-8"))
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)

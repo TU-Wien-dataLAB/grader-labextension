@@ -12,7 +12,8 @@ import {
   Stack,
   TableCell,
   TableRow,
-  Typography
+  Typography,
+  Chip
 } from '@mui/material';
 import { red, blue, green, grey } from '@mui/material/colors';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -37,6 +38,7 @@ import {
 } from '../../services/assignments.service';
 import { showDialog } from '../util/dialog-provider';
 import EditOffIcon from '@mui/icons-material/EditOff';
+import CheckIcon from '@mui/icons-material/Check';
 import { getFiles, lectureBasePath } from '../../services/file.service';
 import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../services/lectures.service';
@@ -94,9 +96,9 @@ const EditButton = (props: IEditProps) => {
       </IconButton>
     );
   }
-  const time = new Date(props.assignment.due_date).getTime();
+  const time = new Date(props.assignment.settings.deadline).getTime();
   if (
-    (props.assignment.due_date !== null && time < Date.now()) ||
+    (props.assignment.settings.deadline !== null && time < Date.now()) ||
     props.status === Assignment.StatusEnum.Complete
   ) {
     return <EditOffIcon sx={{ color: grey[500] }} />;
@@ -138,125 +140,142 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
   ] as IHeaderCell[];
 
   return (
-    <GraderTable<AssignmentStudent>
-      headers={headers}
-      rows={props.rows}
-      rowFunc={row => {
-        return (
-          <TableRow
-            key={row.name}
-            component={ButtonTr}
-            onClick={() =>
-              navigate(`/lecture/${props.lecture.id}/assignment/${row.id}`)
-            }
-          >
-            <TableCell
-              component="th"
-              scope="row"
-              style={{ width: headerWidth(headers, 'Name') }}
-            >
-              <Typography variant={'subtitle2'} sx={{ fontSize: 16 }}>
-                {row.name}
-              </Typography>
-              {row.status === 'created' || row.status === 'pushed' ? (
-                <Typography
-                  sx={{
-                    display: 'inline-block',
-                    ml: 0.75,
-                    fontSize: 16,
-                    color: red[400]
-                  }}
-                >
-                  (not released)
-                </Typography>
-              ) : null}
-              {row.status === 'complete' ? (
-                <Typography
-                  sx={{
-                    display: 'inline-block',
-                    ml: 0.75,
-                    fontSize: 16,
-                    color: blue[400]
-                  }}
-                >
-                  (complete)
-                </Typography>
-              ) : null}
-            </TableCell>
-            <TableCell style={{ width: headerWidth(headers, 'Points') }}>
-              {row.points}
-            </TableCell>
-            <TableCell style={{ width: headerWidth(headers, 'Deadline') }}>
-              <DeadlineComponent
-                component={'chip'}
-                due_date={row.due_date}
-                compact={true}
-              />
-            </TableCell>
-            <TableCell style={{ width: headerWidth(headers, 'Edit') }}>
-              <EditButton
-                status={row.status}
-                lecture={props.lecture}
-                assignment={row}
-              />
-            </TableCell>
-            <TableCell style={{ width: headerWidth(headers, 'Reset') }}>
-              <IconButton
-                aria-label="reset"
-                size={'small'}
-                onClick={e => {
-                  showDialog(
-                    'Reset Assignment',
-                    'Do you really want to reset this assignment?',
-                    async () => {
-                      const assignment = props.rows.find(a => a.id === row.id);
-                      try {
-                        await pushAssignment(
-                          props.lecture.id,
-                          assignment.id,
-                          'assignment',
-                          'Pre-Reset'
-                        );
-                        await resetAssignment(
-                          props.lecture,
-                          assignment as Assignment
-                        );
-                        await pullAssignment(
-                          props.lecture.id,
-                          assignment.id,
-                          'assignment'
-                        );
-
-                        enqueueSnackbar('Assignment reset successfully', {
-                          variant: 'success'
-                        });
-                      } catch (error: any) {
-                        enqueueSnackbar(error.message, {
-                          variant: 'error'
-                        });
-                      }
-                    }
-                  );
-                  e.stopPropagation();
-                }}
+    <>
+      {props.rows.length === 0 ? (
+        <Typography
+          variant="body1"
+          align="center"
+          color="text.secondary"
+          sx={{ mt: 2 }}
+        >
+          No assignments are currently available.
+        </Typography>
+      ) : (
+        <GraderTable<AssignmentStudent>
+          headers={headers}
+          rows={props.rows}
+          rowFunc={row => {
+            return (
+              <TableRow
+                key={row.name}
+                component={ButtonTr}
+                onClick={() =>
+                  navigate(`/lecture/${props.lecture.id}/assignment/${row.id}`)
+                }
               >
-                <RestartAltIcon sx={{ color: blue[500] }} />
-              </IconButton>
-            </TableCell>
-            <TableCell style={{ width: headerWidth(headers, 'Detail View') }}>
-              <IconButton aria-label="detail view" size={'small'}>
-                <SearchIcon />
-              </IconButton>
-            </TableCell>
-            <TableCell
-              style={{ width: headerWidth(headers, 'Feedback Available') }}
-            >
-              <FeedbackIcon feedback_available={row.feedback_available} />
-            </TableCell>
-          </TableRow>
-        );
-      }}
-    />
+                <TableCell
+                  component="th"
+                  scope="row"
+                  style={{ width: headerWidth(headers, 'Name') }}
+                >
+                  <Typography variant={'subtitle2'} sx={{ fontSize: 16 }}>
+                    {row.name}
+                  </Typography>
+                  {row.status === 'created' || row.status === 'pushed' ? (
+                    <Typography
+                      sx={{
+                        display: 'inline-block',
+                        ml: 0.75,
+                        fontSize: 16,
+                        color: red[400]
+                      }}
+                    >
+                      (not released)
+                    </Typography>
+                  ) : null}
+                  {row.status === 'complete' ? (
+                    <Typography
+                      sx={{
+                        display: 'inline-block',
+                        ml: 0.75,
+                        fontSize: 16,
+                        color: blue[400]
+                      }}
+                    >
+                      (complete)
+                    </Typography>
+                  ) : null}
+                </TableCell>
+                <TableCell style={{ width: headerWidth(headers, 'Points') }}>
+                  {row.points}
+                </TableCell>
+                <TableCell style={{ width: headerWidth(headers, 'Deadline') }}>
+                  <DeadlineComponent
+                    component={'chip'}
+                    due_date={row.settings.deadline}
+                    compact={true}
+                  />
+                </TableCell>
+                <TableCell style={{ width: headerWidth(headers, 'Edit') }}>
+                  <EditButton
+                    status={row.status}
+                    lecture={props.lecture}
+                    assignment={row}
+                  />
+                </TableCell>
+                <TableCell style={{ width: headerWidth(headers, 'Reset') }}>
+                  <IconButton
+                    aria-label="reset"
+                    size={'small'}
+                    onClick={e => {
+                      showDialog(
+                        'Reset Assignment',
+                        'Do you really want to reset this assignment?',
+                        async () => {
+                          const assignment = props.rows.find(
+                            a => a.id === row.id
+                          );
+                          try {
+                            await pushAssignment(
+                              props.lecture.id,
+                              assignment.id,
+                              'assignment',
+                              'Pre-Reset'
+                            );
+                            await resetAssignment(
+                              props.lecture,
+                              assignment as Assignment
+                            );
+                            await pullAssignment(
+                              props.lecture.id,
+                              assignment.id,
+                              'assignment'
+                            );
+
+                            enqueueSnackbar('Assignment reset successfully', {
+                              variant: 'success'
+                            });
+                          } catch (error: any) {
+                            enqueueSnackbar(error.message, {
+                              variant: 'error'
+                            });
+                          }
+                        }
+                      );
+                      e.stopPropagation();
+                    }}
+                  >
+                    <RestartAltIcon sx={{ color: blue[500] }} />
+                  </IconButton>
+                </TableCell>
+                <TableCell
+                  style={{ width: headerWidth(headers, 'Detail View') }}
+                >
+                  <IconButton aria-label="detail view" size={'small'}>
+                    <SearchIcon />
+                  </IconButton>
+                </TableCell>
+                <TableCell
+                  style={{ width: headerWidth(headers, 'Feedback Available') }}
+                >
+                  <FeedbackIcon feedback_available={row.feedback_available} />
+                </TableCell>
+              </TableRow>
+            );
+          }}
+        />
+      )}
+    </>
   );
 };
 
@@ -363,16 +382,13 @@ export const LectureComponent = () => {
       <Typography variant={'h4'} sx={{ mb: 2 }}>
         {lecture.name}
         {lecture.complete ? (
-          <Typography
-            sx={{
-              display: 'inline-block',
-              ml: 0.75,
-              fontSize: 16,
-              color: red[400]
-            }}
-          >
-            complete
-          </Typography>
+          <Chip
+            sx={{ ml: 1 }}
+            label={'Complete'}
+            color="error"
+            size="small"
+            icon={<CheckIcon />}
+          />
         ) : null}
       </Typography>
       <Stack>

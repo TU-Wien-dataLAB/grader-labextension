@@ -4,7 +4,6 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from ast import List
 import json
 import os
 import shutil
@@ -12,6 +11,9 @@ from http import HTTPStatus
 from urllib.parse import unquote, quote
 from tornado.web import HTTPError, authenticated
 
+from grader_labextension.api.models.assignment import Assignment
+from grader_labextension.api.models.assignment_settings import AssignmentSettings
+from grader_labextension.api.models.lecture import Lecture
 from grader_labextension.services.request import RequestServiceError
 from grader_service.convert.converters.base import GraderConvertException
 from grader_service.convert.converters.generate_assignment import GenerateAssignment
@@ -65,7 +67,7 @@ class GenerateHandler(ExtensionBaseHandler):
             input_dir=f"{self.root_dir}/{code}/source/{a_id}",
             output_dir=output_dir,
             file_pattern="*.ipynb",
-            copy_files=True,  # Always copy files from source to release
+            assignment_settings=AssignmentSettings(allowed_files=["*"]), # copy all files
         )
         generator.force = True
         generator.log = self.log
@@ -313,7 +315,7 @@ class PushHandler(ExtensionBaseHandler):
 
     async def put(self, lecture_id: int, assignment_id: int, repo: str):
         """Pushes from the local repositories to remote
-            If the repo type is release, it also generate the release files and updates the assignment properties in the grader service
+        If the repo type is release, it also generates the release files and updates the assignment properties in the grader service
 
         :param lecture_id: id of the lecture
         :type lecture_id: int
@@ -324,17 +326,51 @@ class PushHandler(ExtensionBaseHandler):
         """
         if repo not in {"assignment", "source", "release", "edit"}:
             self.write_error(404)
+
+        # Extract request parameters
+        sub_id, commit_message, selected_files, submit, username = self._extract_request_params()
+
+        # Validate commit message for 'source' repo
+        if repo == "source":
+            self._validate_commit_message(commit_message)
+
+        # Fetch lecture and assignment data
+        lecture, assignment = await self._fetch_lecture_and_assignment(lecture_id, assignment_id)
+
+        # Handle 'edit' repo
+        if repo == "edit":
+            sub_id = await self._handle_edit_repo(lecture_id, assignment_id, sub_id, username)
+
+        # Initialize GitService
+        git_service = self._initialize_git_service(lecture, assignment, repo, sub_id, username)
+
+        # Handle 'release' repo
+        if repo == "release":
+            await self._handle_release_repo(git_service, lecture, assignment, lecture_id, assignment_id, selected_files)
+
+        # Perform Git operations
+        await self._perform_git_operations(git_service, repo, commit_message, selected_files, sub_id)
+
+        # Handle submission for 'assignment' repo
+        if submit and repo == "assignment":
+            await self._submit_assignment(git_service, lecture_id, assignment_id)
+
+        self.write({"status": "OK"})
+
+    def _extract_request_params(self):
         sub_id = self.get_argument("subid", None)
         commit_message = self.get_argument("commit-message", None)
         selected_files = self.get_arguments("selected-files")
         submit = self.get_argument("submit", "false") == "true"
-        # this username is used when an instructor creates a submission for a user (ignored otherwise)
         username = self.get_argument("for_user", None)
+        return sub_id, commit_message, selected_files, submit, username
 
-        if repo == "source" and (commit_message is None or commit_message == ""):
+    def _validate_commit_message(self, commit_message):
+        if not commit_message:
             self.log.error("Commit message was not found")
             raise HTTPError(HTTPStatus.NOT_FOUND, reason="Commit message was not found")
 
+    async def _fetch_lecture_and_assignment(self, lecture_id, assignment_id):
         try:
             lecture = await self.request_service.request(
                 "GET",
@@ -346,15 +382,15 @@ class PushHandler(ExtensionBaseHandler):
                 f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
                 header=self.grader_authentication_header,
             )
+            return lecture, assignment
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
-        
-        # differentiate between "normal" edit and "create" edit by sub_id -> if it is None we know we are in
-        # submission creation mode instead of edit mode
-        if repo == "edit" and sub_id is None:
+
+    async def _handle_edit_repo(self, lecture_id, assignment_id, sub_id, username):
+        if sub_id is None:
             submission = Submission(commit_hash="0" * 40)
-            response: dict = await self.request_service.request(
+            response = await self.request_service.request(
                 "POST",
                 f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions",
                 body=submission.to_dict(),
@@ -370,10 +406,12 @@ class PushHandler(ExtensionBaseHandler):
                 body=submission.to_dict(),
                 header=self.grader_authentication_header,
             )
-            sub_id = str(submission.id)
-            self.log.info(f"Created submission {sub_id} for user {username} and pushing to {repo}...")
+            self.log.info(f"Created submission {submission.id} for user {username} and pushing to edit repo...")
+            return str(submission.id)
+        return sub_id
 
-        git_service = GitService(
+    def _initialize_git_service(self, lecture, assignment, repo, sub_id, username):
+        return GitService(
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
@@ -383,65 +421,70 @@ class PushHandler(ExtensionBaseHandler):
             username=username
         )
 
-        if repo == "release":
-            git_service.delete_repo_contents(include_git=True)
-            src_path = GitService(
-                self.root_dir,
-                lecture["code"],
-                assignment["id"],
-                repo_type="source",
-                config=self.config,
-            ).path
+    async def _handle_release_repo(self, git_service, lecture, assignment, lecture_id, assignment_id, selected_files):
+        git_service.delete_repo_contents(include_git=True)
+        src_path = GitService(
+            self.root_dir,
+            lecture["code"],
+            assignment["id"],
+            repo_type="source",
+            config=self.config,
+        ).path
 
-            if(selected_files):
-                self.log.info(f"Selected files to push to {repo}: {selected_files}")
-           
-            git_service.copy_repo_contents(src=src_path, selected_files=selected_files)
+        if selected_files:
+            self.log.info(f"Selected files to push to release repo: {selected_files}")
 
-            self.log.info(f"Files in {src_path} directory after copying selected files: {os.listdir(src_path)}")
+        git_service.copy_repo_contents(src=src_path, selected_files=selected_files)
 
-            # call nbconvert before pushing
-            generator = GenerateAssignment(
-                input_dir=src_path,
-                output_dir=git_service.path,
-                file_pattern="*.ipynb",
-                copy_files=True,  # Always copy files from source to release
+        generator = self._initialize_generator(src_path, git_service.path)
+        await self._generate_release_files(generator, git_service.path)
+
+        gradebook_path = os.path.join(git_service.path, "gradebook.json")
+        await self._update_assignment_properties(gradebook_path, lecture_id, assignment_id)
+
+        try:
+            os.remove(gradebook_path)
+            self.log.info(f"Successfully deleted {gradebook_path}")
+        except OSError as e:
+            self.log.error(f"Cannot delete {gradebook_path}! Error: {e.strerror}\nAborting push!")
+            raise HTTPError(
+                HTTPStatus.CONFLICT,
+                reason=f"Cannot delete {gradebook_path}! Error: {e.strerror}\nAborting push!",
             )
-            generator.force = True
-            generator.log = self.log
 
-            try:
-                # delete contents of output directory since we might have chosen to disallow files
-                self.log.info("Deleting files in release directory")
-                shutil.rmtree(git_service.path)
-                os.mkdir(git_service.path)
-            except Exception as e:
-                self.log.error(e)
-                raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
+    def _initialize_generator(self, src_path, output_path):
+        generator = GenerateAssignment(
+            input_dir=src_path,
+            output_dir=output_path,
+            file_pattern="*.ipynb",
+            assignment_settings=AssignmentSettings(allowed_files=["*"]), # copy all files from source regardless of assignment settings
+        )
+        generator.force = True
+        generator.log = self.log
+        return generator
 
-            self.log.info("Starting GenerateAssignment converter")
-            try:
-                generator.start()
-                self.log.info("GenerateAssignment conversion done")
-            except GraderConvertException as e:
-                self.log.error(
-                    "Converting failed: Error converting notebook!", exc_info=True
-                )
-                raise HTTPError(HTTPStatus.CONFLICT, reason=str(e))
-            try:
-                gradebook_path = os.path.join(git_service.path, "gradebook.json")
-                self.log.info(f"Reading gradebook file: {gradebook_path}")
-                with open(gradebook_path, "r") as f:
-                    gradebook_json: dict = json.load(f)
-            except FileNotFoundError:
-                self.log.error(f"Cannot find gradebook file: {gradebook_path}")
-                raise HTTPError(
-                    HTTPStatus.NOT_FOUND,
-                    reason=f"Cannot find gradebook file: {gradebook_path}",
-                )
+    async def _generate_release_files(self, generator, output_path):
+        try:
+            shutil.rmtree(output_path)
+            os.mkdir(output_path)
+        except Exception as e:
+            self.log.error(e)
+            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
 
-            self.log.info(f"Setting properties of assignment from {gradebook_path}")
-            response: HTTPResponse = await self.request_service.request(
+        self.log.info("Starting GenerateAssignment converter")
+        try:
+            generator.start()
+            self.log.info("GenerateAssignment conversion done")
+        except GraderConvertException as e:
+            self.log.error("Converting failed: Error converting notebook!", exc_info=True)
+            raise HTTPError(HTTPStatus.CONFLICT, reason=str(e))
+
+    async def _update_assignment_properties(self, gradebook_path, lecture_id, assignment_id):
+        try:
+            with open(gradebook_path, "r") as f:
+                gradebook_json = json.load(f)
+
+            response = await self.request_service.request(
                 "PUT",
                 f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/properties",
                 header=self.grader_authentication_header,
@@ -451,69 +494,53 @@ class PushHandler(ExtensionBaseHandler):
             if response.code == 200:
                 self.log.info("Properties set for assignment")
             else:
-                self.log.error(
-                    f"Could not set assignment properties! Error code {response.code}"
-                )
+                self.log.error(f"Could not set assignment properties! Error code {response.code}")
+        except FileNotFoundError:
+            self.log.error(f"Cannot find gradebook file: {gradebook_path}")
+            raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Cannot find gradebook file: {gradebook_path}")
 
-            try:
-                os.remove(gradebook_path)
-                self.log.info(f"Successfully deleted {gradebook_path}")
-            except OSError as e:
-                self.log.error(
-                    f"Cannot delete {gradebook_path}! Error: {e.strerror}\nAborting push!"
-                )
-                raise HTTPError(
-                    HTTPStatus.CONFLICT,
-                    reason=f"Cannot delete {gradebook_path}! Error: {e.strerror}\nAborting push!",
-                )
-
-        self.log.info(f"File contents of {repo}: {git_service.path}")
-        self.log.info(",".join(os.listdir(git_service.path)))
-
+    async def _perform_git_operations(self, git_service: GitService, repo: str, commit_message: str, selected_files, sub_id=None):
         try:
             if not git_service.is_git():
                 git_service.init()
                 git_service.set_author(author=self.user_name)
-                # TODO: create .gitignore file
-            git_service.set_remote(f"grader_{repo}", sub_id=sub_id)
+            git_service.set_remote(f"grader_{repo}", sub_id)
         except GitError as e:
-            self.log.error("GitError:\n" + e.error)
+            self.log.error("git error during git initiation process:" + e.error)
             raise HTTPError(e.code, reason=e.error)
 
         try:
             git_service.commit(message=commit_message, selected_files=selected_files)
         except GitError as e:
-            self.log.error("GitError:\n" + e.error)
+            self.log.error("git error during commit process:" + e.error)
             raise HTTPError(e.code, reason=e.error)
 
         try:
             git_service.push(f"grader_{repo}", force=True)
         except GitError as e:
-            self.log.error("GitError:\n" + e.error)
+            self.log.error("git error during push process:" + e.error)
             git_service.undo_commit()
             raise HTTPError(e.code, reason=str(e.error))
 
-        if submit and repo == "assignment":
-            self.log.info(f"Submitting assignment {assignment_id}!")
-            try:
-                latest_commit_hash = git_service.get_log(history_count=1)[0]["commit"]
-                submission = Submission(commit_hash=latest_commit_hash)
-                response = await self.request_service.request(
-                    "POST",
-                    f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions",
-                    body=submission.to_dict(),
-                    header=self.grader_authentication_header,
-                )
-                self.write(json.dumps(response))
-                return
-            except (KeyError, IndexError) as e:
-                self.log.error(e)
-                raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
-            except RequestServiceError as e:
-                self.log.error(e)
-                raise HTTPError(e.code, reason=e.message)
+    async def _submit_assignment(self, git_service, lecture_id, assignment_id):
+        self.log.info(f"Submitting assignment {assignment_id}!")
+        try:
+            latest_commit_hash = git_service.get_log(history_count=1)[0]["commit"]
+            submission = Submission(commit_hash=latest_commit_hash)
+            response = await self.request_service.request(
+                "POST",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions",
+                body=submission.to_dict(),
+                header=self.grader_authentication_header,
+            )
+            self.write(json.dumps(response))
+        except (KeyError, IndexError) as e:
+            self.log.error(e)
+            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
+        except RequestServiceError as e:
+            self.log.error(e)
+            raise HTTPError(e.code, reason=e.message)
 
-        self.write({"status": "OK"})
 
 
 @register_handler(

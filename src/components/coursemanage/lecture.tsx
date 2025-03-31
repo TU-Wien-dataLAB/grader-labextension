@@ -13,7 +13,8 @@ import {
   TableRow,
   Typography,
   Tooltip,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
 import * as React from 'react';
 import { Assignment } from '../../model/assignment';
@@ -22,7 +23,11 @@ import {
   deleteAssignment,
   getAllAssignments
 } from '../../services/assignments.service';
-import { CreateDialog, EditLectureDialog } from '../util/dialog';
+import {
+  CreateDialog,
+  EditLectureDialog,
+  ExportGradesForLectureDialog
+} from '../util/dialog';
 import { getLecture, updateLecture } from '../../services/lectures.service';
 import { red, grey } from '@mui/material/colors';
 import { enqueueSnackbar } from 'notistack';
@@ -37,6 +42,7 @@ import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 import { useQuery } from '@tanstack/react-query';
 import { AssignmentDetail } from '../../model/assignmentDetail';
 import { queryClient } from '../../widgets/assignmentmanage';
+import CheckIcon from '@mui/icons-material/Check';
 
 interface IAssignmentTableProps {
   lecture: Lecture;
@@ -57,96 +63,110 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
 
   return (
     <>
-      <GraderTable<Assignment>
-        headers={headers}
-        rows={props.rows}
-        rowFunc={row => {
-          return (
-            <TableRow
-              key={row.name}
-              component={ButtonTr}
-              onClick={() =>
-                navigate(`/lecture/${props.lecture.id}/assignment/${row.id}`)
-              }
-            >
-              <TableCell component="th" scope="row">
-                <Typography variant={'subtitle2'} sx={{ fontSize: 16 }}>
-                  {row.name}
-                </Typography>
-              </TableCell>
-              <TableCell>{row.points}</TableCell>
-              <TableCell>
-                <DeadlineComponent
-                  component={'chip'}
-                  due_date={row.due_date}
-                  compact={true}
-                />
-              </TableCell>
-              <TableCell>{row.status}</TableCell>
-              <TableCell>
-                <IconButton aria-label="detail view" size={'small'}>
-                  <SearchIcon />
-                </IconButton>
-              </TableCell>
-              <TableCell>
-                <Tooltip
-                  title={
-                    row.status === 'released' || row.status === 'complete'
-                      ? 'Released or Completed Assignments cannot be deleted'
-                      : `Delete Assignment ${row.name}`
-                  }
-                >
-                  <span>
-                    {' '}
-                    {/* span because of https://mui.com/material-ui/react-tooltip/#disabled-elements */}
-                    <IconButton
-                      aria-label="delete assignment"
-                      size={'small'}
-                      disabled={
-                        row.status === 'released' || row.status === 'complete'
-                      }
-                      onClick={e => {
-                        showDialog(
-                          'Delete Assignment',
-                          'Do you wish to delete this assignment?',
-                          async () => {
-                            try {
-                              await deleteAssignment(props.lecture.id, row.id);
-                              await updateMenus(true);
-                              enqueueSnackbar(
-                                'Successfully Deleted Assignment',
-                                {
-                                  variant: 'success'
-                                }
-                              );
-                              props.refreshAssignments();
-                            } catch (error: any) {
-                              enqueueSnackbar(error.message, {
-                                variant: 'error'
-                              });
+      {props.rows.length === 0 ? (
+        <Typography
+          variant="body1"
+          align="center"
+          color="text.secondary"
+          sx={{ mt: 2 }}
+        >
+          No assignments available. Please add one.
+        </Typography>
+      ) : (
+        <GraderTable<Assignment>
+          headers={headers}
+          rows={props.rows}
+          rowFunc={row => {
+            return (
+              <TableRow
+                key={row.name}
+                component={ButtonTr}
+                onClick={() =>
+                  navigate(`/lecture/${props.lecture.id}/assignment/${row.id}`)
+                }
+              >
+                <TableCell component="th" scope="row">
+                  <Typography variant={'subtitle2'} sx={{ fontSize: 16 }}>
+                    {row.name}
+                  </Typography>
+                </TableCell>
+                <TableCell>{row.points}</TableCell>
+                <TableCell>
+                  <DeadlineComponent
+                    component={'chip'}
+                    due_date={row.settings.deadline}
+                    compact={true}
+                  />
+                </TableCell>
+                <TableCell>{row.status}</TableCell>
+                <TableCell>
+                  <IconButton aria-label="detail view" size={'small'}>
+                    <SearchIcon />
+                  </IconButton>
+                </TableCell>
+                <TableCell>
+                  <Tooltip
+                    title={
+                      row.status === 'released' || row.status === 'complete'
+                        ? 'Released or Completed Assignments cannot be deleted'
+                        : `Delete Assignment ${row.name}`
+                    }
+                  >
+                    <span>
+                      {' '}
+                      {/* span because of https://mui.com/material-ui/react-tooltip/#disabled-elements */}
+                      <IconButton
+                        aria-label="delete assignment"
+                        size={'small'}
+                        disabled={
+                          row.status === 'released' || row.status === 'complete'
+                        }
+                        onClick={e => {
+                          showDialog(
+                            'Delete Assignment',
+                            'Do you wish to delete this assignment?',
+                            async () => {
+                              try {
+                                await deleteAssignment(
+                                  props.lecture.id,
+                                  row.id
+                                );
+                                await updateMenus(true);
+                                enqueueSnackbar(
+                                  'Successfully Deleted Assignment',
+                                  {
+                                    variant: 'success'
+                                  }
+                                );
+                                props.refreshAssignments();
+                              } catch (error: any) {
+                                enqueueSnackbar(error.message, {
+                                  variant: 'error'
+                                });
+                              }
                             }
-                          }
-                        );
-                        e.stopPropagation();
-                      }}
-                    >
-                      <CloseIcon
-                        sx={{
-                          color:
-                            row.status === 'released' ||
-                            row.status === 'complete'
-                              ? grey[500]
-                              : red[500]
+                          );
+                          e.stopPropagation();
                         }}
-                      />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </TableCell>
-            </TableRow>
-          );
-        }}
-      />
+                      >
+                        <CloseIcon
+                          sx={{
+                            color:
+                              row.status === 'released' ||
+                              row.status === 'complete'
+                                ? grey[500]
+                                : red[500]
+                          }}
+                        />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            );
+          }}
+        />
+      )}
     </>
   );
 };
@@ -155,7 +175,7 @@ export const LectureComponent = () => {
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const { lectureId } = extractIdsFromBreadcrumbs();
 
-  const { data: lecture } = useQuery<Lecture>({
+  const { data: lecture, refetch: refetchLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
     queryFn: () => getLecture(lectureId, true),
     enabled: true
@@ -180,6 +200,7 @@ export const LectureComponent = () => {
         await queryClient.invalidateQueries({
           queryKey: ['completedLectures']
         });
+        setRefreshTrigger(prev => !prev);
       },
       error => {
         enqueueSnackbar(error.message, {
@@ -188,6 +209,12 @@ export const LectureComponent = () => {
       }
     );
   };
+
+  const [refreshTrigger, setRefreshTrigger] = React.useState(false);
+
+  React.useEffect(() => {
+    refetchLecture();
+  }, [refreshTrigger, refetchLecture]);
 
   if (isPendingAssignments) {
     return (
@@ -200,20 +227,21 @@ export const LectureComponent = () => {
   }
 
   return (
-    <Stack direction={'column'} sx={{ mt: 5, ml: 5, flex: 1 }}>
+    <Stack
+      direction={'column'}
+      overflow={'hidden'}
+      sx={{ mt: 5, ml: 5, flex: 1 }}
+    >
       <Typography variant={'h4'} sx={{ mr: 2 }}>
         {lecture.name}
         {lecture.complete ? (
-          <Typography
-            sx={{
-              display: 'inline-block',
-              ml: 0.75,
-              fontSize: 16,
-              color: red[400]
-            }}
-          >
-            complete
-          </Typography>
+          <Chip
+            sx={{ ml: 1 }}
+            label={'Complete'}
+            color="error"
+            size="small"
+            icon={<CheckIcon />}
+          />
         ) : null}
       </Typography>
       <Stack
@@ -242,13 +270,14 @@ export const LectureComponent = () => {
           ) : null}
         </Stack>
 
-        <Stack direction="row" alignItems="center" spacing={2}>
+        <Stack direction="row" alignItems="center" spacing={2} sx={{ mr: 2 }}>
           <CreateDialog
             lecture={lecture}
             handleSubmit={async () => {
               await refreshAssignments();
             }}
           />
+          <ExportGradesForLectureDialog lecture={lecture} />
           <EditLectureDialog
             lecture={lecture}
             handleSubmit={handleUpdateLecture}

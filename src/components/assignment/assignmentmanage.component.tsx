@@ -24,6 +24,7 @@ import { getAllLectures } from '../../services/lectures.service';
 
 interface ILectureTableProps {
   rows: Lecture[];
+  completed: boolean;
 }
 
 const LectureTable = (props: ILectureTableProps) => {
@@ -34,29 +35,51 @@ const LectureTable = (props: ILectureTableProps) => {
     { name: 'Code' }
   ];
   return (
-    <GraderTable<Lecture>
-      headers={headers}
-      rows={props.rows}
-      rowFunc={row => {
-        return (
-          <TableRow
-            key={row.name}
-            component={ButtonTr}
-            onClick={() => navigate(`/lecture/${row.id}`)}
-          >
-            <TableCell style={{ width: 100 }} component="th" scope="row">
-              {row.id}
-            </TableCell>
-            <TableCell>
-              <Typography variant={'subtitle2'} sx={{ fontSize: 16 }}>
-                {row.name}
-              </Typography>
-            </TableCell>
-            <TableCell>{row.code}</TableCell>
-          </TableRow>
-        );
-      }}
-    />
+    <>
+      {props.rows.length === 0 && props.completed ? (
+        <Typography
+          variant="body1"
+          align="center"
+          color="text.secondary"
+          sx={{ mt: 2 }}
+        >
+          No lectures are completed.
+        </Typography>
+      ) : props.rows.length === 0 && !props.completed ? (
+        <Typography
+          variant="body1"
+          align="center"
+          color="text.secondary"
+          sx={{ mt: 2 }}
+        >
+          No lectures are currently active.
+        </Typography>
+      ) : (
+        <GraderTable<Lecture>
+          headers={headers}
+          rows={props.rows}
+          rowFunc={row => {
+            return (
+              <TableRow
+                key={row.name}
+                component={ButtonTr}
+                onClick={() => navigate(`/lecture/${row.id}`)}
+              >
+                <TableCell style={{ width: 100 }} component="th" scope="row">
+                  {row.id}
+                </TableCell>
+                <TableCell>
+                  <Typography variant={'subtitle2'} sx={{ fontSize: 16 }}>
+                    {row.name}
+                  </Typography>
+                </TableCell>
+                <TableCell>{row.code}</TableCell>
+              </TableRow>
+            );
+          }}
+        />
+      )}
+    </>
   );
 };
 
@@ -65,22 +88,24 @@ const LectureTable = (props: ILectureTableProps) => {
  * @param props Props of the lecture file components
  */
 export const AssignmentManageComponent = () => {
-  const { data: lectures, isLoading: isLoadingOngoingLectures } = useQuery<Lecture[]>({
+  const { data: lectures, isLoading: isLoadingOngoingLectures } = useQuery<
+    Lecture[]
+  >({
     queryKey: ['lectures'],
     queryFn: () => getAllLectures(false)
   });
 
-  const { data: completedLectures, isLoading: isLoadingCompletedLectures } = useQuery<Lecture[]>({
-    queryKey: ['completedLectures'],
-    queryFn: () => getAllLectures(true)
-  });
-  
+  const { data: completedLectures, isLoading: isLoadingCompletedLectures } =
+    useQuery<Lecture[]>({
+      queryKey: ['completedLectures'],
+      queryFn: () => getAllLectures(true)
+    });
+
   const [showComplete, setShowComplete] = useState(false);
 
   if (isLoadingCompletedLectures || isLoadingOngoingLectures) {
-    return <div>Loading...</div>
+    return <div>Loading...</div>;
   }
-
 
   return (
     <Stack flexDirection={'column'} sx={{ m: 5, flex: 1, overflow: 'hidden' }}>
@@ -105,9 +130,8 @@ export const AssignmentManageComponent = () => {
       </Stack>
 
       <LectureTable
-        rows={
-          showComplete ? completedLectures : lectures
-        }
+        completed={showComplete}
+        rows={showComplete ? completedLectures : lectures}
       />
     </Stack>
   );

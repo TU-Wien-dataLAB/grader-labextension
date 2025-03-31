@@ -1,10 +1,6 @@
 import {
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Stack,
   Typography
 } from '@mui/material';
@@ -14,7 +10,6 @@ import { Assignment } from '../../../model/assignment';
 import { Submission } from '../../../model/submission';
 import {
   createOrOverrideEditRepository,
-  getLogs,
   getSubmission,
   pullSubmissionFiles,
   pushSubmissionFiles
@@ -28,6 +23,7 @@ import Toolbar from '@mui/material/Toolbar';
 import { showDialog } from '../../util/dialog-provider';
 import { GraderLoadingButton } from '../../util/loading-button';
 import { useQuery } from '@tanstack/react-query';
+import { SubmissionLogs } from '../../util/submission-logs';
 
 export const EditSubmission = () => {
   const navigate = useNavigate();
@@ -51,10 +47,6 @@ export const EditSubmission = () => {
       getSubmission(lecture.id, assignment.id, manualGradeSubmission.id, true)
   });
 
-  const { data: logs, refetch: refetchLogs } = useQuery({
-    queryKey: ['logs', lecture.id, assignment.id, manualGradeSubmission.id],
-    queryFn: () => getLogs(lecture.id, assignment.id, manualGradeSubmission.id)
-  });
 
   const { data: submissionFiles, refetch: refetchSubmissionFiles } = useQuery({
     queryKey: ['submissionFiles'],
@@ -65,11 +57,6 @@ export const EditSubmission = () => {
 
   const reloadSubmission = async () => {
     await refetchSubmission();
-  };
-
-  const openLogs = async () => {
-    setShowLogs(true);
-    await refetchLogs();
   };
 
   const pushEditedFiles = async () => {
@@ -125,7 +112,7 @@ export const EditSubmission = () => {
   };
 
   return (
-    <Stack direction={'column'} sx={{ flex: '1 1 100%' }}>
+    <Stack direction={'column'} sx={{ flex: '1 1 100%', overflow: 'auto' }}>
       <Box sx={{ m: 2, mt: 5 }}>
         <Stack direction="row" spacing={2} sx={{ ml: 2 }}>
           <Stack sx={{ mt: 0.5 }}>
@@ -167,7 +154,7 @@ export const EditSubmission = () => {
           sx={{ mr: 2 }}
           variant="outlined"
           size="small"
-          onClick={openLogs}
+          onClick={() => setShowLogs(true)}
         >
           Show Logs
         </Button>
@@ -228,25 +215,13 @@ export const EditSubmission = () => {
           Back
         </Button>
       </Toolbar>
-      <Dialog
+      <SubmissionLogs
         open={showLogs}
         onClose={() => setShowLogs(false)}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">{'Logs'}</DialogTitle>
-        <DialogContent>
-          <Typography
-            id="alert-dialog-description"
-            sx={{ fontSize: 10, fontFamily: "'Roboto Mono', monospace" }}
-          >
-            {logs || 'No logs available'}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowLogs(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+        lectureId={lecture.id}
+        assignmentId={assignment.id}
+        submissionId={manualGradeSubmission.id}
+      />
     </Stack>
   );
 };
