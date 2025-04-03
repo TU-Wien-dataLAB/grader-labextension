@@ -7,8 +7,6 @@
 import { ReactWidget } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { Cell } from '@jupyterlab/cells';
-
-import { ReactElement } from 'react';
 import { ErrorComponent } from './error-component';
 
 export class ErrorWidget extends ReactWidget {
@@ -21,7 +19,7 @@ export class ErrorWidget extends ReactWidget {
     this.err = err;
   }
 
-  protected render(): ReactElement[] | ReactElement {
+  protected render(): any {
     return <ErrorComponent err={this.err} />;
   }
 }

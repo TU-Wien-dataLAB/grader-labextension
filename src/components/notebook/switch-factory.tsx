@@ -4,11 +4,9 @@
 // This source code is licensed under the BSD-style license found in the
 // LICENSE file in the root directory of this source tree.
 
-import { Grid } from '@mui/material';
 import React from 'react';
 import { Scope, UserPermissions } from '../../services/permission.service';
 import { CreationModeSwitch } from './create-assignment/creation-switch';
-import { Validator } from './create-assignment/validator';
 import { GradingModeSwitch } from './manual-grading/grading-switch';
 import { IModeSwitchProps } from './slider';
 import { lectureSubPaths } from '../../services/file.service';

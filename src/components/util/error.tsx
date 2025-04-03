@@ -18,7 +18,7 @@ export default function ErrorPage({ id }: { id: string }) {
   return (
     <Container maxWidth="md" style={{ marginTop: '50px' }}>
       <Grid container spacing={2} justifyContent="center">
-        <Grid item xs={6}>
+        <Grid size={{ xs:6 }}>
           <Typography sx={{ mb: 2 }} variant={'h2'}>
             Sorry!
           </Typography>
@@ -47,7 +47,7 @@ export default function ErrorPage({ id }: { id: string }) {
             </Button>
           </p>
         </Grid>
-        <Grid item xs={6}>
+        <Grid size={{ xs:6 }}>
           <svg
             width="100%"
             height="auto"

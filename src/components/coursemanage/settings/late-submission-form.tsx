@@ -1,13 +1,10 @@
 import { SubmissionPeriod } from '../../../model/submissionPeriod';
 import React from 'react';
 import {
-  Box,
   Button,
   IconButton,
-  InputLabel,
   Stack,
-  TextField,
-  Tooltip
+  TextField
 } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
 import moment from 'moment';

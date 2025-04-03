@@ -61,7 +61,6 @@ export const DialogProvider = (props: IDialogProviderProps) => {
       <Dialog
         open={open}
         onClose={closeDialog}
-        onBackdropClick={closeDialog}
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
       >

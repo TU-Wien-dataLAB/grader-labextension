@@ -10,7 +10,7 @@ import { Assignment } from '../../../model/assignment';
 import { Lecture } from '../../../model/lecture';
 import { SectionTitle } from '../../util/section-title';
 import { OverviewCard } from './overview-card';
-import { Box, Card, Grid, LinearProgress } from '@mui/material';
+import { Box, Card, LinearProgress } from '@mui/material';
 import { AssignmentStatus } from './assignment-status';
 import { useQuery } from '@tanstack/react-query';
 import { getAssignment } from '../../../services/assignments.service';

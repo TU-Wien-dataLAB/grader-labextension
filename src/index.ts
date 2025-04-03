@@ -175,8 +175,8 @@ const connectTrackerSignals = (tracker: INotebookTracker) => {
     }, this);
 
   tracker.activeCellChanged.connect(() => {
-    const notebookPanel: NotebookPanel = tracker.currentWidget;
-    //Notebook not yet loaded
+    const notebookPanel: NotebookPanel | null = tracker.currentWidget;
+    // notebook not yet loaded
     if (notebookPanel === null) {
       return;
     }
@@ -262,9 +262,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     // the MUI theme provider is set in the corresponding widgets
     // the CSS color-scheme property only applies to native input elements automatically so this does only apply to those (i.e. notebook grading mode and creation mode)
     themeManager.themeChanged.connect(() => {
-      document.documentElement.dataset.theme = themeManager.isLight(
-        themeManager.theme
-      )
+      document.documentElement.dataset.theme = themeManager.isLight(themeManager.theme ?? 'light')
         ? 'light'
         : 'dark';
     }, this);
@@ -339,19 +337,19 @@ const extension: JupyterFrontEndPlugin<void> = {
           }
         }
 
-        let cmMenu = null;
+        // if tutor or instructor permissions were found add course management menu
         if (sum !== 0) {
           console.log(
             'Non-student permissions found! Adding coursemanage launcher and connecting creation mode'
           );
           connectTrackerSignals(tracker);
 
-          // add Menu to JupyterLab main menu
-          cmMenu = new Menu({ commands: app.commands });
+          // add menu to JupyterLab main menu
+          const cmMenu = new Menu({ commands: app.commands });;
           cmMenu.title.label = 'Course Management';
           mainMenu.addMenu(cmMenu, false, { rank: 210 });
-
           createCourseManagementOpenCommand(app, launcher, courseManageTracker)
+          GlobalObjects.courseManageMenu = cmMenu;
         }
 
         // add Menu to JupyterLab main menu
@@ -360,7 +358,7 @@ const extension: JupyterFrontEndPlugin<void> = {
         mainMenu.addMenu(aMenu, false, { rank: 200 });
 
         GlobalObjects.assignmentMenu = aMenu;
-        GlobalObjects.courseManageMenu = cmMenu;
+        
         updateMenus();
 
         // only add assignment list if user permissions can be loaded
@@ -441,6 +439,8 @@ const extension: JupyterFrontEndPlugin<void> = {
         return tracker.activeCell.model.getMetadata('revert') !== null;
       },
       execute: () => {
+
+
         showDialog({
           title: "Do you want to revert the cell to it's original state?",
           body: 'This will overwrite your current changes!',
@@ -474,14 +474,17 @@ const extension: JupyterFrontEndPlugin<void> = {
         return tracker.activeCell.model.getMetadata('hint') !== null;
       },
       execute: () => {
-        let hintWidget: HintWidget = null;
+        // check if there is an active cell
+        if (!tracker.activeCell) return
 
-        (tracker.activeCell.layout as PanelLayout).widgets.map(widget => {
+        let hintWidget: HintWidget | undefined;
+
+        (tracker.activeCell.layout as PanelLayout).widgets.forEach(widget => {
           if (widget instanceof HintWidget) {
             hintWidget = widget;
           }
         });
-        if (hintWidget === null) {
+        if (hintWidget === undefined) {
           (tracker.activeCell.layout as PanelLayout).addWidget(
             new HintWidget(
               tracker.activeCell.model.getMetadata('hint').toString()

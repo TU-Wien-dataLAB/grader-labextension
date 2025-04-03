@@ -6,12 +6,10 @@
 
 import { FileBrowserModel } from '@jupyterlab/filebrowser/lib/model';
 import { GlobalObjects } from '../index';
-import { Contents } from '@jupyterlab/services';
 import { Assignment } from '../model/assignment';
 import { HTTPMethod, request } from './request.service';
 import { Lecture } from '../model/lecture';
 import { RepoType } from '../components/util/repo-type';
-import IModel = Contents.IModel;
 import { PageConfig, PathExt } from '@jupyterlab/coreutils';
 import { enqueueSnackbar } from 'notistack';
 import { RemoteFileStatus } from '../model/remoteFileStatus';

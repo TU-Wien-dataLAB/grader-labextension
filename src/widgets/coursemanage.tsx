@@ -17,7 +17,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './assignmentmanage';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+// import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 
 export class CourseManageView extends ReactWidget {
@@ -34,10 +34,10 @@ export class CourseManageView extends ReactWidget {
     this.router = createMemoryRouter(getRoutes(), { initialEntries: ['/'] });
 
     const themeManager = GlobalObjects.themeManager;
-    this.theme = themeManager.isLight(themeManager.theme) ? 'light' : 'dark';
+    this.theme = themeManager.isLight(themeManager.theme ?? 'light') ? 'light' : 'dark';
 
     themeManager.themeChanged.connect(() => {
-      this.theme = themeManager.isLight(themeManager.theme) ? 'light' : 'dark';
+      this.theme = themeManager.isLight(themeManager.theme ?? 'light') ? 'light' : 'dark';
     }, this);
   }
 

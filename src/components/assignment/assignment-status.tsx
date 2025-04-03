@@ -4,7 +4,6 @@
 // This source code is licensed under the BSD-style license found in the
 // LICENSE file in the root directory of this source tree.
 
-import { Assignment } from '../../model/assignment';
 import {
   Card,
   CardContent,
@@ -14,7 +13,6 @@ import {
   Typography
 } from '@mui/material';
 import * as React from 'react';
-import { getFiles } from '../../services/file.service';
 
 import { Submission } from '../../model/submission';
 import ChatRoundedIcon from '@mui/icons-material/ChatRounded';

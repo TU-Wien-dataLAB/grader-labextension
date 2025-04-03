@@ -12,7 +12,6 @@ import {
 import * as React from 'react';
 import { Lecture } from '../../../model/lecture';
 import { Assignment } from '../../../model/assignment';
-import { Submission } from '../../../model/submission';
 import { FilesList } from '../../util/file-list';
 import { lectureBasePath, makeDirs } from '../../../services/file.service';
 import { Link, useOutletContext } from 'react-router-dom';

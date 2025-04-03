@@ -97,5 +97,7 @@ export function loadObject<T>(
   lecture?: Lecture,
   assignment?: Assignment
 ): T | null {
-  return JSON.parse(loadString(key, lecture, assignment));
+  const jsonString = loadString(key, lecture, assignment);
+  if (!jsonString) return null; // Return null if there's nothing to parse
+  return JSON.parse(jsonString);
 }

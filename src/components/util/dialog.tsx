@@ -174,7 +174,7 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
 
       <Dialog
         open={open || openDialog}
-        onBackdropClick={() => {
+        onClose={() => {
           setOpen(false);
           handleClose();
         }}
@@ -387,7 +387,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
       </Tooltip>
       <Dialog
         open={openDialog}
-        onBackdropClick={() => setOpen(false)}
         onClose={() => setOpen(false)}
       >
         <DialogTitle>Create Assignment</DialogTitle>
@@ -586,7 +585,8 @@ export interface ICommitDialogProps {
 export const CommitDialog = (props: ICommitDialogProps) => {
   const [open, setOpen] = React.useState(false);
   const [message, setMessage] = React.useState('');
-  const [selectedDir, setSelectedDir] = React.useState('source');
+  // currently we only use this dialog for commiting source files
+  const selectedDir = 'source'
   const [filesListVisible, setFilesListVisible] = React.useState(false);
   const [selectedFiles, setSelectedFiles] = React.useState<string[]>();
   const path = `${lectureBasePath}${props.lecture.code}/${selectedDir}/${props.assignment.id}`;
@@ -627,7 +627,6 @@ export const CommitDialog = (props: ICommitDialogProps) => {
       <Box onClick={() => setOpen(true)}>{props.children}</Box>
       <Dialog
         open={open}
-        onBackdropClick={() => setOpen(false)}
         onClose={() => setOpen(false)}
         fullWidth={true}
         maxWidth={'sm'}

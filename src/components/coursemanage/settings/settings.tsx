@@ -1,5 +1,4 @@
 import { Assignment } from '../../../model/assignment';
-import { Submission } from '../../../model/submission';
 import * as React from 'react';
 import { useFormik } from 'formik';
 import {
@@ -20,14 +19,12 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import {
   updateAssignment,
-  deleteAssignment,
   getAssignment
 } from '../../../services/assignments.service';
 import { enqueueSnackbar } from 'notistack';
 import { Lecture } from '../../../model/lecture';
 import * as yup from 'yup';
 import { SectionTitle } from '../../util/section-title';
-import { useNavigate } from 'react-router-dom';
 import {
   getLateSubmissionInfo,
   ILateSubmissionInfo,
@@ -42,7 +39,6 @@ import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { getLecture } from '../../../services/lectures.service';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient } from '../../../widgets/assignmentmanage';
-import { AssignmentSettings } from '../../../model/assignmentSettings';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -66,8 +62,7 @@ const validationSchema = yup.object({
 });
 
 export const SettingsComponent = () => {
-  const navigate = useNavigate();
-
+  
   const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
 
   const { data: lecture } = useQuery<Lecture>({

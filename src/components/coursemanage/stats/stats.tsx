@@ -2,7 +2,6 @@ import { Lecture } from '../../../model/lecture';
 import { Assignment } from '../../../model/assignment';
 import { Submission } from '../../../model/submission';
 import { Box, Card, IconButton, LinearProgress, Tooltip } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2';
 import { SectionTitle } from '../../util/section-title';
 import ReplayIcon from '@mui/icons-material/Replay';
 import * as React from 'react';

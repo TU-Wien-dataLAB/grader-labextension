@@ -11,7 +11,6 @@ import {
   Chip
 } from '@mui/material';
 import InsertDriveFileRoundedIcon from '@mui/icons-material/InsertDriveFileRounded';
-import WarningIcon from '@mui/icons-material/Warning';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import DangerousIcon from '@mui/icons-material/Dangerous';
 import {

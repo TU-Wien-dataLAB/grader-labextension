@@ -268,7 +268,6 @@ export default function GradingTable() {
     assignment,
     rows,
     setRows,
-    manualGradeSubmission,
     setManualGradeSubmission
   } = useOutletContext() as {
     lecture: Lecture;

@@ -8,8 +8,6 @@ import {
   Typography
 } from '@mui/material';
 import {
-  PolarAngleAxis,
-  RadialBar,
   PieChart,
   ResponsiveContainer,
   Pie,

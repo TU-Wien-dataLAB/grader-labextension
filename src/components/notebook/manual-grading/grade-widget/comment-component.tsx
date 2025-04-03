@@ -8,7 +8,6 @@ import * as React from 'react';
 import { NbgraderData, ToolData } from '../../model';
 import { GradeBook } from '../../../../services/gradebook';
 import { INotebookModel } from '@jupyterlab/notebook';
-import { width } from '@mui/system';
 
 export interface ICommentComponentProps {
   model: INotebookModel;

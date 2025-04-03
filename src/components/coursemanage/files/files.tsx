@@ -9,7 +9,6 @@ import { Assignment } from '../../../model/assignment';
 import { Lecture } from '../../../model/lecture';
 import {
   generateAssignment,
-  getAssignment,
   pullAssignment,
   pushAssignment
 } from '../../../services/assignments.service';
@@ -28,8 +27,7 @@ import {
   IconButton,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
-  Typography
+  Tooltip
 } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
 import TerminalIcon from '@mui/icons-material/Terminal';
@@ -50,7 +48,6 @@ import { RepoType } from '../../util/repo-type';
 import { enqueueSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getLecture } from '../../../services/lectures.service';
 import { loadString, storeString } from '../../../services/storage.service';
 import { queryClient } from '../../../widgets/assignmentmanage';
 import { RemoteFileStatus } from '../../../model/remoteFileStatus';
@@ -70,16 +67,6 @@ export const Files = ({
   const navigate = useNavigate();
   const reloadPage = () => navigate(0);
   const serverRoot = PageConfig.getOption('serverRoot');
-
-  const { data: updatedLecture = lecture } = useQuery({
-    queryKey: ['lecture', lecture.id],
-    queryFn: () => getLecture(lecture.id, true)
-  });
-
-  const { data: updatedAssignment = assignment } = useQuery({
-    queryKey: ['assignment', lecture.id, assignment.id],
-    queryFn: () => getAssignment(lecture.id, assignment.id, true)
-  });
 
   const { data: selectedDir = 'source', refetch: refetchSelectedDir } =
     useQuery({
@@ -319,7 +306,7 @@ export const Files = ({
             </Tooltip>
           )
         }
-        subheaderTypographyProps={{ display: 'inline', ml: 2 }}
+        slotProps={{ subheader: { display: 'inline', ml: 2 } }}
       />
       <Divider />
       <Box

@@ -11,7 +11,6 @@ import { Lecture } from '../../model/lecture';
 import { Assignment } from '../../model/assignment';
 import { Submission } from '../../model/submission';
 import {
-  getAllSubmissions,
   getProperties,
   getSubmission,
   pullFeedback
@@ -57,7 +56,7 @@ export const Feedback = () => {
   });
 
   const feedbackPath = `${lectureBasePath}${lecture?.code}/feedback/${assignmentId}/${submissionId}`;
-  const { data: submissionFiles, refetch: refetchSubmissionFiles } = useQuery({
+  const { refetch: refetchSubmissionFiles } = useQuery({
     queryKey: ['submissionFiles', feedbackPath],
     queryFn: () => feedbackPath ? getFiles(feedbackPath) : Promise.resolve([]),
     enabled: !!feedbackPath 

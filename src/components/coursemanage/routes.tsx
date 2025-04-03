@@ -1,19 +1,11 @@
 import * as React from 'react';
 import {
   createRoutesFromElements,
-  Route,
-  useNavigation
+  Route
 } from 'react-router-dom';
-import Box from '@mui/material/Box';
-import { Typography } from '@mui/material';
-import { LinkRouter, Page } from '../util/breadcrumbs';
+import { Page } from '../util/breadcrumbs';
 import ErrorPage from '../util/error';
 import { CourseManageComponent } from './coursemanage.component';
-import { UserPermissions } from '../../services/permission.service';
-import {
-  getAllLectures
-} from '../../services/lectures.service';
-import { enqueueSnackbar } from 'notistack';
 import { LectureComponent } from './lecture';
 import { AssignmentModalComponent } from './assignment-modal';
 import { OverviewComponent } from './overview/overview';
@@ -27,24 +19,7 @@ import { CreateSubmission } from './grading/create-submission';
 import { loadAssignment, loadLecture } from '../assignment/routes';
 import { queryClient } from '../../widgets/assignmentmanage';
 
-const shouldReload = (request: Request) =>
-  new URL(request.url).searchParams.get('reload') === 'true';
-
-const loadPermissions = async () => {
-  try {
-    await UserPermissions.loadPermissions();
-    const [lectures, completedLectures] = await Promise.all([
-      getAllLectures(),
-      getAllLectures(true)
-    ]);
-    return { lectures, completedLectures };
-  } catch (error: any) {
-    enqueueSnackbar(error.message, {
-      variant: 'error'
-    });
-    throw new Error('Could not load data!');
-  }
-};
+/** Example Page
 
 function ExamplePage({ to }) {
   const navigation = useNavigation(); // router navigates to new route (and loads data)
@@ -67,6 +42,7 @@ function ExamplePage({ to }) {
     </Box>
   );
 }
+*/
 
 export const getRoutes = () => {
   const routes = createRoutesFromElements(

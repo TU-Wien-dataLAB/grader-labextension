@@ -108,7 +108,7 @@ export const ManualGrading = () => {
     lecture,
     assignment,
     rows,
-    setRows,
+    setRows: _setRows, //not used
     manualGradeSubmission,
     setManualGradeSubmission
   } = useOutletContext() as {

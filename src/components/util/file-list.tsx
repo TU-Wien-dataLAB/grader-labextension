@@ -49,10 +49,6 @@ export const FilesList = (props: IFileListProps) => {
     return true;
   };
 
-  const handleFileSelectChange = (filePath: string, isSelected: boolean) => {
-    props.onFileSelectChange(filePath, isSelected);
-  };
-
   const generateItems = (files: File[], handleFileSelectChange) => {
     const filePaths = files.flatMap(file =>
       extractRelativePaths(file, 'assignments')
