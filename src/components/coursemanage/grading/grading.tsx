@@ -488,7 +488,7 @@ export default function GradingTable() {
                   >
                     {row.id}
                   </TableCell>
-                  <TableCell align="left">{row.username}</TableCell>
+                  <TableCell align="left">{row.user_display_name}</TableCell>
                   <TableCell align="right">
                     {utcToLocalFormat(row.submitted_at)}
                   </TableCell>

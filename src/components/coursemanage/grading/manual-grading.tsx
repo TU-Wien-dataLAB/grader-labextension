@@ -323,7 +323,7 @@ export const ManualGrading = () => {
                 color="text.primary"
                 sx={{ display: 'inline-block', fontSize: 16, height: 35 }}
               >
-                {submission.username}
+                {submission.user_display_name}
               </Typography>
               <Typography
                 color="text.primary"
