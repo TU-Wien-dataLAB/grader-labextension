@@ -11,5 +11,6 @@
 
 export interface User { 
     name?: string;
+    display_name?: string;
 }
 
