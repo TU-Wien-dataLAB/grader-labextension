@@ -64,11 +64,18 @@ export function getAssignmentProperties(
 
 export function updateAssignment(
   lectureId: number,
-  assignment: Assignment
+  assignment: Assignment,
+  recalcScores: boolean = false
 ): Promise<Assignment> {
+  const searchParams = new URLSearchParams({
+    'recalc-scores': String(recalcScores),
+  });
+  let url = `/api/lectures/${lectureId}/assignments/${assignment.id}`
+  url += '?' + searchParams;
+
   return request<Assignment, Assignment>(
     HTTPMethod.PUT,
-    `/api/lectures/${lectureId}/assignments/${assignment.id}`,
+    url,
     assignment
   );
 }

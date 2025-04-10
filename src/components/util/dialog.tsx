@@ -36,13 +36,13 @@ import {
   Alert,
   AlertTitle,
   FormControl,
-  Switch
+  Switch,
 } from '@mui/material';
 import { Assignment } from '../../model/assignment';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { createAssignment } from '../../services/assignments.service';
+import { createAssignment, updateAssignment } from '../../services/assignments.service';
 import { Lecture } from '../../model/lecture';
 import AutogradeTypeEnum = AssignmentSettings.AutogradeTypeEnum;
 import AssignementTypeEnum = AssignmentSettings.AssignmentTypeEnum;
@@ -68,12 +68,15 @@ import { ltiSyncSubmissions } from '../../services/submissions.service';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import { openBrowser } from '../coursemanage/overview/util';
 import { AssignmentSettings } from '../../model/assignmentSettings';
+import { TooltipComponent } from './tooltip';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
 Automatic Grading: The assignment is being autograded as soon as the students makes a submission.\n
 Fully Automatic Grading: The assignment is autograded and feedback is generated as soon as the student makes a submission. 
 (requires all scores to be based on autograde results)`;
+
+const recalculateScoreExplaination = 'Using this action will result in the recalculation of all submission scores \n based on the deadline/late submission settings.';
 
 const validationSchema = yup.object({
   name: yup
@@ -118,6 +121,81 @@ const EditLectureNameTooltip = styled(
     maxWidth: 220
   }
 }));
+
+
+export const SaveAssignmentSettingsDialog = (props) => {
+  const formik = useFormik({
+    initialValues: {
+      recalcScores: false
+    },
+    onSubmit: values => {
+      updateAssignment(props.lecture.id, props.assignment, values.recalcScores).then(
+              async () => {
+                await updateMenus(true);
+                await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+                await queryClient.invalidateQueries({ queryKey: ['assignment',props.assignment.id] });
+                enqueueSnackbar('Successfully Updated Assignment', {
+                  variant: 'success',
+                });
+              },
+              (error: Error) => {
+                enqueueSnackbar(error.message, {
+                  variant: 'error',
+                });
+
+              }
+            );
+      props.setOpen(false)
+    }
+  })
+  return ( 
+  <Dialog
+    open={props.open}
+    onClose={() => {
+      props.setOpen(false)
+    }}
+    fullWidth
+    maxWidth="sm"
+  >
+    <DialogTitle>Save Assignment Settings</DialogTitle>
+    <form onSubmit={formik.handleSubmit}>
+      <DialogContent>
+        <Stack spacing={0.5} direction="row" useFlexGap>
+              
+                <Checkbox
+                checked={formik.values.recalcScores}
+                onChange={e => {
+                  formik.setFieldValue('recalcScores', e.target.checked);
+              
+                }}
+               />
+               <Typography sx={{pt:"9px"}}>
+                  Recalculate scores
+               </Typography>
+               <TooltipComponent title={recalculateScoreExplaination} sx={{mt:"9px"}} />
+            
+              
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button
+          color="primary"
+          variant="outlined"
+          onClick={() => {
+            props.setOpen(false)
+          }}
+        >
+          Cancel
+        </Button>
+        <Button color="primary" variant="contained" type="submit">
+          Save
+        </Button>
+      </DialogActions>
+    </form>
+  </Dialog>)
+
+
+}
 
 export const EditLectureDialog = (props: IEditLectureProps) => {
   const formik = useFormik({

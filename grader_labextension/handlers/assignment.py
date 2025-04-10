@@ -11,7 +11,7 @@ from tornado.web import HTTPError, authenticated
 
 from grader_labextension.registry import register_handler
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler
-from grader_labextension.services.request import RequestServiceError
+from grader_labextension.services.request import RequestService, RequestServiceError
 import tornado
 import os
 
@@ -124,10 +124,15 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
         """
 
         data = tornado.escape.json_decode(self.request.body)
+        query_params = RequestService.get_query_string(
+            {
+                "recalc-scores": self.get_argument("recalc-scores", None),
+            }
+        )
         try:
             response = await self.request_service.request(
                 method="PUT",
-                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}{query_params}",
                 body=data,
                 header=self.grader_authentication_header,
             )
