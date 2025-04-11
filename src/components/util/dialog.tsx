@@ -281,7 +281,7 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
                 {props.lecture.code === props.lecture.name && (
                   <Typography variant="body2" color="text.secondary">
                     The current name matches the lecture code. Consider updating
-                    updating it to something more descriptive.
+                    it to something more descriptive.
                   </Typography>
                 )}
               </Stack>
