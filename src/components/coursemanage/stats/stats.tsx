@@ -120,7 +120,7 @@ export const StatsComponent = () => {
   }, [latestSubmissions]);
 
   React.useEffect(() => {
-    if (usersData === null) {
+    if (usersData === null || usersData === undefined) {
       return;
     }
     if (Object.keys(usersData).length > 0) {
