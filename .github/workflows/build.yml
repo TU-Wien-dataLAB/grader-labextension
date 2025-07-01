@@ -36,6 +36,22 @@ jobs:
     - name: Build package
       run: python -m build
 
+    # SETUP LINTING
+    - name: Set up ruff
+      uses: astral-sh/ruff-action@v3
+
+    # LINT
+    - name: Run ruff check
+      run: ruff check
+
+    # CHECK IMPORTS SORTING
+    - name: Run ruff check imports
+      run: ruff check --select I
+
+    # FORMAT
+    - name: Run ruff format
+      run: ruff format
+
     # Upload Artifacts
     - name: Archive labextension artifacts
       uses: actions/upload-artifact@v4
