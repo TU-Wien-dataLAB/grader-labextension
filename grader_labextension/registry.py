@@ -46,7 +46,8 @@ class HandlerPathRegistry(object, metaclass=Singleton):
         # check if class inherits from tornado RequestHandler
         if RequestHandler not in cls.__mro__:
             raise ValueError(
-                "Incorrect base class. Class has to be extended from tornado 'RequestHandler' in order to be registered."
+                "Incorrect base class. Class has to be extended from tornado 'RequestHandler' "
+                "in order to be registered."
             )
         HandlerPathRegistry.registry[cls] = path
 

@@ -117,6 +117,7 @@ ignore = ["W002"]
 line-length = 100
 include = [
     "grader_labextension/*.py",
+    "conftest.py",
     "pyproject.toml",
 ]
 extend-exclude = [
