@@ -4,9 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List, Set, Tuple
+from typing import List, Tuple
 from tornado.web import RequestHandler
-from jupyter_server.utils import url_path_join
 
 
 class Singleton(type):
@@ -23,10 +22,15 @@ class HandlerPathRegistry(object, metaclass=Singleton):
 
     @staticmethod
     def handler_list(base_url) -> List[Tuple[str, RequestHandler]]:
-        return list(zip(
-            [base_url.replace('/','\/') + path for path in HandlerPathRegistry.registry.values()],
-            HandlerPathRegistry.registry.keys()
-        ))
+        return list(
+            zip(
+                [
+                    base_url.replace("/", "\/") + path
+                    for path in HandlerPathRegistry.registry.values()
+                ],
+                HandlerPathRegistry.registry.keys(),
+            )
+        )
 
     @staticmethod
     def has_path(cls) -> bool:
@@ -50,4 +54,5 @@ def register_handler(path: str):
     def _register_class(cls):
         HandlerPathRegistry().add(cls, path)
         return cls
+
     return _register_class

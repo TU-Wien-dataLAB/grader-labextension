@@ -7,6 +7,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPResponse, HTTPE
 from traitlets import Unicode, TraitError, validate
 from traitlets.config import SingletonConfigurable
 
+
 class RequestServiceError(Exception):
     def __init__(self, code: int, status_text: str, message: str):
         self.code = code
@@ -22,11 +23,11 @@ class RequestService(SingletonConfigurable):
     url = Unicode(os.environ.get("GRADER_HOST_URL", "http://127.0.0.1:4010"))
 
     def __init__(
-        self, 
-        default_request_timeout: float = 20.0, 
-        default_connect_timeout: float = 20.0, 
+        self,
+        default_request_timeout: float = 20.0,
+        default_connect_timeout: float = 20.0,
         max_retries: int = 3,  # Max retry attempts for transient errors
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.http_client = AsyncHTTPClient(max_clients=10)  # Limit concurrency
@@ -34,13 +35,12 @@ class RequestService(SingletonConfigurable):
         self.default_request_timeout = default_request_timeout
         self.default_connect_timeout = default_connect_timeout
         self.max_retries = max_retries
-        
+
     def get_authorization_header(self):
         auth_token = os.environ.get("GRADER_API_TOKEN")
         if auth_token is None:
             raise RequestServiceError(401, "Unauthorized", "No Grader API token found.")
         return {"Authorization": f"Token {auth_token}"}
-        
 
     async def request_with_retries(
         self,
@@ -54,7 +54,7 @@ class RequestService(SingletonConfigurable):
         max_retries: int = None,
         retry_delay: float = 1.0,  # Initial retry delay in seconds
         backoff_factor: float = 2.0,  # Factor to increase delay between retries
-        response_callback: Optional[Callable[[HTTPResponse], None]] = None
+        response_callback: Optional[Callable[[HTTPResponse], None]] = None,
     ) -> Union[dict, list, HTTPResponse]:
         """
         Make an HTTP request with retry logic for transient errors.
@@ -72,7 +72,7 @@ class RequestService(SingletonConfigurable):
                     decode_response=decode_response,
                     request_timeout=request_timeout,
                     connect_timeout=connect_timeout,
-                    response_callback=response_callback
+                    response_callback=response_callback,
                 )
             except (HTTPError, ConnectionRefusedError) as e:
                 if isinstance(e, HTTPError) and e.code not in {502, 503, 504}:
@@ -80,11 +80,17 @@ class RequestService(SingletonConfigurable):
                 attempt += 1
                 if attempt < retries:
                     retry_delay_seconds = retry_delay * (backoff_factor ** (attempt - 1))
-                    self.log.warning(f"Retry {attempt}/{retries} after {retry_delay_seconds}s due to error: {e}")
+                    self.log.warning(
+                        f"Retry {attempt}/{retries} after {retry_delay_seconds}s due to error: {e}"
+                    )
                     await asyncio.sleep(retry_delay_seconds)
                 else:
-                    raise RequestServiceError(503, "Service Unavailable", "Max retries reached. Upstream service unavailable.")
-    
+                    raise RequestServiceError(
+                        503,
+                        "Service Unavailable",
+                        "Max retries reached. Upstream service unavailable.",
+                    )
+
     async def request(
         self,
         method: str,
@@ -94,14 +100,14 @@ class RequestService(SingletonConfigurable):
         decode_response: bool = True,
         request_timeout: float = None,
         connect_timeout: float = None,
-        response_callback: Optional[Callable[[HTTPResponse], None]] = None
+        response_callback: Optional[Callable[[HTTPResponse], None]] = None,
     ) -> Union[dict, list, HTTPResponse]:
         """
         Core request function that handles the HTTP call.
         """
         if header is None:
             header = self.get_authorization_header()
-        
+
         self.log.info(f"Requesting {method} {self.url + endpoint}")
         request_timeout = request_timeout or self.default_request_timeout
         connect_timeout = connect_timeout or self.default_connect_timeout
@@ -117,12 +123,14 @@ class RequestService(SingletonConfigurable):
             headers=header,
             body=body if body else None,
             request_timeout=request_timeout,
-            connect_timeout=connect_timeout
+            connect_timeout=connect_timeout,
         )
 
         try:
             response: HTTPResponse = await self.http_client.fetch(request=request)
-            self.log.info(f"Received response with status {response.code} from {response.effective_url}")
+            self.log.info(
+                f"Received response with status {response.code} from {response.effective_url}"
+            )
 
             if decode_response:
                 # Check the Content-Type of the response
@@ -144,17 +152,21 @@ class RequestService(SingletonConfigurable):
         except HTTPError as http_error:
             self.log.error(f"HTTP error occurred: {http_error.response.reason}")
             raise RequestServiceError(
-                http_error.code, 
-                "Service Error", 
-                http_error.response.reason or "An error occurred in the upstream service."
+                http_error.code,
+                "Service Error",
+                http_error.response.reason or "An error occurred in the upstream service.",
             )
 
         except ConnectionRefusedError:
             self.log.error(f"Connection refused for {self.url + endpoint}")
-            raise RequestServiceError(502, "Bad Gateway", "Unable to connect to the upstream service.")
+            raise RequestServiceError(
+                502, "Bad Gateway", "Unable to connect to the upstream service."
+            )
         except Exception as e:
             self.log.error(f"Unexpected error: {e}")
-            raise RequestServiceError(500, "Internal Server Error", f"An unexpected error occurred: {str(e)}")
+            raise RequestServiceError(
+                500, "Internal Server Error", f"An unexpected error occurred: {str(e)}"
+            )
 
     def prepare_headers(self, header: Dict[str, str] = None) -> Dict[str, str]:
         """

@@ -22,6 +22,7 @@ class ExportGradesHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/submissions/save.
     """
+
     async def put(self, lecture_id: int, assignment_id: int):
         """
         Exports submissions of an assignment to the csv format.
@@ -34,7 +35,7 @@ class ExportGradesHandler(ExtensionBaseHandler):
             {
                 "instructor-version": "true",
                 "filter": self.get_argument("filter", "none"),
-                "format": "csv"
+                "format": "csv",
             }
         )
         try:
@@ -42,7 +43,7 @@ class ExportGradesHandler(ExtensionBaseHandler):
                 method="GET",
                 endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions{query_params}",
                 header=self.grader_authentication_header,
-                decode_response=False
+                decode_response=False,
             )
         except RequestServiceError as e:
             self.log.error(e)
@@ -50,18 +51,18 @@ class ExportGradesHandler(ExtensionBaseHandler):
 
         lecture = await self.get_lecture(lecture_id)
         assignment = await self.get_assignment(lecture_id, assignment_id)
-        dir_path = os.path.join(self.root_dir, lecture["code"], "assignments", str(assignment["id"]))
+        dir_path = os.path.join(
+            self.root_dir, lecture["code"], "assignments", str(assignment["id"])
+        )
         os.makedirs(dir_path, exist_ok=True)
         csv_content = response.body.decode("utf-8")
-        parsed_query_params = urllib.parse.parse_qs(query_params.lstrip('?'))
+        parsed_query_params = urllib.parse.parse_qs(query_params.lstrip("?"))
         filter_value = parsed_query_params.get("filter", ["none"])[0]
         file_path = os.path.join(dir_path, f"{assignment['name']}_{filter_value}_submissions.csv")
         with open(file_path, "w") as f:
             f.write(csv_content)
 
         self.write({"status": "OK"})
-
-
 
 
 @register_handler(
@@ -72,6 +73,7 @@ class GradingAutoHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/auto.
     """
+
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
         """Sends a GET-request to the grader service to autograde a submission
@@ -103,6 +105,7 @@ class GradingManualHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/manual.
     """
+
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
         """Generates a local git repository and pulls autograded files of a submission in the user directory
@@ -155,7 +158,6 @@ class GradingManualHandler(ExtensionBaseHandler):
         if os.path.exists(git_service.path):
             shutil.rmtree(git_service.path, ignore_errors=True)
 
-
         os.makedirs(git_service.path, exist_ok=True)
         try:
             if not git_service.is_git():
@@ -175,6 +177,7 @@ class GenerateFeedbackHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/feedback.
     """
+
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
         """Sends a GET-request to the grader service to generate feedback for a graded submission
@@ -207,9 +210,10 @@ class PullFeedbackHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/pull/feedback.
     """
+
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
-        """Generates a local git repository and pulls the feedback files of a submission in the user directory 
+        """Generates a local git repository and pulls the feedback files of a submission in the user directory
 
         :param lecture_id: id of the lecture
         :type lecture_id: int

@@ -11,17 +11,14 @@ from http import HTTPStatus
 from urllib.parse import unquote, quote
 from tornado.web import HTTPError, authenticated
 
-from grader_labextension.api.models.assignment import Assignment
 from grader_labextension.api.models.assignment_settings import AssignmentSettings
-from grader_labextension.api.models.lecture import Lecture
 from grader_labextension.services.request import RequestServiceError
 from grader_service.convert.converters.base import GraderConvertException
 from grader_service.convert.converters.generate_assignment import GenerateAssignment
-from .base_handler import ExtensionBaseHandler, cache
+from .base_handler import ExtensionBaseHandler
 from ..api.models.submission import Submission
 from ..registry import register_handler
 from ..services.git import GitError, GitService
-from tornado.httpclient import HTTPResponse
 
 
 @register_handler(
@@ -58,16 +55,13 @@ class GenerateHandler(ExtensionBaseHandler):
         a_id = assignment["id"]
 
         output_dir = f"{self.root_dir}/{code}/release/{a_id}"
-        os.makedirs(
-            os.path.expanduser(output_dir),
-            exist_ok=True,
-        )
+        os.makedirs(os.path.expanduser(output_dir), exist_ok=True)
 
         generator = GenerateAssignment(
             input_dir=f"{self.root_dir}/{code}/source/{a_id}",
             output_dir=output_dir,
             file_pattern="*.ipynb",
-            assignment_settings=AssignmentSettings(allowed_files=["*"]), # copy all files
+            assignment_settings=AssignmentSettings(allowed_files=["*"]),  # copy all files
         )
         generator.force = True
         generator.log = self.log
@@ -109,12 +103,10 @@ class GitRemoteFileStatusHandler(ExtensionBaseHandler):
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
         if repo not in {"assignment", "source", "release"}:
             self.log.error(HTTPStatus.NOT_FOUND)
-            raise HTTPError(
-                HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist"
-            )
+            raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
         lecture = await self.get_lecture(lecture_id)
         assignment = await self.get_assignment(lecture_id, assignment_id)
-        file_path = self.get_query_argument('file')  # Retrieve the file path from the query parameters
+        file_path = self.get_query_argument("file")
         git_service = GitService(
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
@@ -150,9 +142,7 @@ class GitRemoteStatusHandler(ExtensionBaseHandler):
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
         if repo not in {"assignment", "source", "release"}:
             self.log.error(HTTPStatus.NOT_FOUND)
-            raise HTTPError(
-                HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist"
-            )
+            raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
         lecture = await self.get_lecture(lecture_id)
         assignment = await self.get_assignment(lecture_id, assignment_id)
         git_service = GitService(
@@ -184,6 +174,7 @@ class GitLogHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/log/{repo}.
     """
+
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
         """
@@ -196,9 +187,7 @@ class GitLogHandler(ExtensionBaseHandler):
         """
         if repo not in {"assignment", "source", "release"}:
             self.log.error(HTTPStatus.NOT_FOUND)
-            raise HTTPError(
-                HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist"
-            )
+            raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
         n_history = int(self.get_argument("n", "10"))
         try:
             lecture = await self.request_service.request(
@@ -261,9 +250,7 @@ class PullHandler(ExtensionBaseHandler):
         """
         if repo not in {"assignment", "source", "release", "edit"}:
             self.log.error(HTTPStatus.NOT_FOUND)
-            raise HTTPError(
-                HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist"
-            )
+            raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
 
         # Submission id needed for edit repository
         sub_id = self.get_argument("subid", None)
@@ -291,7 +278,7 @@ class PullHandler(ExtensionBaseHandler):
             config=self.config,
             force_user_repo=repo == "release",
             sub_id=sub_id,
-            log=self.log
+            log=self.log,
         )
         try:
             if not git_service.is_git():
@@ -346,10 +333,14 @@ class PushHandler(ExtensionBaseHandler):
 
         # Handle 'release' repo
         if repo == "release":
-            await self._handle_release_repo(git_service, lecture, assignment, lecture_id, assignment_id, selected_files)
+            await self._handle_release_repo(
+                git_service, lecture, assignment, lecture_id, assignment_id, selected_files
+            )
 
         # Perform Git operations
-        await self._perform_git_operations(git_service, repo, commit_message, selected_files, sub_id)
+        await self._perform_git_operations(
+            git_service, repo, commit_message, selected_files, sub_id
+        )
 
         # Handle submission for 'assignment' repo
         if submit and repo == "assignment":
@@ -406,7 +397,9 @@ class PushHandler(ExtensionBaseHandler):
                 body=submission.to_dict(),
                 header=self.grader_authentication_header,
             )
-            self.log.info(f"Created submission {submission.id} for user {username} and pushing to edit repo...")
+            self.log.info(
+                f"Created submission {submission.id} for user {username} and pushing to edit repo..."
+            )
             return str(submission.id)
         return sub_id
 
@@ -418,17 +411,15 @@ class PushHandler(ExtensionBaseHandler):
             repo_type=repo,
             config=self.config,
             sub_id=sub_id,
-            username=username
+            username=username,
         )
 
-    async def _handle_release_repo(self, git_service, lecture, assignment, lecture_id, assignment_id, selected_files):
+    async def _handle_release_repo(
+        self, git_service, lecture, assignment, lecture_id, assignment_id, selected_files
+    ):
         git_service.delete_repo_contents(include_git=True)
         src_path = GitService(
-            self.root_dir,
-            lecture["code"],
-            assignment["id"],
-            repo_type="source",
-            config=self.config,
+            self.root_dir, lecture["code"], assignment["id"], repo_type="source", config=self.config
         ).path
 
         if selected_files:
@@ -457,7 +448,9 @@ class PushHandler(ExtensionBaseHandler):
             input_dir=src_path,
             output_dir=output_path,
             file_pattern="*.ipynb",
-            assignment_settings=AssignmentSettings(allowed_files=["*"]), # copy all files from source regardless of assignment settings
+            assignment_settings=AssignmentSettings(
+                allowed_files=["*"]
+            ),  # copy all files from source regardless of assignment settings
         )
         generator.force = True
         generator.log = self.log
@@ -497,9 +490,13 @@ class PushHandler(ExtensionBaseHandler):
                 self.log.error(f"Could not set assignment properties! Error code {response.code}")
         except FileNotFoundError:
             self.log.error(f"Cannot find gradebook file: {gradebook_path}")
-            raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Cannot find gradebook file: {gradebook_path}")
+            raise HTTPError(
+                HTTPStatus.NOT_FOUND, reason=f"Cannot find gradebook file: {gradebook_path}"
+            )
 
-    async def _perform_git_operations(self, git_service: GitService, repo: str, commit_message: str, selected_files, sub_id=None):
+    async def _perform_git_operations(
+        self, git_service: GitService, repo: str, commit_message: str, selected_files, sub_id=None
+    ):
         try:
             if not git_service.is_git():
                 git_service.init()
@@ -542,7 +539,6 @@ class PushHandler(ExtensionBaseHandler):
             raise HTTPError(e.code, reason=e.message)
 
 
-
 @register_handler(
     path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/reset\/?"
 )
@@ -578,7 +574,6 @@ class ResetHandler(ExtensionBaseHandler):
 class RestoreHandler(ExtensionBaseHandler):
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, commit_hash: str):
-
         try:
             lecture = await self.request_service.request(
                 "GET",
@@ -618,9 +613,7 @@ class RestoreHandler(ExtensionBaseHandler):
             raise HTTPError(e.code, reason=e.error)
 
 
-@register_handler(
-    path=r"\/(?P<lecture_id>\d*)\/(?P<assignment_id>\d*)\/(?P<notebook_name>.*)"
-)
+@register_handler(path=r"\/(?P<lecture_id>\d*)\/(?P<assignment_id>\d*)\/(?P<notebook_name>.*)")
 class NotebookAccessHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/{notebook_name}.
@@ -666,8 +659,8 @@ class NotebookAccessHandler(ExtensionBaseHandler):
             try:
                 git_service.init()
                 git_service.set_author(author=self.user_name)
-                git_service.set_remote(f"grader_release")
-                git_service.pull(f"grader_release", force=True)
+                git_service.set_remote("grader_release")
+                git_service.pull("grader_release", force=True)
                 self.write({"status": "OK"})
             except GitError as e:
                 self.log.error("GitError:\n" + e.error)
@@ -679,6 +672,8 @@ class NotebookAccessHandler(ExtensionBaseHandler):
             self.log.error(e)
             raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
 
-        url = f'/user/{username}/lab/tree/{lecture["code"]}/{assignment["id"]}/{quote(notebook_name)}'
+        url = (
+            f"/user/{username}/lab/tree/{lecture['code']}/{assignment['id']}/{quote(notebook_name)}"
+        )
         self.log.info(f"Redirecting to {url}")
         self.redirect(url)

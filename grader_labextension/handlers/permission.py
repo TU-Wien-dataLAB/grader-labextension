@@ -16,21 +16,21 @@ class PermissionBaseHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /permissions.
     """
+
     @authenticated
     async def get(self):
-        """ Sends a GET-request to the grader service and returns the permissions of a user
-        """
+        """Sends a GET-request to the grader service and returns the permissions of a user"""
         try:
             response = await self.request_service.request_with_retries(
                 "GET",
                 f"{self.service_base_url}api/permissions",
                 header=self.grader_authentication_header,
-                response_callback=self.set_service_headers
+                response_callback=self.set_service_headers,
             )
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
         except Exception as e:
-            self.log.error(f'Unexpected Error: {e}')
+            self.log.error(f"Unexpected Error: {e}")
             raise HTTPError(e)
         self.write(json.dumps(response))
