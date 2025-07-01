@@ -3,18 +3,19 @@
 #
 import enum
 import logging
-import subprocess
-from pathlib import Path
-from typing import List, Dict, Union, Tuple
-from urllib.parse import urlparse
-from traitlets.config.configurable import Configurable
-from traitlets.traitlets import Unicode
 import os
 import posixpath
 import shlex
-from datetime import datetime
 import shutil
+import subprocess
 import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Tuple, Union
+from urllib.parse import urlparse
+
+from traitlets.config.configurable import Configurable
+from traitlets.traitlets import Unicode
 
 
 class GitError(Exception):
@@ -22,6 +23,7 @@ class GitError(Exception):
         self.code = code
         self.error = error
         super().__init__(error)
+
 
 class RemoteFileStatus(enum.Enum):
     UP_TO_DATE = 1
@@ -36,10 +38,28 @@ class GitService(Configurable):
     DEFAULT_GIT_URL_PREFIX = "/services/grader/git"
     _git_version = None
 
-    git_access_token = Unicode(os.environ.get("GRADER_API_TOKEN"), allow_none=False).tag(config=True)
-    git_service_url = Unicode(os.environ.get("GRADER_HOST_URL", DEFAULT_HOST_URL) + os.environ.get("GRADER_GIT_PREFIX", DEFAULT_GIT_URL_PREFIX), allow_none=False).tag(config=True)
-    def __init__(self, server_root_dir: str, lecture_code: str, assignment_id: int, repo_type: str,
-                 force_user_repo=False, sub_id=None, username=None, log=logging.getLogger('gitservice'), *args, **kwargs):
+    git_access_token = Unicode(os.environ.get("GRADER_API_TOKEN"), allow_none=False).tag(
+        config=True
+    )
+    git_service_url = Unicode(
+        os.environ.get("GRADER_HOST_URL", DEFAULT_HOST_URL)
+        + os.environ.get("GRADER_GIT_PREFIX", DEFAULT_GIT_URL_PREFIX),
+        allow_none=False,
+    ).tag(config=True)
+
+    def __init__(
+        self,
+        server_root_dir: str,
+        lecture_code: str,
+        assignment_id: int,
+        repo_type: str,
+        force_user_repo=False,
+        sub_id=None,
+        username=None,
+        log=logging.getLogger("gitservice"),
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.log = log
         self.git_root_dir = server_root_dir
@@ -55,13 +75,29 @@ class GitService(Configurable):
     def _determine_repo_path(self, force_user_repo: bool, sub_id: str, username: str) -> str:
         """Determine the path for the git repository based on the type."""
         if self.repo_type == "assignment" or force_user_repo:
-            return os.path.join(self.git_root_dir, self.lecture_code, "assignments", str(self.assignment_id))
+            return os.path.join(
+                self.git_root_dir, self.lecture_code, "assignments", str(self.assignment_id)
+            )
         elif self.repo_type == "edit":
             if username is not None:
-                return os.path.join(self.git_root_dir, self.lecture_code, "create", str(self.assignment_id), username)
+                return os.path.join(
+                    self.git_root_dir,
+                    self.lecture_code,
+                    "create",
+                    str(self.assignment_id),
+                    username,
+                )
             else:
-                return os.path.join(self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id), str(sub_id))
-        return os.path.join(self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id))
+                return os.path.join(
+                    self.git_root_dir,
+                    self.lecture_code,
+                    self.repo_type,
+                    str(self.assignment_id),
+                    str(sub_id),
+                )
+        return os.path.join(
+            self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id)
+        )
 
     def _initialize_git_logging(self):
         """Initialize logging related to git configuration."""
@@ -91,8 +127,10 @@ class GitService(Configurable):
             origin (str): The remote name.
             sub_id (str): Optional query parameter for feedback pull.
         """
-        
-        url_path = posixpath.join(self.git_remote_url, self.lecture_code, str(self.assignment_id), self.repo_type)
+
+        url_path = posixpath.join(
+            self.git_remote_url, self.lecture_code, str(self.assignment_id), self.repo_type
+        )
         url = self._build_remote_url(url_path, sub_id)
         self.log.info(f"Setting remote {origin} for {self.path} to {url}")
         try:
@@ -126,8 +164,8 @@ class GitService(Configurable):
 
     def fetch_all(self):
         self.log.info(f"Fetching all at path {self.path}")
-        self._run_command(f"git fetch --all", cwd=self.path)
-        
+        self._run_command("git fetch --all", cwd=self.path)
+
     def pull(self, origin: str, branch: str = "main", force: bool = False):
         """Pull changes from the remote repository.
 
@@ -138,7 +176,11 @@ class GitService(Configurable):
         """
         self.log.info(f"Pulling from {origin}/{branch} at {self.path}")
         if not self.remote_branch_exists(origin=origin, branch=branch):
-            raise GitError(404, "Remote repository not found. Please ensure your assignment is pushed to the repository before proceeding.")
+            raise GitError(
+                404,
+                "Remote repository not found. Please ensure your assignment is pushed "
+                "to the repository before proceeding.",
+            )
         if force:
             # clean local changes
             command = "git clean -fd"
@@ -172,13 +214,15 @@ class GitService(Configurable):
     def undo_commit(self, n: int = 1) -> None:
         self.log.info(f"Undoing {n} commit(s)")
         self._run_command(f"git reset --mixed HEAD~{n}", cwd=self.path)
-        self._run_command(f"git gc", cwd=self.path)
+        self._run_command("git gc", cwd=self.path)
 
     def revert(self, commit_hash: str):
         self.log.info(f"Reverting to {commit_hash}")
-        self._run_command(f'git revert --no-commit {commit_hash}..HEAD', cwd=self.path)
-        self._run_command(f'git commit -m "reverting to {commit_hash}" --allow-empty', cwd=self.path)
-    
+        self._run_command(f"git revert --no-commit {commit_hash}..HEAD", cwd=self.path)
+        self._run_command(
+            f'git commit -m "reverting to {commit_hash}" --allow-empty', cwd=self.path
+        )
+
     def is_git(self) -> bool:
         """Check if the directory is a git repository.
 
@@ -190,7 +234,7 @@ class GitService(Configurable):
     def set_author(self, author):
         # TODO: maybe ask user to specify their own choices
         self._run_command(f'git config user.name "{author}"', cwd=self.path)
-        self._run_command(f'git config user.email "sample@mail.com"', cwd=self.path)
+        self._run_command('git config user.email "sample@mail.com"', cwd=self.path)
 
     def clone(self, origin: str, force=False):
         """Clones the repository
@@ -202,7 +246,6 @@ class GitService(Configurable):
         self.init(force=force)
         self.set_remote(origin=origin)
         self.pull(origin=origin, force=force)
-
 
     def delete_repo_contents(self, include_git=False):
         """Deletes the contents of the git service
@@ -237,7 +280,7 @@ class GitService(Configurable):
                         shutil.copytree(s, d, ignore=ignore)
                     else:
                         shutil.copy2(s, d)
-        else:    
+        else:
             self.log.info(f"Copying repository contents from {src} to {self.path}")
             if sys.version_info.major == 3 and sys.version_info.minor >= 8:
                 shutil.copytree(src, self.path, ignore=ignore, dirs_exist_ok=True)
@@ -252,7 +295,9 @@ class GitService(Configurable):
 
     def check_remote_status(self, origin: str, branch: str) -> RemoteFileStatus:
         untracked, added, modified, deleted = self.git_status(hidden_files=False)
-        local_changes = len(untracked) > 0 or len(added) > 0 or len(modified) > 0 or len(deleted) > 0
+        local_changes = (
+            len(untracked) > 0 or len(added) > 0 or len(modified) > 0 or len(deleted) > 0
+        )
         if self.local_branch_exists(branch):
             local = self._run_command(f"git rev-parse {branch}", cwd=self.path).strip()
         else:
@@ -272,7 +317,9 @@ class GitService(Configurable):
                 return RemoteFileStatus.PUSH_NEEDED
             return RemoteFileStatus.UP_TO_DATE
 
-        base = self._run_command(f"git merge-base {branch} {origin}/{branch}", cwd=self.path).strip()
+        base = self._run_command(
+            f"git merge-base {branch} {origin}/{branch}", cwd=self.path
+        ).strip()
 
         if local == base:
             return RemoteFileStatus.PULL_NEEDED
@@ -281,7 +328,9 @@ class GitService(Configurable):
         else:
             return RemoteFileStatus.DIVERGENT
 
-    def git_status(self, hidden_files: bool = False) -> Tuple[List[str], List[str], List[str], List[str]]:
+    def git_status(
+        self, hidden_files: bool = False
+    ) -> Tuple[List[str], List[str], List[str], List[str]]:
         files = self._run_command("git status --porcelain", cwd=self.path)
         untracked, added, modified, deleted = [], [], [], []
         for line in files.splitlines():
@@ -297,9 +346,11 @@ class GitService(Configurable):
             elif k == "D":
                 deleted.append(v)
         return untracked, added, modified, deleted
-    
+
     def check_remote_file_status(self, file_path: str) -> RemoteFileStatus:
-        file_status_list = self._run_command(f"git status --porcelain {file_path}", cwd=self.path).split(maxsplit=1)
+        file_status_list = self._run_command(
+            f"git status --porcelain {file_path}", cwd=self.path
+        ).split(maxsplit=1)
         # Extract the status character from the list
         if file_status_list:
             file_status = file_status_list[0]
@@ -315,14 +366,14 @@ class GitService(Configurable):
     def local_branch_exists(self, branch: str) -> bool:
         try:
             self._run_command(f"git rev-parse --quiet --verify {branch}", cwd=self.path)
-        except GitError as e:
+        except GitError:
             return False
         return True
 
     def remote_branch_exists(self, origin: str, branch: str) -> bool:
         try:
             self._run_command(f"git ls-remote --exit-code {origin}  {branch}", cwd=self.path)
-        except GitError as e:
+        except GitError:
             return False
         return True
 
@@ -330,7 +381,7 @@ class GitService(Configurable):
         """
         Execute git log command & return the result.
         """
-        cmd = f'git log --pretty=format:%H%n%an%n%at%n%D%n%s -{history_count}'
+        cmd = f"git log --pretty=format:%H%n%an%n%at%n%D%n%s -{history_count}"
         my_output = self._run_command(cmd, cwd=self.path)
 
         result = []
@@ -342,7 +393,10 @@ class GitService(Configurable):
             commit = {
                 "commit": line_array[i],
                 "author": line_array[i + 1],
-                "date": datetime.fromtimestamp(int(line_array[i + 2])).isoformat("T", "milliseconds") + "Z",
+                "date": datetime.fromtimestamp(int(line_array[i + 2])).isoformat(
+                    "T", "milliseconds"
+                )
+                + "Z",
                 # "date": line_array[i + 2],
                 "ref": line_array[i + 3],
                 "commit_msg": line_array[i + 4],
@@ -400,7 +454,9 @@ class GitService(Configurable):
         """
         try:
             self.log.debug(f"Executing command: {command} in {cwd}")
-            result = subprocess.run(command, shell=True, check=True, cwd=cwd, text=True, capture_output=True)
+            result = subprocess.run(
+                command, shell=True, check=True, cwd=cwd, text=True, capture_output=True
+            )
             return result.stdout
         except subprocess.CalledProcessError as e:
             error_message = f"Command '{command}' failed with error: {e.stderr}"
