@@ -6,12 +6,12 @@
 
 from grader_labextension.handlers import (
     assignment,
+    base_handler,
     grading,
     lectures,
-    submissions,
     permission,
+    submissions,
     version_control,
-    base_handler,
 )
 
 __all__ = [

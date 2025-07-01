@@ -8,17 +8,19 @@ import json
 import os
 import shutil
 from http import HTTPStatus
-from urllib.parse import unquote, quote
+from urllib.parse import quote, unquote
+
+from grader_service.convert.converters.base import GraderConvertException
+from grader_service.convert.converters.generate_assignment import GenerateAssignment
 from tornado.web import HTTPError, authenticated
 
 from grader_labextension.api.models.assignment_settings import AssignmentSettings
 from grader_labextension.services.request import RequestServiceError
-from grader_service.convert.converters.base import GraderConvertException
-from grader_service.convert.converters.generate_assignment import GenerateAssignment
-from .base_handler import ExtensionBaseHandler
+
 from ..api.models.submission import Submission
 from ..registry import register_handler
 from ..services.git import GitError, GitService
+from .base_handler import ExtensionBaseHandler
 
 
 @register_handler(

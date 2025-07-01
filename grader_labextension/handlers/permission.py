@@ -5,9 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
-from grader_labextension.registry import register_handler
-from grader_labextension.handlers.base_handler import ExtensionBaseHandler
+
 from tornado.web import HTTPError, authenticated
+
+from grader_labextension.handlers.base_handler import ExtensionBaseHandler
+from grader_labextension.registry import register_handler
 from grader_labextension.services.request import RequestServiceError
 
 

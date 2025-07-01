@@ -4,16 +4,16 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import functools
-from typing import Optional, Awaitable
-
-from tornado.web import HTTPError
-
-from grader_labextension.services.request import RequestService, RequestServiceError
-from jupyter_server.base.handlers import APIHandler
 import os
+from typing import Awaitable, Optional
+
+from jupyter_server.base.handlers import APIHandler
 from tornado.httpclient import HTTPResponse
+from tornado.web import HTTPError
 from traitlets.config.configurable import SingletonConfigurable
 from traitlets.traitlets import Unicode
+
+from grader_labextension.services.request import RequestService, RequestServiceError
 
 
 def cache(max_age: int):

@@ -5,14 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
+import os
 
+import tornado
 from tornado.web import HTTPError, authenticated
 
-from grader_labextension.registry import register_handler
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler
+from grader_labextension.registry import register_handler
 from grader_labextension.services.request import RequestService, RequestServiceError
-import tornado
-import os
 
 
 @register_handler(path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/?")

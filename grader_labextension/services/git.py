@@ -3,18 +3,19 @@
 #
 import enum
 import logging
-import subprocess
-from pathlib import Path
-from typing import List, Dict, Union, Tuple
-from urllib.parse import urlparse
-from traitlets.config.configurable import Configurable
-from traitlets.traitlets import Unicode
 import os
 import posixpath
 import shlex
-from datetime import datetime
 import shutil
+import subprocess
 import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Tuple, Union
+from urllib.parse import urlparse
+
+from traitlets.config.configurable import Configurable
+from traitlets.traitlets import Unicode
 
 
 class GitError(Exception):

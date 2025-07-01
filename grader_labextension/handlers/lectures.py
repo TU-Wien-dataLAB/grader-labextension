@@ -6,12 +6,14 @@
 
 import json
 import os
-from grader_labextension.registry import register_handler
-from grader_labextension.handlers.base_handler import ExtensionBaseHandler
-from grader_labextension.services.request import RequestService, RequestServiceError
-import tornado
-from tornado.web import authenticated, HTTPError
 import urllib.parse
+
+import tornado
+from tornado.web import HTTPError, authenticated
+
+from grader_labextension.handlers.base_handler import ExtensionBaseHandler
+from grader_labextension.registry import register_handler
+from grader_labextension.services.request import RequestService, RequestServiceError
 
 
 @register_handler(path=r"api\/lectures\/?")

@@ -3,16 +3,17 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
+import os
 import shutil
+import urllib.parse
 
-from grader_labextension.services.request import RequestService, RequestServiceError
-from grader_labextension.registry import register_handler
-from grader_labextension.handlers.base_handler import ExtensionBaseHandler
 from tornado.httpclient import HTTPResponse
 from tornado.web import HTTPError, authenticated
+
+from grader_labextension.handlers.base_handler import ExtensionBaseHandler
+from grader_labextension.registry import register_handler
 from grader_labextension.services.git import GitError, GitService
-import urllib.parse
-import os
+from grader_labextension.services.request import RequestService, RequestServiceError
 
 
 @register_handler(

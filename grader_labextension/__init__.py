@@ -10,8 +10,9 @@ except ImportError:
     __version__ = "dev"
 
 import asyncio
-from grader_labextension.registry import HandlerPathRegistry
+
 from grader_labextension.handlers.base_handler import HandlerConfig
+from grader_labextension.registry import HandlerPathRegistry
 from grader_labextension.services.request import RequestService, RequestServiceError
 
 

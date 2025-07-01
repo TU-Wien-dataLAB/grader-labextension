@@ -1,10 +1,11 @@
-import os
-import json
 import asyncio
-from typing import Union, Dict, Callable, Optional
-from urllib.parse import urlparse, ParseResultBytes, urlencode, quote_plus
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPResponse, HTTPError
-from traitlets import Unicode, TraitError, validate
+import json
+import os
+from typing import Callable, Dict, Optional, Union
+from urllib.parse import ParseResultBytes, quote_plus, urlencode, urlparse
+
+from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest, HTTPResponse
+from traitlets import TraitError, Unicode, validate
 from traitlets.config import SingletonConfigurable
 
 
