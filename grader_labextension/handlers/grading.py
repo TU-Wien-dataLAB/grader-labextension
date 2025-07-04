@@ -261,5 +261,5 @@ class PullFeedbackHandler(ExtensionBaseHandler):
         if not git_service.is_git():
             git_service.init()
         git_service.set_remote("feedback", sub_id=sub_id)
-        git_service.pull("feedback", branch=f"feedback_{submission['commit_hash']}", force=False)
+        git_service.pull("feedback", branch=f"feedback_{submission['commit_hash']}", force=True)
         self.write({"status": "Pulled Feedback"})

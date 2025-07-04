@@ -259,7 +259,7 @@ class PullHandler(ExtensionBaseHandler):
         :param repo: type of the repository
         :type repo: str
         """
-        if repo not in {"assignment", "source", "release", "edit"}:
+        if repo not in {"assignment", "source", "release", "edit", "feedback"}:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(
                 HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist"
