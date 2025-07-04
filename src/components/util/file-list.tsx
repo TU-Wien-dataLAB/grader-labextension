@@ -3,7 +3,6 @@ import { Card, List, Paper, Typography } from '@mui/material';
 import { SxProps } from '@mui/system';
 import { Theme } from '@mui/material/styles';
 import {
-  getFiles,
   openFile,
   File,
   extractRelativePaths,
@@ -15,10 +14,9 @@ import FileItem from './file-item';
 import FolderItem from './folder-item';
 import { Assignment } from '../../model/assignment';
 import { Lecture } from '../../model/lecture';
-import { useQuery } from '@tanstack/react-query';
 
 interface IFileListProps {
-  path: string;
+  files: File[];
   sx?: SxProps<Theme>;
   shouldContain?: string[];
   assignment?: Assignment;
@@ -26,25 +24,13 @@ interface IFileListProps {
   missingFiles?: File[];
   checkboxes: boolean;
   onFileSelectChange?: (filePath: string, isSelected: boolean) => void;
-  checkStatus?: boolean; // check if files in list are up to date with remote git repo
+  checkStatus?: boolean;
 }
 
 export const FilesList = (props: IFileListProps) => {
-  const { data: files = [], refetch } = useQuery({
-    queryKey: ['files', props.path],
-    queryFn: () => getFiles(props.path),
-    // Disable automatic refetching, since we want to subscribe directyly on property changes.
-    refetchOnMount: false,
-    refetchInterval: false
-  });
-
-  React.useEffect(() => {
-    refetch();
-  }, [props]);
-
   const inContained = (file: string) => {
     if (props.shouldContain) {
-      return props.shouldContain.filter(f => file === f).length > 0;
+      return props.shouldContain.includes(file);
     }
     return true;
   };
@@ -53,73 +39,68 @@ export const FilesList = (props: IFileListProps) => {
     const filePaths = files.flatMap(file =>
       extractRelativePaths(file, 'assignments')
     );
-    const missingFiles: File[] =
-      (props.shouldContain &&
-        props.shouldContain
-          .filter(f => !filePaths.includes(f))
-          .map(missingFile => ({
-            name:
-              missingFile.substring(missingFile.lastIndexOf('/') + 1) ||
-              missingFile,
-            path:
-              `${lectureBasePath}${props.lecture.code}/assignments/${props.assignment.id}/` +
-              missingFile,
-            type: 'file',
-            content: []
-          }))) ||
-      [];
 
-    const missingFilesTopOrder = missingFiles.filter(missingFile => {
+    const missingFiles =
+      props.shouldContain?.filter(f => !filePaths.includes(f)).map(missingFile => ({
+        name:
+          missingFile.substring(missingFile.lastIndexOf('/') + 1) ||
+          missingFile,
+        path:
+          `${lectureBasePath}${props.lecture.code}/assignments/${props.assignment.id}/` +
+          missingFile,
+        type: 'file',
+        content: []
+      })) || [];
+
+    const topLevelMissing = missingFiles.filter(missingFile => {
       const relativePath = getRelativePath(missingFile.path, 'assignments');
       return !relativePath.includes('/');
     });
 
-    const items = files.concat(missingFilesTopOrder).map((file: File) => {
-      if (file.type === 'directory') {
-        return (
-          <FolderItem
-            key={file.path}
-            folder={file}
-            lecture={props.lecture}
-            assigment={props.assignment}
-            missingFiles={missingFiles || []}
-            inContained={inContained}
-            openFile={openFile}
-            checkboxes={props.checkboxes}
-            onFileSelectChange={handleFileSelectChange}
-            checkStatus={props.checkStatus}
-          />
-        );
-      } else {
-        return (
-          <FileItem
-            key={file.path}
-            file={file}
-            lecture={props.lecture}
-            assignment={props.assignment}
-            missingFiles={missingFiles || []}
-            inContained={inContained}
-            openFile={openFile}
-            checkboxes={props.checkboxes}
-            onFileSelectChange={handleFileSelectChange}
-            checkStatus={props.checkStatus}
-          />
-        );
-      }
-    });
+    const allFiles = files.concat(topLevelMissing);
 
-    return items;
+    return allFiles.map((file: File) =>
+      file.type === 'directory' ? (
+        <FolderItem
+          key={file.path}
+          folder={file}
+          lecture={props.lecture}
+          assigment={props.assignment}
+          missingFiles={missingFiles}
+          inContained={inContained}
+          openFile={openFile}
+          checkboxes={props.checkboxes}
+          onFileSelectChange={handleFileSelectChange}
+          checkStatus={props.checkStatus}
+        />
+      ) : (
+        <FileItem
+          key={file.path}
+          file={file}
+          lecture={props.lecture}
+          assignment={props.assignment}
+          missingFiles={missingFiles}
+          inContained={inContained}
+          openFile={openFile}
+          checkboxes={props.checkboxes}
+          onFileSelectChange={handleFileSelectChange}
+          checkStatus={props.checkStatus}
+        />
+      )
+    );
   };
 
   return (
     <Paper elevation={0} sx={props.sx}>
       <Card sx={{ mt: 1, mb: 1, overflow: 'auto' }} variant="outlined">
-        {files.length === 0 ? (
-          <Typography variant={'body1'} color={grey[500]} sx={{ ml: 1 }}>
+        {props.files.length === 0 ? (
+          <Typography variant="body1" color={grey[500]} sx={{ ml: 1 }}>
             No Files Found
           </Typography>
         ) : (
-          <List dense={false}>{generateItems(files, props.onFileSelectChange)}</List>
+          <List dense={false}>
+            {generateItems(props.files, props.onFileSelectChange)}
+          </List>
         )}
       </Card>
     </Paper>

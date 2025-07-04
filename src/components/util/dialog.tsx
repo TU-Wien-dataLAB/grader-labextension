@@ -69,6 +69,7 @@ import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import { openBrowser } from '../coursemanage/overview/util';
 import { AssignmentSettings } from '../../model/assignmentSettings';
 import { TooltipComponent } from './tooltip';
+import { useQuery } from '@tanstack/react-query';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -663,31 +664,36 @@ export interface ICommitDialogProps {
 export const CommitDialog = (props: ICommitDialogProps) => {
   const [open, setOpen] = React.useState(false);
   const [message, setMessage] = React.useState('');
-  // currently we only use this dialog for commiting source files
-  const selectedDir = 'source'
+  const selectedDir = 'source';
   const [filesListVisible, setFilesListVisible] = React.useState(false);
-  const [selectedFiles, setSelectedFiles] = React.useState<string[]>();
+  const [selectedFiles, setSelectedFiles] = React.useState<string[]>([]);
+
   const path = `${lectureBasePath}${props.lecture.code}/${selectedDir}/${props.assignment.id}`;
 
-  const fetchFilesForSelectedDir = async () => {
-    try {
-      const files = await getFiles(path);
-      const filePaths = files.flatMap(file =>
-        extractRelativePaths(file, 'source')
-      );
-      setSelectedFiles(filePaths);
-    } catch (error) {
-      console.error('Error fetching files:', error);
+  const { data: files = [], refetch } = useQuery({
+    queryKey: ['commitDialogFiles', path],
+    queryFn: () => getFiles(path),
+    enabled: false // only fetch when explicitly triggered
+  });
+
+  const toggleFilesList = async () => {
+    const newVisible = !filesListVisible;
+    setFilesListVisible(newVisible);
+
+    if (newVisible) {
+      try {
+        const fetchedFiles = await refetch();
+        const filePaths = fetchedFiles.data.flatMap(file =>
+          extractRelativePaths(file, 'source')
+        );
+        setSelectedFiles(filePaths);
+      } catch (error) {
+        console.error('Error fetching files:', error);
+      }
     }
   };
 
-  const toggleFilesList = () => {
-    setFilesListVisible(!filesListVisible);
-    fetchFilesForSelectedDir();
-  };
-
   const handleFileSelectChange = (filePath: string, isSelected: boolean) => {
-    // console.log(`<File select change:> ${filePath} - ${isSelected}`);
     setSelectedFiles(prevSelectedFiles => {
       if (isSelected) {
         if (!prevSelectedFiles.includes(filePath)) {
@@ -706,10 +712,10 @@ export const CommitDialog = (props: ICommitDialogProps) => {
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        fullWidth={true}
-        maxWidth={'sm'}
+        fullWidth
+        maxWidth="sm"
       >
-        <Stack direction={'row'} justifyContent={'space-between'}>
+        <Stack direction="row" justifyContent="space-between">
           <DialogTitle>Commit Files</DialogTitle>
           <InfoModal />
         </Stack>
@@ -724,17 +730,16 @@ export const CommitDialog = (props: ICommitDialogProps) => {
           </Button>
           {filesListVisible && (
             <FilesList
-              path={path}
+              files={files}
               lecture={props.lecture}
               assignment={props.assignment}
-              checkboxes={true}
+              checkboxes
               onFileSelectChange={handleFileSelectChange}
-              checkStatus={true}
+              checkStatus
             />
           )}
           <TextField
             sx={{ mt: 2, width: '100%' }}
-            id="outlined-textarea"
             label="Commit Message"
             placeholder="Commit Message"
             value={message}
@@ -748,7 +753,7 @@ export const CommitDialog = (props: ICommitDialogProps) => {
             variant="outlined"
             onClick={() => {
               setOpen(false);
-              toggleFilesList();
+              setFilesListVisible(false);
             }}
           >
             Cancel
@@ -757,13 +762,11 @@ export const CommitDialog = (props: ICommitDialogProps) => {
           <Button
             color="primary"
             variant="contained"
-            type="submit"
             disabled={message === ''}
             onClick={() => {
-              // console.log("See selected files: " + selectedFiles);
               props.handleCommit(message, selectedFiles);
               setOpen(false);
-              toggleFilesList();
+              setFilesListVisible(false);
             }}
           >
             Commit

@@ -22,9 +22,8 @@ import {
 import ReplayIcon from '@mui/icons-material/Replay';
 import { SubmissionList } from './submission-list';
 import { AssignmentStatus } from './assignment-status';
-import { Files } from './files/files';
 import WarningIcon from '@mui/icons-material/Warning';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import {
   getAssignment,
   getAssignmentProperties,
@@ -54,6 +53,9 @@ import { GradeBook } from '../../services/gradebook';
 import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
+import { FilesList } from '../util/file-list';
+import { Contents } from '@jupyterlab/services';
+import { GlobalObjects } from '../..';
 
 const calculateActiveStep = (submissions: Submission[]) => {
   const hasFeedback = submissions.reduce(
@@ -113,6 +115,8 @@ export const AssignmentComponent = () => {
 
   const [fileList, setFileList] = React.useState<string[]>([]);
   const [activeStatus, setActiveStatus] = React.useState(0);
+  const navigate = useNavigate();
+  const reloadPage = () => navigate(0);
 
   const {
     data: subLeft,
@@ -154,7 +158,22 @@ export const AssignmentComponent = () => {
         setActiveStatus(active_step);
         refetchSubleft();
       });
+      // Watch for file changes in the JupyterLab file browser
+      GlobalObjects.docManager.services.contents.fileChanged.connect(
+        (sender: Contents.IManager, change: Contents.IChangedArgs) => {
+          const { oldValue, newValue } = change;
+          if (
+            (newValue && !newValue.path.includes(path)) ||
+            (oldValue && !oldValue.path.includes(path))
+          ) {
+            return;
+          }
+          refetchFiles();
+          reloadPage();
+        }
+      );
     }
+
   }, [lecture, assignment, submissions.length]);
 
   if (
@@ -173,6 +192,9 @@ export const AssignmentComponent = () => {
   }
 
   const path = `${lectureBasePath}${lecture.code}/assignments/${assignment.id}`;
+  // Open the assignment in the JupyterLab file browser
+  openBrowser(path);
+
 
   const resetAssignmentHandler = async () => {
     showDialog(
@@ -349,7 +371,14 @@ export const AssignmentComponent = () => {
               </IconButton>
             </Tooltip>
           </Stack>
-          <Files lecture={lecture} assignment={assignment} files={fileList} />
+          <FilesList
+            files={files}
+            sx={{ m: 2, mt: 1 }}
+            lecture={lecture}
+            shouldContain={fileList}
+            assignment={assignment}
+            checkboxes={false}
+          />
           <Stack direction={'row'} spacing={1} sx={{ m: 1, ml: 2 }}>
             {assignment.settings.assignment_type === 'group' && (
               <Tooltip title={'Push Changes'}>

@@ -145,7 +145,7 @@ export const makeDir = async (path: string, name: string) => {
     f = items.next();
   }
 
-  console.log('direcory: ' + name + ' exists: ' + exists);
+  console.log('directory: ' + name + ' exists: ' + exists);
   if (!exists) {
     const model = await GlobalObjects.docManager.newUntitled({
       path,

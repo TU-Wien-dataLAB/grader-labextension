@@ -105,7 +105,7 @@ export const GitLogModal = (props: IGitLogProps) => {
               </List>
             </CardContent>
           </Card>
-          <Button sx={{ mt: 2 }} onClick={handleClose}>
+          <Button sx={{ }} onClick={handleClose}>
             Close
           </Button>
         </Box>

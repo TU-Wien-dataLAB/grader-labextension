@@ -3,7 +3,6 @@
 //
 // This source code is licensed under the BSD-style license found in the
 // LICENSE file in the root directory of this source tree.
-
 import { SectionTitle } from '../util/section-title';
 import { Box, Button, Stack, Tooltip, Typography } from '@mui/material';
 import * as React from 'react';
@@ -25,17 +24,18 @@ import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../services/lectures.service';
 import { getAssignment } from '../../services/assignments.service';
 import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
+import { enqueueSnackbar } from 'notistack';
 
 export const Feedback = () => {
   const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
   const params = useParams();
   const submissionId = +params['sid'];
-
+  
   const { data: lecture, isLoading: isLoadingLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
     queryFn: () => getLecture(lectureId),
     enabled: !!lectureId
-   });
+  });
 
   const { data: assignment, isLoading: isLoadingAssignment } = useQuery<Assignment>({
     queryKey: ['assignment', assignmentId],
@@ -49,68 +49,65 @@ export const Feedback = () => {
     enabled: !!lecture && !!assignment
   });
 
-  const { data: gradeBook, refetch: refetchGradeBook } = useQuery({
+  const feedbackPath = `${lectureBasePath}${lecture.code}/feedback/${assignmentId}/${submissionId}`;
+  openBrowser(feedbackPath);
+
+  const { data: gradeBook } = useQuery({
     queryKey: ['gradeBook', submissionId],
-    queryFn: () => submission ? getProperties(lectureId, assignmentId, submissionId).then(properties => new GradeBook(properties)) : Promise.resolve(null),
+    queryFn: () =>
+      submission
+        ? getProperties(lectureId, assignmentId, submissionId).then(
+            properties => new GradeBook(properties)
+          )
+        : Promise.resolve(null),
     enabled: !!submission
   });
 
-  const feedbackPath = `${lectureBasePath}${lecture?.code}/feedback/${assignmentId}/${submissionId}`;
-  const { refetch: refetchSubmissionFiles } = useQuery({
-    queryKey: ['submissionFiles', feedbackPath],
-    queryFn: () => feedbackPath ? getFiles(feedbackPath) : Promise.resolve([]),
-    enabled: !!feedbackPath 
+  const { data: files = [], refetch: refetchFiles } = useQuery({
+    queryKey: ['submissionFiles', lectureId, assignmentId, submissionId],
+    queryFn: () => {
+      return getFiles(feedbackPath);
+    },
+    enabled: !!lecture?.code && !!assignmentId && !!submissionId
   });
 
-
-  const reloadProperties = async () => {
-    await refetchGradeBook();
-  };
-
-  React.useEffect(() => {
-    reloadProperties();
-  }, []);
+  const assignmentLink = `/lecture/${lecture?.id}/assignment/${assignment?.id}`;
 
   if (isLoadingAssignment || isLoadingLecture || isLoadingSubmission) {
     return <div>Loading...</div>;
   }
 
-  const assignmentLink = `/lecture/${lecture.id}/assignment/${assignment.id}`;
+  
+
+  const handlePullFeedback = async () => {
+    await pullFeedback(lecture, assignment, submission).then(() => {
+      enqueueSnackbar('Feedback pulled successfully', {
+        variant: 'success',
+      });
+      refetchFiles();
+    }).catch(error => {
+      enqueueSnackbar(`Error pulling feedback: ${error}`, {
+        variant: 'error',
+      });
+    });
+  };
 
   return (
     <Box sx={{ overflow: 'auto' }}>
-      <SectionTitle title={'Feedback for ' + assignment.name} />
+      <SectionTitle title={`Feedback for ${assignment.name}`} />
       <Box sx={{ m: 2, mt: 12 }}>
         <Stack direction="row" spacing={2} sx={{ ml: 2 }}>
           <Stack sx={{ mt: 0.5 }}>
-            <Typography
-              textAlign="right"
-              color="text.secondary"
-              sx={{ fontSize: 12, height: 35 }}
-            >
-              Lecture
-            </Typography>
-            <Typography
-              textAlign="right"
-              color="text.secondary"
-              sx={{ fontSize: 12, height: 35 }}
-            >
-              Assignment
-            </Typography>
-            <Typography
-              textAlign="right"
-              color="text.secondary"
-              sx={{ fontSize: 12, height: 35 }}
-            >
-              Points
-            </Typography>
-            <Typography
-              textAlign="right"
-              color="text.secondary"
-              sx={{ fontSize: 12, height: 35 }}
-            >
-              Extra Credit
-            </Typography>
+            {['Lecture', 'Assignment', 'Points', 'Extra Credit'].map(label => (
+              <Typography
+                key={label}
+                textAlign="right"
+                color="text.secondary"
+                sx={{ fontSize: 12, height: 35 }}
+              >
+                {label}
+              </Typography>
+            ))}
           </Stack>
           <Stack>
             <Typography
@@ -157,45 +154,34 @@ export const Feedback = () => {
           </Stack>
         </Stack>
       </Box>
-      <Typography sx={{ m: 2, mb: 0 }}>Feedback Files</Typography>
 
+      <Typography sx={{ m: 2, mb: 0 }}>Feedback Files</Typography>
       <FilesList
-        path={feedbackPath}
+        files={files}
         sx={{ m: 2, overflow: 'auto' }}
         lecture={lecture}
         assignment={assignment}
         checkboxes={false}
       />
 
-      <Stack direction={'row'} spacing={2} sx={{ m: 2 }}>
+      <Stack direction="row" spacing={2} sx={{ m: 2 }}>
         <Button variant="outlined" component={Link as any} to={assignmentLink}>
           Back
         </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          color={'primary'}
-          onClick={() => {
-            pullFeedback(lecture, assignment, submission).then(async () => {
-              await refetchSubmissionFiles();
-            });
-          }}
-        >
+        <Button variant="outlined" size="small" color="primary" onClick={handlePullFeedback}>
           Pull Feedback
         </Button>
-        {feedbackPath !== null && (
-          <Tooltip title={'Show files in JupyterLab file browser'}>
-            <Button
-              variant="outlined"
-              size="small"
-              color={'primary'}
-              onClick={() => openBrowser(feedbackPath)}
-            >
-              <OpenInBrowserIcon fontSize="small" sx={{ mr: 1 }} />
-              Show in Filebrowser
-            </Button>
-          </Tooltip>
-        )}
+        <Tooltip title="Show files in JupyterLab file browser">
+          <Button
+            variant="outlined"
+            size="small"
+            color="primary"
+            onClick={() => openBrowser(feedbackPath)}
+          >
+            <OpenInBrowserIcon fontSize="small" sx={{ mr: 1 }} />
+            Show in Filebrowser
+          </Button>
+        </Tooltip>
       </Stack>
     </Box>
   );
