@@ -40,7 +40,7 @@ test = [
 ]
 
 [tool.tbump.version]
-current = "0.7.0"
+current = "0.8.0-a1"
 
 regex = '''
   (?P<major>\d+)
@@ -112,3 +112,18 @@ before-build-python = ["jlpm clean:all"]
 
 [tool.check-wheel-contents]
 ignore = ["W002"]
+
+[tool.ruff]
+line-length = 100
+include = [
+    "grader_labextension/*.py",
+    "conftest.py",
+    "pyproject.toml",
+]
+extend-exclude = [
+    "grader_labextension/api/*",
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+skip-magic-trailing-comma = true
