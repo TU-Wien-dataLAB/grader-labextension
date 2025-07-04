@@ -122,6 +122,7 @@ include = [
 ]
 extend-exclude = [
     "grader_labextension/api/*",
+    "*_config.py"
 ]
 
 [tool.ruff.format]
