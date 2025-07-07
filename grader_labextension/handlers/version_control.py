@@ -20,7 +20,7 @@ from grader_labextension.services.request import RequestServiceError
 
 from ..api.models.submission import Submission
 from ..registry import register_handler
-from ..services.git import GitError, GitService
+from ..services.git import GitError, GitRepoType, GitService
 from .base_handler import ExtensionBaseHandler
 
 
@@ -108,7 +108,7 @@ class GitRemoteFileStatusHandler(ExtensionBaseHandler):
 
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
-        if repo not in {"assignment", "source", "release"}:
+        if repo not in {GitRepoType.ASSIGNMENT, GitRepoType.SOURCE, GitRepoType.RELEASE}:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
         lecture = await self.get_lecture(lecture_id)
@@ -118,9 +118,9 @@ class GitRemoteFileStatusHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type=repo,
+            repo_type=GitRepoType(repo),
             config=self.config,
-            force_user_repo=True if repo == "release" else False,
+            force_user_repo=repo == GitRepoType.RELEASE,
         )
         try:
             if not git_service.is_git():
@@ -149,7 +149,7 @@ class GitRemoteStatusHandler(ExtensionBaseHandler):
 
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
-        if repo not in {"assignment", "source", "release"}:
+        if repo not in {GitRepoType.ASSIGNMENT, GitRepoType.SOURCE, GitRepoType.RELEASE}:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
         lecture = await self.get_lecture(lecture_id)
@@ -158,9 +158,9 @@ class GitRemoteStatusHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type=repo,
+            repo_type=GitRepoType(repo),
             config=self.config,
-            force_user_repo=True if repo == "release" else False,
+            force_user_repo=repo == GitRepoType.RELEASE,
         )
         try:
             if not git_service.is_git():
@@ -196,7 +196,7 @@ class GitLogHandler(ExtensionBaseHandler):
         :param repo: repo name
         :return: logs of git repo
         """
-        if repo not in {"assignment", "source", "release"}:
+        if repo not in {GitRepoType.ASSIGNMENT, GitRepoType.SOURCE, GitRepoType.RELEASE}:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
         n_history = int(self.get_argument("n", "10"))
@@ -219,9 +219,9 @@ class GitLogHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type=repo,
+            repo_type=GitRepoType(repo),
             config=self.config,
-            force_user_repo=True if repo == "release" else False,
+            force_user_repo=repo == GitRepoType.RELEASE,
         )
         try:
             if not git_service.is_git():
@@ -261,7 +261,13 @@ class PullHandler(ExtensionBaseHandler):
         :param repo: type of the repository
         :type repo: str
         """
-        if repo not in {"assignment", "source", "release", "edit", "feedback"}:
+        if repo not in {
+            GitRepoType.ASSIGNMENT,
+            GitRepoType.SOURCE,
+            GitRepoType.RELEASE,
+            GitRepoType.EDIT,
+            GitRepoType.FEEDBACK
+        }:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
 
@@ -287,9 +293,9 @@ class PullHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type=repo,
+            repo_type=GitRepoType(repo),
             config=self.config,
-            force_user_repo=repo == "release",
+            force_user_repo=repo == GitRepoType.RELEASE,
             sub_id=sub_id,
             log=self.log,
         )
@@ -328,28 +334,33 @@ class PushHandler(ExtensionBaseHandler):
         :param repo: type of the repository
         :type repo: str
         """
-        if repo not in {"assignment", "source", "release", "edit"}:
+        if repo not in {
+            GitRepoType.ASSIGNMENT,
+            GitRepoType.SOURCE,
+            GitRepoType.RELEASE,
+            GitRepoType.EDIT,
+        }:
             self.write_error(404)
 
         # Extract request parameters
         sub_id, commit_message, selected_files, submit, username = self._extract_request_params()
 
         # Validate commit message for 'source' repo
-        if repo == "source":
+        if repo == GitRepoType.SOURCE:
             self._validate_commit_message(commit_message)
 
         # Fetch lecture and assignment data
         lecture, assignment = await self._fetch_lecture_and_assignment(lecture_id, assignment_id)
 
         # Handle 'edit' repo
-        if repo == "edit":
+        if repo == GitRepoType.EDIT:
             sub_id = await self._handle_edit_repo(lecture_id, assignment_id, sub_id, username)
 
         # Initialize GitService
         git_service = self._initialize_git_service(lecture, assignment, repo, sub_id, username)
 
         # Handle 'release' repo
-        if repo == "release":
+        if repo == GitRepoType.RELEASE:
             await self._handle_release_repo(
                 git_service, lecture, assignment, lecture_id, assignment_id, selected_files
             )
@@ -360,7 +371,7 @@ class PushHandler(ExtensionBaseHandler):
         )
 
         # Handle submission for 'assignment' repo
-        if submit and repo == "assignment":
+        if submit and repo == GitRepoType.ASSIGNMENT:
             await self._submit_assignment(git_service, lecture_id, assignment_id)
 
         self.write({"status": "OK"})
@@ -440,7 +451,11 @@ class PushHandler(ExtensionBaseHandler):
     ):
         git_service.delete_repo_contents(include_git=True)
         src_path = GitService(
-            self.root_dir, lecture["code"], assignment["id"], repo_type="source", config=self.config
+            self.root_dir,
+            lecture["code"],
+            assignment["id"],
+            repo_type=GitRepoType.SOURCE,
+            config=self.config,
         ).path
 
         if selected_files:
@@ -618,7 +633,7 @@ class RestoreHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type="assignment",
+            repo_type=GitRepoType.ASSIGNMENT,
             config=self.config,
             force_user_repo=False,
             sub_id=None,
@@ -676,7 +691,7 @@ class NotebookAccessHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type="release",
+            repo_type=GitRepoType.RELEASE,
             config=self.config,
             force_user_repo=True,
         )

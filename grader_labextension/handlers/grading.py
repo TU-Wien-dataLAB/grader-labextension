@@ -12,7 +12,7 @@ from tornado.web import HTTPError, authenticated
 
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler
 from grader_labextension.registry import register_handler
-from grader_labextension.services.git import GitError, GitService
+from grader_labextension.services.git import GitError, GitRepoType, GitService
 from grader_labextension.services.request import RequestService, RequestServiceError
 
 
@@ -145,7 +145,7 @@ class GradingManualHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type="autograde",
+            repo_type=GitRepoType.AUTOGRADE,
             config=self.config,
         )
         git_service.path = os.path.join(
@@ -249,7 +249,7 @@ class PullFeedbackHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type="feedback",
+            repo_type=GitRepoType.FEEDBACK,
             config=self.config,
         )
         git_service.path = os.path.join(

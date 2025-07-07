@@ -33,6 +33,25 @@ class RemoteFileStatus(enum.Enum):
     NO_REMOTE_REPO = 5
 
 
+class GitRepoType(enum.StrEnum):
+    """Allowed repository types.
+
+    SOURCE: The source files created by the instructor.
+    RELEASE: The "student" version of the source files.
+    ASSIGNMENT: A user's copy of the release files, which can be submitted.
+    AUTOGRADE: Autograded submission files.
+    EDIT: Copy of the submission files, created by the instructor for manual editing.
+    FEEDBACK: Final feedback for a submission.
+    """
+
+    SOURCE = "source"
+    RELEASE = "release"
+    ASSIGNMENT = "assignment"
+    AUTOGRADE = "autograde"
+    EDIT = "edit"
+    FEEDBACK = "feedback"
+
+
 class GitService(Configurable):
     DEFAULT_HOST_URL = "http://127.0.0.1:4010"
     DEFAULT_GIT_URL_PREFIX = "/services/grader/git"
@@ -52,7 +71,7 @@ class GitService(Configurable):
         server_root_dir: str,
         lecture_code: str,
         assignment_id: int,
-        repo_type: str,
+        repo_type: GitRepoType,
         force_user_repo=False,
         sub_id=None,
         username=None,
@@ -74,11 +93,11 @@ class GitService(Configurable):
 
     def _determine_repo_path(self, force_user_repo: bool, sub_id: str, username: str) -> str:
         """Determine the path for the git repository based on the type."""
-        if self.repo_type == "assignment" or force_user_repo:
+        if self.repo_type == GitRepoType.ASSIGNMENT or force_user_repo:
             return os.path.join(
                 self.git_root_dir, self.lecture_code, "assignments", str(self.assignment_id)
             )
-        elif self.repo_type == "edit":
+        elif self.repo_type == GitRepoType.EDIT:
             if username is not None:
                 return os.path.join(
                     self.git_root_dir,
