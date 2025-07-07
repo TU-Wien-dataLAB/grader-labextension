@@ -8,7 +8,6 @@ import posixpath
 import shlex
 import shutil
 import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
@@ -305,16 +304,7 @@ class GitService(Configurable):
                         shutil.copy2(s, d)
         else:
             self.log.info(f"Copying repository contents from {src} to {self.path}")
-            if sys.version_info.major == 3 and sys.version_info.minor >= 8:
-                shutil.copytree(src, self.path, ignore=ignore, dirs_exist_ok=True)
-            else:
-                for item in os.listdir(src):
-                    s = os.path.join(src, item)
-                    d = os.path.join(self.path, item)
-                    if os.path.isdir(s):
-                        shutil.copytree(s, d, ignore=ignore)
-                    else:
-                        shutil.copy2(s, d)
+            shutil.copytree(src, self.path, ignore=ignore, dirs_exist_ok=True)
 
     def check_remote_status(self, origin: str, branch: str) -> RemoteFileStatus:
         untracked, added, modified, deleted = self.git_status(hidden_files=False)
