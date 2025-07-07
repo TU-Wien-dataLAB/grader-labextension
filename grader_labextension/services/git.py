@@ -149,7 +149,10 @@ class GitService(Configurable):
         Returns:
             str: The complete remote URL.
         """
-        return f"{self.git_http_scheme}://oauth:{self.git_access_token}@{posixpath.join(base_url, sub_id or '')}"
+        return (
+            f"{self.git_http_scheme}://oauth:{self.git_access_token}@"
+            f"{posixpath.join(base_url, sub_id or '')}"
+        )
 
     def switch_branch(self, branch: str):
         """Switch to the specified branch.
@@ -268,6 +271,7 @@ class GitService(Configurable):
 
         Args:
             src (str): path where the to be copied files reside
+            selected_files (List[str], optional): list of files to copy. Defaults to None.
         """
         ignore = shutil.ignore_patterns(".git", "__pycache__")
         if selected_files:

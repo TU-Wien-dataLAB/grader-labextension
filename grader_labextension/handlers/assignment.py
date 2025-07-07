@@ -58,7 +58,8 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
             for assignment in response:
                 if assignment["id"] not in dirs:
                     self.log.info(
-                        f"Creating directory {self.root_dir}/{lecture['code']}/assignments/{assignment['id']}"
+                        f"Creating directory {self.root_dir}/{lecture['code']}/assignments/"
+                        f"{assignment['id']}"
                     )
                     os.makedirs(
                         os.path.expanduser(
@@ -99,8 +100,8 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
-        # if we did not get an error when creating the assignment (i.e. the user is authorized etc.) then we can
-        # create the directory structure if it does not exist yet
+        # if we did not get an error when creating the assignment (i.e. the user is authorized
+        # etc.) then we can create the directory structure if it does not exist yet
         os.makedirs(
             os.path.expanduser(f"{self.root_dir}/{lecture['code']}/assignments/{response['id']}"),
             exist_ok=True,
@@ -140,7 +141,8 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="PUT",
-                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}{query_params}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/"
+                f"{assignment_id}{query_params}",
                 body=data,
                 header=self.grader_authentication_header,
             )
@@ -162,7 +164,8 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/"
+                f"{assignment_id}",
                 header=self.grader_authentication_header,
                 response_callback=self.set_service_headers,
             )
@@ -193,7 +196,8 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
         try:
             await self.request_service.request(
                 method="DELETE",
-                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/"
+                f"{assignment_id}",
                 header=self.grader_authentication_header,
                 decode_response=False,
             )
@@ -208,7 +212,8 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
 )
 class AssignmentPropertiesHandler(ExtensionBaseHandler):
     """
-    Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/properties.
+    Tornado Handler class for http requests to
+    /lectures/{lecture_id}/assignments/{assignment_id}/properties.
     """
 
     @authenticated
@@ -224,7 +229,8 @@ class AssignmentPropertiesHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/properties",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/"
+                f"{assignment_id}/properties",
                 header=self.grader_authentication_header,
                 response_callback=self.set_service_headers,
             )

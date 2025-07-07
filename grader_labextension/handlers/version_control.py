@@ -8,6 +8,7 @@ import json
 import os
 import shutil
 from http import HTTPStatus
+from typing import List, Optional
 from urllib.parse import quote, unquote
 
 from grader_service.convert.converters.base import GraderConvertException
@@ -28,11 +29,12 @@ from .base_handler import ExtensionBaseHandler
 )
 class GenerateHandler(ExtensionBaseHandler):
     """
-    Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/generate.
+    Tornado Handler class for http requests to
+    /lectures/{lecture_id}/assignments/{assignment_id}/generate.
     """
 
     async def put(self, lecture_id: int, assignment_id: int):
-        """Generates the release files from the source files of a assignment
+        """Generates the release files from the source files of an assignment
 
         :param lecture_id: id of the lecture
         :type lecture_id: int
@@ -83,22 +85,25 @@ class GenerateHandler(ExtensionBaseHandler):
         except Exception as e:
             self.log.error(e)
             raise HTTPError(HTTPStatus.CONFLICT, reason=str(e))
+
+        gradebook_path = os.path.join(generator._output_directory, "gradebook.json")
         try:
-            gradebook_path = os.path.join(generator._output_directory, "gradebook.json")
             os.remove(gradebook_path)
             self.log.info(f"Successfully deleted {gradebook_path}")
         except OSError as e:
-            self.log.error(f"Could delete {gradebook_path}! Error: {e.strerror}")
+            self.log.error(f"Could not delete {gradebook_path}! Error: {e.strerror}")
         self.log.info("GenerateAssignment conversion done")
         self.write({"status": "OK"})
 
 
 @register_handler(
-    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/remote-file-status\/(?P<repo>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/"
+    r"remote-file-status\/(?P<repo>\w*)\/?"
 )
 class GitRemoteFileStatusHandler(ExtensionBaseHandler):
     """
-    Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/remote-file-status/{repo}.
+    Tornado Handler class for http requests to
+    /lectures/{lecture_id}/assignments/{assignment_id}/remote-file-status/{repo}.
     """
 
     @authenticated
@@ -133,11 +138,13 @@ class GitRemoteFileStatusHandler(ExtensionBaseHandler):
 
 
 @register_handler(
-    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/remote-status\/(?P<repo>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/"
+    r"remote-status\/(?P<repo>\w*)\/?"
 )
 class GitRemoteStatusHandler(ExtensionBaseHandler):
     """
-    Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/remote_status/{repo}.
+    Tornado Handler class for http requests to
+    /lectures/{lecture_id}/assignments/{assignment_id}/remote_status/{repo}.
     """
 
     @authenticated
@@ -170,11 +177,13 @@ class GitRemoteStatusHandler(ExtensionBaseHandler):
 
 
 @register_handler(
-    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/log\/(?P<repo>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/log\/"
+    r"(?P<repo>\w*)\/?"
 )
 class GitLogHandler(ExtensionBaseHandler):
     """
-    Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/log/{repo}.
+    Tornado Handler class for http requests to
+    /lectures/{lecture_id}/assignments/{assignment_id}/log/{repo}.
     """
 
     @authenticated
@@ -232,11 +241,13 @@ class GitLogHandler(ExtensionBaseHandler):
 
 
 @register_handler(
-    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/pull\/(?P<repo>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/pull\/"
+    r"(?P<repo>\w*)\/?"
 )
 class PullHandler(ExtensionBaseHandler):
     """
-    Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/pull/{repo}.
+    Tornado Handler class for http requests to
+    /lectures/{lecture_id}/assignments/{assignment_id}/pull/{repo}.
     """
 
     @authenticated
@@ -295,16 +306,20 @@ class PullHandler(ExtensionBaseHandler):
 
 
 @register_handler(
-    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/push\/(?P<repo>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/push\/"
+    r"(?P<repo>\w*)\/?"
 )
 class PushHandler(ExtensionBaseHandler):
     """
-    Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/push/{repo}.
+    Tornado Handler class for http requests to
+    /lectures/{lecture_id}/assignments/{assignment_id}/push/{repo}.
     """
 
     async def put(self, lecture_id: int, assignment_id: int, repo: str):
         """Pushes from the local repositories to remote
-        If the repo type is release, it also generates the release files and updates the assignment properties in the grader service
+
+        If the repo type is release, it also generates the release files and updates the assignment
+        properties in the grader service
 
         :param lecture_id: id of the lecture
         :type lecture_id: int
@@ -350,7 +365,9 @@ class PushHandler(ExtensionBaseHandler):
 
         self.write({"status": "OK"})
 
-    def _extract_request_params(self):
+    def _extract_request_params(
+        self,
+    ) -> (Optional[str], Optional[str], List[str], bool, Optional[str]):
         sub_id = self.get_argument("subid", None)
         commit_message = self.get_argument("commit-message", None)
         selected_files = self.get_arguments("selected-files")
@@ -385,7 +402,8 @@ class PushHandler(ExtensionBaseHandler):
             submission = Submission(commit_hash="0" * 40)
             response = await self.request_service.request(
                 "POST",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+                f"submissions",
                 body=submission.to_dict(),
                 header=self.grader_authentication_header,
             )
@@ -395,7 +413,8 @@ class PushHandler(ExtensionBaseHandler):
             submission.edited = True
             await self.request_service.request(
                 "PUT",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission.id}",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+                f"submissions/{submission.id}",
                 body=submission.to_dict(),
                 header=self.grader_authentication_header,
             )
@@ -481,7 +500,8 @@ class PushHandler(ExtensionBaseHandler):
 
             response = await self.request_service.request(
                 "PUT",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/properties",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+                f"properties",
                 header=self.grader_authentication_header,
                 body=gradebook_json,
                 decode_response=False,
@@ -528,7 +548,8 @@ class PushHandler(ExtensionBaseHandler):
             submission = Submission(commit_hash=latest_commit_hash)
             response = await self.request_service.request(
                 "POST",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+                f"submissions",
                 body=submission.to_dict(),
                 header=self.grader_authentication_header,
             )
@@ -561,7 +582,8 @@ class ResetHandler(ExtensionBaseHandler):
         try:
             await self.request_service.request(
                 "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/reset",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+                f"reset",
                 header=self.grader_authentication_header,
             )
         except RequestServiceError as e:
@@ -571,7 +593,8 @@ class ResetHandler(ExtensionBaseHandler):
 
 
 @register_handler(
-    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/restore\/(?P<commit_hash>\w*)\/?"
+    path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/(?P<assignment_id>\d*)\/restore\/"
+    r"(?P<commit_hash>\w*)\/?"
 )
 class RestoreHandler(ExtensionBaseHandler):
     @authenticated
@@ -618,7 +641,8 @@ class RestoreHandler(ExtensionBaseHandler):
 @register_handler(path=r"\/(?P<lecture_id>\d*)\/(?P<assignment_id>\d*)\/(?P<notebook_name>.*)")
 class NotebookAccessHandler(ExtensionBaseHandler):
     """
-    Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/{notebook_name}.
+    Tornado Handler class for http requests to
+    /lectures/{lecture_id}/assignments/{assignment_id}/{notebook_name}.
     """
 
     @authenticated
