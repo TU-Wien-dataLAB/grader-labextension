@@ -41,28 +41,14 @@ class GenerateHandler(ExtensionBaseHandler):
         :param assignment_id: id of the assignment
         :type assignment_id: int
         """
-        try:
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
-            assignment = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
-                header=self.grader_authentication_header,
-            )
-        except RequestServiceError as e:
-            self.log.error(e)
-            raise HTTPError(e.code, reason=e.message)
+        lecture = await self.get_lecture(lecture_id)
         code = lecture["code"]
-        a_id = assignment["id"]
 
-        output_dir = f"{self.root_dir}/{code}/release/{a_id}"
+        output_dir = f"{self.root_dir}/{code}/release/{assignment_id}"
         os.makedirs(os.path.expanduser(output_dir), exist_ok=True)
 
         generator = GenerateAssignment(
-            input_dir=f"{self.root_dir}/{code}/source/{a_id}",
+            input_dir=f"{self.root_dir}/{code}/source/{assignment_id}",
             output_dir=output_dir,
             file_pattern="*.ipynb",
             assignment_settings=AssignmentSettings(allowed_files=["*"]),  # copy all files
@@ -111,6 +97,7 @@ class GitRemoteFileStatusHandler(ExtensionBaseHandler):
         if repo not in {GitRepoType.ASSIGNMENT, GitRepoType.SOURCE, GitRepoType.RELEASE}:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
+
         lecture = await self.get_lecture(lecture_id)
         assignment = await self.get_assignment(lecture_id, assignment_id)
         file_path = self.get_query_argument("file")
@@ -152,8 +139,10 @@ class GitRemoteStatusHandler(ExtensionBaseHandler):
         if repo not in {GitRepoType.ASSIGNMENT, GitRepoType.SOURCE, GitRepoType.RELEASE}:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
+
         lecture = await self.get_lecture(lecture_id)
         assignment = await self.get_assignment(lecture_id, assignment_id)
+
         git_service = GitService(
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
@@ -200,20 +189,9 @@ class GitLogHandler(ExtensionBaseHandler):
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
         n_history = int(self.get_argument("n", "10"))
-        try:
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
-            assignment = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
-                header=self.grader_authentication_header,
-            )
-        except RequestServiceError as e:
-            self.log.error(e)
-            raise HTTPError(e.code, reason=e.message)
+
+        lecture = await self.get_lecture(lecture_id)
+        assignment = await self.get_assignment(lecture_id, assignment_id)
 
         git_service = GitService(
             server_root_dir=self.root_dir,
@@ -274,20 +252,8 @@ class PullHandler(ExtensionBaseHandler):
         # Submission id needed for edit repository
         sub_id = self.get_argument("subid", None)
 
-        try:
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
-            assignment = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
-                header=self.grader_authentication_header,
-            )
-        except RequestServiceError as e:
-            self.log.error(e)
-            raise HTTPError(e.code, reason=e.message)
+        lecture = await self.get_lecture(lecture_id)
+        assignment = await self.get_assignment(lecture_id, assignment_id)
 
         git_service = GitService(
             server_root_dir=self.root_dir,
@@ -350,14 +316,23 @@ class PushHandler(ExtensionBaseHandler):
             self._validate_commit_message(commit_message)
 
         # Fetch lecture and assignment data
-        lecture, assignment = await self._fetch_lecture_and_assignment(lecture_id, assignment_id)
+        lecture = await self.get_lecture(lecture_id)
+        assignment = await self.get_assignment(lecture_id, assignment_id)
 
         # Handle 'edit' repo
         if repo == GitRepoType.EDIT:
             sub_id = await self._handle_edit_repo(lecture_id, assignment_id, sub_id, username)
 
         # Initialize GitService
-        git_service = self._initialize_git_service(lecture, assignment, repo, sub_id, username)
+        git_service = GitService(
+            server_root_dir=self.root_dir,
+            lecture_code=lecture["code"],
+            assignment_id=assignment["id"],
+            repo_type=GitRepoType(repo),
+            config=self.config,
+            sub_id=sub_id,
+            username=username,
+        )
 
         # Handle 'release' repo
         if repo == GitRepoType.RELEASE:
@@ -391,23 +366,6 @@ class PushHandler(ExtensionBaseHandler):
             self.log.error("Commit message was not found")
             raise HTTPError(HTTPStatus.NOT_FOUND, reason="Commit message was not found")
 
-    async def _fetch_lecture_and_assignment(self, lecture_id, assignment_id):
-        try:
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
-            assignment = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
-                header=self.grader_authentication_header,
-            )
-            return lecture, assignment
-        except RequestServiceError as e:
-            self.log.error(e)
-            raise HTTPError(e.code, reason=e.message)
-
     async def _handle_edit_repo(self, lecture_id, assignment_id, sub_id, username):
         if sub_id is None:
             submission = Submission(commit_hash="0" * 40)
@@ -434,17 +392,6 @@ class PushHandler(ExtensionBaseHandler):
             )
             return str(submission.id)
         return sub_id
-
-    def _initialize_git_service(self, lecture, assignment, repo, sub_id, username):
-        return GitService(
-            server_root_dir=self.root_dir,
-            lecture_code=lecture["code"],
-            assignment_id=assignment["id"],
-            repo_type=repo,
-            config=self.config,
-            sub_id=sub_id,
-            username=username,
-        )
 
     async def _handle_release_repo(
         self, git_service, lecture, assignment, lecture_id, assignment_id, selected_files
@@ -614,20 +561,8 @@ class ResetHandler(ExtensionBaseHandler):
 class RestoreHandler(ExtensionBaseHandler):
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, commit_hash: str):
-        try:
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
-            assignment = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
-                header=self.grader_authentication_header,
-            )
-        except RequestServiceError as e:
-            self.log.error(e)
-            raise HTTPError(e.code, reason=e.message)
+        lecture = await self.get_lecture(lecture_id)
+        assignment = await self.get_assignment(lecture_id, assignment_id)
 
         git_service = GitService(
             server_root_dir=self.root_dir,

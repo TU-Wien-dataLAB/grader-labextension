@@ -318,9 +318,8 @@ class GitService(Configurable):
 
     def check_remote_status(self, origin: str, branch: str) -> RemoteFileStatus:
         untracked, added, modified, deleted = self.git_status(hidden_files=False)
-        local_changes = (
-            len(untracked) > 0 or len(added) > 0 or len(modified) > 0 or len(deleted) > 0
-        )
+        local_changes = any([untracked, added, modified, deleted])
+
         if self.local_branch_exists(branch):
             local = self._run_command(f"git rev-parse {branch}", cwd=self.path).strip()
         else:
