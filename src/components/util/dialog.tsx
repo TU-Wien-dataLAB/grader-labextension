@@ -559,7 +559,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 error={formik.values.max_submissions < 1}
               />
 
-              <InputLabel id="demo-simple-select-label-auto">
+              <InputLabel id="auto-grading-behaviour-label">
                 Auto-Grading Behaviour
                 <Tooltip title={gradingBehaviourHelp}>
                   <HelpOutlineOutlinedIcon
@@ -570,7 +570,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
               </InputLabel>
               <TextField
                 select
-                id="assignment-type-select"
+                id="auto-grade=ing-type-select"
                 value={formik.values.autograde_type}
                 label="Auto-Grading Behaviour"
                 placeholder="Grading"
