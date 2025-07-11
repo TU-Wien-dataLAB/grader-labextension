@@ -25,28 +25,28 @@ export interface Submission {
     edited?: boolean;
 }
 export namespace Submission {
-    export type AutoStatusEnum = 'not_graded' | 'pending' | 'automatically_graded' | 'grading_failed';
     export const AutoStatusEnum = {
-        NotGraded: 'not_graded' as AutoStatusEnum,
-        Pending: 'pending' as AutoStatusEnum,
-        AutomaticallyGraded: 'automatically_graded' as AutoStatusEnum,
-        GradingFailed: 'grading_failed' as AutoStatusEnum
-    };
-    export type ManualStatusEnum = 'not_graded' | 'manually_graded' | 'being_edited' | 'grading_failed';
+        NotGraded: 'not_graded',
+        Pending: 'pending',
+        AutomaticallyGraded: 'automatically_graded',
+        GradingFailed: 'grading_failed'
+    } as const;
+    export type AutoStatusEnum = typeof AutoStatusEnum[keyof typeof AutoStatusEnum];
     export const ManualStatusEnum = {
-        NotGraded: 'not_graded' as ManualStatusEnum,
-        ManuallyGraded: 'manually_graded' as ManualStatusEnum,
-        BeingEdited: 'being_edited' as ManualStatusEnum,
-        GradingFailed: 'grading_failed' as ManualStatusEnum
-    };
-    export type FeedbackStatusEnum = 'not_generated' | 'generating' | 'generated' | 'generation_failed' | 'feedback_outdated';
+        NotGraded: 'not_graded',
+        ManuallyGraded: 'manually_graded',
+        BeingEdited: 'being_edited',
+        GradingFailed: 'grading_failed'
+    } as const;
+    export type ManualStatusEnum = typeof ManualStatusEnum[keyof typeof ManualStatusEnum];
     export const FeedbackStatusEnum = {
-        NotGenerated: 'not_generated' as FeedbackStatusEnum,
-        Generating: 'generating' as FeedbackStatusEnum,
-        Generated: 'generated' as FeedbackStatusEnum,
-        GenerationFailed: 'generation_failed' as FeedbackStatusEnum,
-        FeedbackOutdated: 'feedback_outdated' as FeedbackStatusEnum
-    };
+        NotGenerated: 'not_generated',
+        Generating: 'generating',
+        Generated: 'generated',
+        GenerationFailed: 'generation_failed',
+        FeedbackOutdated: 'feedback_outdated'
+    } as const;
+    export type FeedbackStatusEnum = typeof FeedbackStatusEnum[keyof typeof FeedbackStatusEnum];
 }
 
 
