@@ -39,8 +39,6 @@ import {
 } from '../../services/submissions.service';
 import { enqueueSnackbar } from 'notistack';
 import { showDialog } from '../util/dialog-provider';
-import { RepoType } from '../util/repo-type';
-import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import GradingIcon from '@mui/icons-material/Grading';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -255,19 +253,6 @@ export const AssignmentComponent = () => {
     );
   };
 
-  const pushAssignmentHandler = async () => {
-    await pushAssignment(lecture.id, assignment.id, RepoType.ASSIGNMENT).then(
-      () =>
-        enqueueSnackbar('Successfully Pushed Assignment', {
-          variant: 'success'
-        }),
-      error =>
-        enqueueSnackbar(error.message, {
-          variant: 'error'
-        })
-    );
-  };
-
   /**
    * Pulls from given repository by sending a request to the grader git service.
    * @param repo input which repository should be fetched
@@ -380,31 +365,6 @@ export const AssignmentComponent = () => {
             checkboxes={false}
           />
           <Stack direction={'row'} spacing={1} sx={{ m: 1, ml: 2 }}>
-            {assignment.settings.assignment_type === 'group' && (
-              <Tooltip title={'Push Changes'}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={pushAssignmentHandler}
-                >
-                  <PublishRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-                  Push
-                </Button>
-              </Tooltip>
-            )}
-
-            {assignment.settings.assignment_type === 'group' && (
-              <Tooltip title={'Pull from Remote'}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => fetchAssignmentHandler('assignment')}
-                >
-                  <FileDownloadIcon fontSize="small" sx={{ mr: 1 }} />
-                  Pull
-                </Button>
-              </Tooltip>
-            )}
             {!isAssignmentFetched() ? (
               <Tooltip title={'Fetch Assignment'}>
                 <Button

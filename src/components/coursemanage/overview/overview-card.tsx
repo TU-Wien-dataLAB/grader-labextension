@@ -19,7 +19,6 @@ import { Lecture } from '../../../model/lecture';
 import GroupIcon from '@mui/icons-material/Group';
 import ChecklistIcon from '@mui/icons-material/Checklist';
 import GradeIcon from '@mui/icons-material/Grade';
-import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
 import { AssignmentSettings } from '../../../model/assignmentSettings';
 
 export interface IOverviewCardProps {
@@ -36,8 +35,6 @@ export const OverviewCard = (props: IOverviewCardProps) => {
       : props.assignment.settings.autograde_type === AssignmentSettings.AutogradeTypeEnum.FullAuto
         ? 'Fully Automatic Grading'
         : 'No Automatic Grading';
-
-  const assignmentType = props.assignment.settings.assignment_type === 'user' ? 'User' : 'Group';
 
   return (
     <Paper
@@ -85,13 +82,6 @@ export const OverviewCard = (props: IOverviewCardProps) => {
             primary="Grading Behaviour"
             secondary={gradingBehaviour}
           />
-        </ListItem>
-        <Divider variant="inset" />
-        <ListItem>
-          <ListItemAvatar>
-            <QuestionMarkIcon color="primary" sx={{ fontSize: 40 }} />
-          </ListItemAvatar>
-          <ListItemText primary="Assignment Type" secondary={assignmentType} />
         </ListItem>
       </List>
     </Paper>
