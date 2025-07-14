@@ -54,6 +54,7 @@ import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 import { FilesList } from '../util/file-list';
 import { Contents } from '@jupyterlab/services';
 import { GlobalObjects } from '../..';
+import { RepoType } from '../util/repo-type';
 
 const calculateActiveStep = (submissions: Submission[]) => {
   const hasFeedback = submissions.reduce(
@@ -203,11 +204,11 @@ export const AssignmentComponent = () => {
           await pushAssignment(
             lecture.id,
             assignment.id,
-            'assignment',
+            RepoType.USER,
             'Pre-Reset'
           );
           await resetAssignment(lecture, assignment);
-          await pullAssignment(lecture.id, assignment.id, 'assignment');
+          await pullAssignment(lecture.id, assignment.id, RepoType.USER);
           enqueueSnackbar('Successfully Reset Assignment', {
             variant: 'success'
           });
@@ -257,7 +258,7 @@ export const AssignmentComponent = () => {
    * Pulls from given repository by sending a request to the grader git service.
    * @param repo input which repository should be fetched
    */
-  const fetchAssignmentHandler = async (repo: 'assignment' | 'release') => {
+  const fetchAssignmentHandler = async (repo: RepoType.USER | RepoType.RELEASE) => {
     await pullAssignment(lecture.id, assignment.id, repo).then(
       () => {
         enqueueSnackbar('Successfully Pulled Repo', {
@@ -371,7 +372,7 @@ export const AssignmentComponent = () => {
                   variant="outlined"
                   color="primary"
                   size="small"
-                  onClick={() => fetchAssignmentHandler('assignment')}
+                  onClick={() => fetchAssignmentHandler(RepoType.USER)}
                 >
                   <FileDownloadIcon fontSize="small" sx={{ mr: 1 }} />
                   Fetch

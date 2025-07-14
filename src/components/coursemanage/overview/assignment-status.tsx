@@ -5,33 +5,21 @@
 // LICENSE file in the root directory of this source tree.
 
 import { Assignment } from '../../../model/assignment';
-import {
-  Box,
-  Button,
-  Step,
-  StepContent,
-  StepLabel,
-  Stepper,
-  Tooltip,
-  Typography
-} from '@mui/material';
+import { Box, Button, Step, StepContent, StepLabel, Stepper, Tooltip, Typography } from '@mui/material';
 import * as React from 'react';
 import NewReleasesRoundedIcon from '@mui/icons-material/NewReleasesRounded';
 import TaskIcon from '@mui/icons-material/Task';
 import UndoIcon from '@mui/icons-material/Undo';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import { ReleaseDialog } from '../../util/dialog';
-import {
-  getAssignment,
-  pushAssignment,
-  updateAssignment
-} from '../../../services/assignments.service';
+import { getAssignment, pushAssignment, updateAssignment } from '../../../services/assignments.service';
 import { Lecture } from '../../../model/lecture';
 import { enqueueSnackbar } from 'notistack';
 import { DeadlineComponent } from '../../util/deadline';
 import { showDialog } from '../../util/dialog-provider';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { queryClient } from '../../../widgets/assignmentmanage';
+import { RepoType } from '../../util/repo-type';
 
 /**
  * Props for AssignmentStatusComponent.
@@ -122,11 +110,11 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
   const handlePushAssignment = async (commitMessage: string) => {
     try {
       // Note: has to be in this order (release -> source)
-      await pushAssignment(props.lecture.id, assignment.id, 'release');
+      await pushAssignment(props.lecture.id, assignment.id, RepoType.RELEASE);
       await pushAssignment(
         props.lecture.id,
         assignment.id,
-        'source',
+        RepoType.SOURCE,
         commitMessage
       );
     } catch (err) {
