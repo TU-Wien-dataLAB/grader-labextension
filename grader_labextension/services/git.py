@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Union
 from urllib.parse import urlparse
 
+from grader_service.handlers import GitRepoType
 from traitlets.config.configurable import Configurable
 from traitlets.traitlets import Unicode
 
@@ -30,25 +31,6 @@ class RemoteFileStatus(enum.Enum):
     PUSH_NEEDED = 3
     DIVERGENT = 4
     NO_REMOTE_REPO = 5
-
-
-class GitRepoType(enum.StrEnum):
-    """Allowed repository types.
-
-    SOURCE: The source files created by the instructor.
-    RELEASE: The "student" version of the source files.
-    ASSIGNMENT: A user's copy of the release files, which can be submitted.
-    AUTOGRADE: Autograded submission files.
-    EDIT: Copy of the submission files, created by the instructor for manual editing.
-    FEEDBACK: Final feedback for a submission.
-    """
-
-    SOURCE = "source"
-    RELEASE = "release"
-    ASSIGNMENT = "assignment"
-    AUTOGRADE = "autograde"
-    EDIT = "edit"
-    FEEDBACK = "feedback"
 
 
 class GitService(Configurable):
@@ -92,7 +74,8 @@ class GitService(Configurable):
 
     def _determine_repo_path(self, force_user_repo: bool, sub_id: str, username: str) -> str:
         """Determine the path for the git repository based on the type."""
-        if self.repo_type == GitRepoType.ASSIGNMENT or force_user_repo:
+        if self.repo_type == GitRepoType.USER or force_user_repo:
+            # For repo type USER, the subdirectory is called `assignments` (for historical reasons).
             return os.path.join(
                 self.git_root_dir, self.lecture_code, "assignments", str(self.assignment_id)
             )

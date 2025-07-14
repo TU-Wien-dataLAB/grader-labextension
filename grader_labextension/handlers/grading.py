@@ -7,12 +7,13 @@ import os
 import shutil
 import urllib.parse
 
+from grader_service.handlers import GitRepoType
 from tornado.httpclient import HTTPResponse
 from tornado.web import HTTPError, authenticated
 
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler
 from grader_labextension.registry import register_handler
-from grader_labextension.services.git import GitError, GitRepoType, GitService
+from grader_labextension.services.git import GitError, GitService
 from grader_labextension.services.request import RequestService, RequestServiceError
 
 

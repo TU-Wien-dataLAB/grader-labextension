@@ -13,6 +13,7 @@ from urllib.parse import quote, unquote
 
 from grader_service.convert.converters.base import GraderConvertException
 from grader_service.convert.converters.generate_assignment import GenerateAssignment
+from grader_service.handlers import GitRepoType
 from tornado.web import HTTPError, authenticated
 
 from grader_labextension.api.models.assignment_settings import AssignmentSettings
@@ -20,7 +21,7 @@ from grader_labextension.services.request import RequestServiceError
 
 from ..api.models.submission import Submission
 from ..registry import register_handler
-from ..services.git import GitError, GitRepoType, GitService
+from ..services.git import GitError, GitService
 from .base_handler import ExtensionBaseHandler
 
 
@@ -94,7 +95,7 @@ class GitRemoteFileStatusHandler(ExtensionBaseHandler):
 
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
-        if repo not in {GitRepoType.ASSIGNMENT, GitRepoType.SOURCE, GitRepoType.RELEASE}:
+        if repo not in {GitRepoType.USER, GitRepoType.SOURCE, GitRepoType.RELEASE}:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
 
@@ -136,7 +137,7 @@ class GitRemoteStatusHandler(ExtensionBaseHandler):
 
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, repo: str):
-        if repo not in {GitRepoType.ASSIGNMENT, GitRepoType.SOURCE, GitRepoType.RELEASE}:
+        if repo not in {GitRepoType.USER, GitRepoType.SOURCE, GitRepoType.RELEASE}:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
 
@@ -185,7 +186,7 @@ class GitLogHandler(ExtensionBaseHandler):
         :param repo: repo name
         :return: logs of git repo
         """
-        if repo not in {GitRepoType.ASSIGNMENT, GitRepoType.SOURCE, GitRepoType.RELEASE}:
+        if repo not in {GitRepoType.USER, GitRepoType.SOURCE, GitRepoType.RELEASE}:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
         n_history = int(self.get_argument("n", "10"))
@@ -240,11 +241,11 @@ class PullHandler(ExtensionBaseHandler):
         :type repo: str
         """
         if repo not in {
-            GitRepoType.ASSIGNMENT,
+            GitRepoType.USER,
             GitRepoType.SOURCE,
             GitRepoType.RELEASE,
             GitRepoType.EDIT,
-            GitRepoType.FEEDBACK
+            GitRepoType.FEEDBACK,
         }:
             self.log.error(HTTPStatus.NOT_FOUND)
             raise HTTPError(HTTPStatus.NOT_FOUND, reason=f"Repository {repo} does not exist")
@@ -301,7 +302,7 @@ class PushHandler(ExtensionBaseHandler):
         :type repo: str
         """
         if repo not in {
-            GitRepoType.ASSIGNMENT,
+            GitRepoType.USER,
             GitRepoType.SOURCE,
             GitRepoType.RELEASE,
             GitRepoType.EDIT,
@@ -345,8 +346,8 @@ class PushHandler(ExtensionBaseHandler):
             git_service, repo, commit_message, selected_files, sub_id
         )
 
-        # Handle submission for 'assignment' repo
-        if submit and repo == GitRepoType.ASSIGNMENT:
+        # Handle submission for 'user' (formerly: 'assignment') repo
+        if submit and repo == GitRepoType.USER:
             await self._submit_assignment(git_service, lecture_id, assignment_id)
 
         self.write({"status": "OK"})
@@ -568,7 +569,7 @@ class RestoreHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type=GitRepoType.ASSIGNMENT,
+            repo_type=GitRepoType.USER,
             config=self.config,
             force_user_repo=False,
             sub_id=None,
