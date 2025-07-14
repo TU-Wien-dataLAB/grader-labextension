@@ -578,11 +578,11 @@ class RestoreHandler(ExtensionBaseHandler):
             if not git_service.is_git():
                 git_service.init()
                 git_service.set_author(author=self.user_name)
-            git_service.set_remote("grader_assignment")
+            git_service.set_remote(f"grader_{GitRepoType.USER}")
             # first reset by pull so there are no changes in the repository before reverting
-            git_service.pull("grader_assignment", force=True)
+            git_service.pull(f"grader_{GitRepoType.USER}", force=True)
             git_service.revert(commit_hash=commit_hash)
-            git_service.push("grader_assignment")
+            git_service.push(f"grader_{GitRepoType.USER}")
             self.write({"status": "OK"})
         except GitError as e:
             self.log.error("GitError:\n" + e.error)
@@ -636,8 +636,8 @@ class NotebookAccessHandler(ExtensionBaseHandler):
             try:
                 git_service.init()
                 git_service.set_author(author=self.user_name)
-                git_service.set_remote("grader_release")
-                git_service.pull("grader_release", force=True)
+                git_service.set_remote(f"grader_{GitRepoType.RELEASE}")
+                git_service.pull(f"grader_{GitRepoType.RELEASE}", force=True)
                 self.write({"status": "OK"})
             except GitError as e:
                 self.log.error("GitError:\n" + e.error)
