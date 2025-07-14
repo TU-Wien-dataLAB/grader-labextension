@@ -289,7 +289,7 @@ export const SettingsComponent = () => {
             }
           />
 
-          <InputLabel id="demo-simple-select-label-auto">
+          <InputLabel id="auto-grading-behaviour-label">
             Auto-Grading Behaviour
             <TooltipComponent 
            
@@ -298,7 +298,7 @@ export const SettingsComponent = () => {
           </InputLabel>
           <TextField
             select
-            id="assignment-type-select"
+            id="auto-grading-type-select"
             value={formik.values.settings.autograde_type}
             label="Auto-Grading Behaviour"
             placeholder="Grading"

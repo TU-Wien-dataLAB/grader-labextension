@@ -8,12 +8,12 @@ import posixpath
 import shlex
 import shutil
 import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 from urllib.parse import urlparse
 
+from grader_service.handlers import GitRepoType
 from traitlets.config.configurable import Configurable
 from traitlets.traitlets import Unicode
 
@@ -52,7 +52,7 @@ class GitService(Configurable):
         server_root_dir: str,
         lecture_code: str,
         assignment_id: int,
-        repo_type: str,
+        repo_type: GitRepoType,
         force_user_repo=False,
         sub_id=None,
         username=None,
@@ -74,11 +74,12 @@ class GitService(Configurable):
 
     def _determine_repo_path(self, force_user_repo: bool, sub_id: str, username: str) -> str:
         """Determine the path for the git repository based on the type."""
-        if self.repo_type == "assignment" or force_user_repo:
+        if self.repo_type == GitRepoType.USER or force_user_repo:
+            # For repo type USER, the subdirectory is called `assignments` (for historical reasons).
             return os.path.join(
                 self.git_root_dir, self.lecture_code, "assignments", str(self.assignment_id)
             )
-        elif self.repo_type == "edit":
+        elif self.repo_type == GitRepoType.EDIT:
             if username is not None:
                 return os.path.join(
                     self.git_root_dir,
@@ -149,7 +150,10 @@ class GitService(Configurable):
         Returns:
             str: The complete remote URL.
         """
-        return f"{self.git_http_scheme}://oauth:{self.git_access_token}@{posixpath.join(base_url, sub_id or '')}"
+        return (
+            f"{self.git_http_scheme}://oauth:{self.git_access_token}@"
+            f"{posixpath.join(base_url, sub_id or '')}"
+        )
 
     def switch_branch(self, branch: str):
         """Switch to the specified branch.
@@ -268,6 +272,7 @@ class GitService(Configurable):
 
         Args:
             src (str): path where the to be copied files reside
+            selected_files (List[str], optional): list of files to copy. Defaults to None.
         """
         ignore = shutil.ignore_patterns(".git", "__pycache__")
         if selected_files:
@@ -282,22 +287,12 @@ class GitService(Configurable):
                         shutil.copy2(s, d)
         else:
             self.log.info(f"Copying repository contents from {src} to {self.path}")
-            if sys.version_info.major == 3 and sys.version_info.minor >= 8:
-                shutil.copytree(src, self.path, ignore=ignore, dirs_exist_ok=True)
-            else:
-                for item in os.listdir(src):
-                    s = os.path.join(src, item)
-                    d = os.path.join(self.path, item)
-                    if os.path.isdir(s):
-                        shutil.copytree(s, d, ignore=ignore)
-                    else:
-                        shutil.copy2(s, d)
+            shutil.copytree(src, self.path, ignore=ignore, dirs_exist_ok=True)
 
     def check_remote_status(self, origin: str, branch: str) -> RemoteFileStatus:
         untracked, added, modified, deleted = self.git_status(hidden_files=False)
-        local_changes = (
-            len(untracked) > 0 or len(added) > 0 or len(modified) > 0 or len(deleted) > 0
-        )
+        local_changes = any([untracked, added, modified, deleted])
+
         if self.local_branch_exists(branch):
             local = self._run_command(f"git rev-parse {branch}", cwd=self.path).strip()
         else:

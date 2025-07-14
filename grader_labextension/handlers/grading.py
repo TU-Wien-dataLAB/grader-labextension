@@ -7,6 +7,7 @@ import os
 import shutil
 import urllib.parse
 
+from grader_service.handlers import GitRepoType
 from tornado.httpclient import HTTPResponse
 from tornado.web import HTTPError, authenticated
 
@@ -145,7 +146,7 @@ class GradingManualHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type="autograde",
+            repo_type=GitRepoType.AUTOGRADE,
             config=self.config,
         )
         git_service.path = os.path.join(
@@ -163,10 +164,12 @@ class GradingManualHandler(ExtensionBaseHandler):
         try:
             if not git_service.is_git():
                 git_service.init()
-            git_service.set_remote("autograde", sub_id=sub_id)
-            git_service.pull("autograde", branch=f"submission_{submission['commit_hash']}")
+            git_service.set_remote(GitRepoType.AUTOGRADE, sub_id=sub_id)
+            git_service.pull(
+                GitRepoType.AUTOGRADE, branch=f"submission_{submission['commit_hash']}"
+            )
         except GitError as e:
-            self.log.error(f"Giterror: {e.error}")
+            self.log.error(f"Git error: {e.error}")
             raise HTTPError(e.code, reason=e.error)
 
 
@@ -249,7 +252,7 @@ class PullFeedbackHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type="feedback",
+            repo_type=GitRepoType.FEEDBACK,
             config=self.config,
         )
         git_service.path = os.path.join(
@@ -265,6 +268,8 @@ class PullFeedbackHandler(ExtensionBaseHandler):
 
         if not git_service.is_git():
             git_service.init()
-        git_service.set_remote("feedback", sub_id=sub_id)
-        git_service.pull("feedback", branch=f"feedback_{submission['commit_hash']}", force=True)
+        git_service.set_remote(GitRepoType.FEEDBACK, sub_id=sub_id)
+        git_service.pull(
+            GitRepoType.FEEDBACK, branch=f"feedback_{submission['commit_hash']}", force=True
+        )
         self.write({"status": "Pulled Feedback"})

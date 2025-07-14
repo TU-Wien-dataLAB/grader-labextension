@@ -6,11 +6,7 @@
 import * as React from 'react';
 import { Assignment } from '../../../model/assignment';
 import { Lecture } from '../../../model/lecture';
-import {
-  generateAssignment,
-  pullAssignment,
-  pushAssignment
-} from '../../../services/assignments.service';
+import { generateAssignment, pullAssignment, pushAssignment } from '../../../services/assignments.service';
 import GetAppRoundedIcon from '@mui/icons-material/GetAppRounded';
 import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser';
 import { CommitDialog } from '../../util/dialog';
@@ -39,11 +35,7 @@ import { Contents } from '@jupyterlab/services';
 import { openBrowser, openTerminal } from '../overview/util';
 import { PageConfig } from '@jupyterlab/coreutils';
 import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
-import {
-  getRemoteStatus,
-  lectureBasePath,
-  getFiles
-} from '../../../services/file.service';
+import { getFiles, getRemoteStatus, lectureBasePath } from '../../../services/file.service';
 import { RepoType } from '../../util/repo-type';
 import { enqueueSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
@@ -142,8 +134,8 @@ export const Files = ({
 
   const handlePushAssignment = async (commitMessage: string, selectedFiles: string[]) => {
     try {
-      await pushAssignment(lecture.id, assignment.id, 'release', commitMessage, selectedFiles);
-      await pushAssignment(lecture.id, assignment.id, 'source', commitMessage, selectedFiles);
+      await pushAssignment(lecture.id, assignment.id, RepoType.RELEASE, commitMessage, selectedFiles);
+      await pushAssignment(lecture.id, assignment.id, RepoType.SOURCE, commitMessage, selectedFiles);
       await queryClient.invalidateQueries({ queryKey: ['assignments'] });
       enqueueSnackbar('Successfully Pushed Assignment', { variant: 'success' });
       refetchRepoStatus();
@@ -155,7 +147,7 @@ export const Files = ({
 
   const handlePullAssignment = async () => {
     try {
-      await pullAssignment(lecture.id, assignment.id, 'source');
+      await pullAssignment(lecture.id, assignment.id, RepoType.SOURCE);
       enqueueSnackbar('Successfully Pulled Assignment', { variant: 'success' });
       refetchRepoStatus();
       refetchFiles();

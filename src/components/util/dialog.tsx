@@ -45,7 +45,6 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import { createAssignment, updateAssignment } from '../../services/assignments.service';
 import { Lecture } from '../../model/lecture';
 import AutogradeTypeEnum = AssignmentSettings.AutogradeTypeEnum;
-import AssignementTypeEnum = AssignmentSettings.AssignmentTypeEnum;
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import AddIcon from '@mui/icons-material/Add';
 import { enqueueSnackbar } from 'notistack';
@@ -395,7 +394,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
     initialValues: {
       name: 'Assignment',
       deadline: null,
-      assignment_type: 'user' as AssignementTypeEnum,
       autograde_type: 'auto' as AutogradeTypeEnum,
       max_submissions: undefined as number,
     },
@@ -412,7 +410,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
         status: "created",
         settings: {allowed_files: [],
                    deadline: values.deadline,
-                   assignment_type: values.assignment_type as AssignementTypeEnum,
                    max_submissions: values.max_submissions,
                    autograde_type: values.autograde_type as AutogradeTypeEnum
         }
@@ -562,7 +559,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 error={formik.values.max_submissions < 1}
               />
 
-              <InputLabel id="demo-simple-select-label-auto">
+              <InputLabel id="auto-grading-behaviour-label">
                 Auto-Grading Behaviour
                 <Tooltip title={gradingBehaviourHelp}>
                   <HelpOutlineOutlinedIcon
@@ -573,7 +570,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
               </InputLabel>
               <TextField
                 select
-                id="assignment-type-select"
+                id="auto-grade=ing-type-select"
                 value={formik.values.autograde_type}
                 label="Auto-Grading Behaviour"
                 placeholder="Grading"

@@ -121,17 +121,6 @@ export const Feedback = () => {
               sx={{ display: 'inline-block', fontSize: 16, height: 35 }}
             >
               {assignment.name}
-              <Typography
-                color="text.secondary"
-                sx={{
-                  display: 'inline-block',
-                  fontSize: 14,
-                  ml: 2,
-                  height: 35
-                }}
-              >
-                {assignment.settings.assignment_type}
-              </Typography>
             </Typography>
             <Typography
               color="text.primary"

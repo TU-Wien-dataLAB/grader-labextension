@@ -39,8 +39,6 @@ import {
 } from '../../services/submissions.service';
 import { enqueueSnackbar } from 'notistack';
 import { showDialog } from '../util/dialog-provider';
-import { RepoType } from '../util/repo-type';
-import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import GradingIcon from '@mui/icons-material/Grading';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -56,6 +54,7 @@ import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 import { FilesList } from '../util/file-list';
 import { Contents } from '@jupyterlab/services';
 import { GlobalObjects } from '../..';
+import { RepoType } from '../util/repo-type';
 
 const calculateActiveStep = (submissions: Submission[]) => {
   const hasFeedback = submissions.reduce(
@@ -205,11 +204,11 @@ export const AssignmentComponent = () => {
           await pushAssignment(
             lecture.id,
             assignment.id,
-            'assignment',
+            RepoType.USER,
             'Pre-Reset'
           );
           await resetAssignment(lecture, assignment);
-          await pullAssignment(lecture.id, assignment.id, 'assignment');
+          await pullAssignment(lecture.id, assignment.id, RepoType.USER);
           enqueueSnackbar('Successfully Reset Assignment', {
             variant: 'success'
           });
@@ -255,24 +254,11 @@ export const AssignmentComponent = () => {
     );
   };
 
-  const pushAssignmentHandler = async () => {
-    await pushAssignment(lecture.id, assignment.id, RepoType.ASSIGNMENT).then(
-      () =>
-        enqueueSnackbar('Successfully Pushed Assignment', {
-          variant: 'success'
-        }),
-      error =>
-        enqueueSnackbar(error.message, {
-          variant: 'error'
-        })
-    );
-  };
-
   /**
    * Pulls from given repository by sending a request to the grader git service.
    * @param repo input which repository should be fetched
    */
-  const fetchAssignmentHandler = async (repo: 'assignment' | 'release') => {
+  const fetchAssignmentHandler = async (repo: RepoType.USER | RepoType.RELEASE) => {
     await pullAssignment(lecture.id, assignment.id, repo).then(
       () => {
         enqueueSnackbar('Successfully Pulled Repo', {
@@ -380,38 +366,13 @@ export const AssignmentComponent = () => {
             checkboxes={false}
           />
           <Stack direction={'row'} spacing={1} sx={{ m: 1, ml: 2 }}>
-            {assignment.settings.assignment_type === 'group' && (
-              <Tooltip title={'Push Changes'}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={pushAssignmentHandler}
-                >
-                  <PublishRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-                  Push
-                </Button>
-              </Tooltip>
-            )}
-
-            {assignment.settings.assignment_type === 'group' && (
-              <Tooltip title={'Pull from Remote'}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => fetchAssignmentHandler('assignment')}
-                >
-                  <FileDownloadIcon fontSize="small" sx={{ mr: 1 }} />
-                  Pull
-                </Button>
-              </Tooltip>
-            )}
             {!isAssignmentFetched() ? (
               <Tooltip title={'Fetch Assignment'}>
                 <Button
                   variant="outlined"
                   color="primary"
                   size="small"
-                  onClick={() => fetchAssignmentHandler('assignment')}
+                  onClick={() => fetchAssignmentHandler(RepoType.USER)}
                 >
                   <FileDownloadIcon fontSize="small" sx={{ mr: 1 }} />
                   Fetch
