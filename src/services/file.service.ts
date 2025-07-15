@@ -163,6 +163,7 @@ export const makeDir = async (path: string, name: string) => {
   return newPath;
 };
 
+// makeDirs creates multiple directories in a given path
 export const makeDirs = async (path: string, names: string[]) => {
   let p = path;
   for (let i = 0; i < names.length; i++) {

@@ -186,6 +186,8 @@ export const Files = ({
       NO_REMOTE_REPO: { label: 'No Remote Repository', color: 'primary', icon: <CheckIcon /> }
     };
 
+    
+
     // Fallback if the status is not in the statusMap (it should be)
     const { label, color, icon } = statusMap[status] || {};
 
@@ -201,6 +203,23 @@ export const Files = ({
     ) : null;
   };
 
+  const getRemoteStatusText = (status: RemoteFileStatus.StatusEnum) => {
+    switch (status) {
+      case RemoteFileStatus.StatusEnum.UpToDate:
+        return 'The local files are up to date with the remote repository.';
+      case RemoteFileStatus.StatusEnum.PullNeeded:
+        return 'The remote repository has new changes. Pull now to update your local files.';
+      case RemoteFileStatus.StatusEnum.PushNeeded:
+        return 'You have made changes to your local repository which you can push.';
+      case RemoteFileStatus.StatusEnum.Divergent:
+        return 'The local and remote files are divergent.';
+      case RemoteFileStatus.StatusEnum.NoRemoteRepo:
+        return 'There is no remote repository yet. Push your assignment to create it.';
+      default:
+        return '';
+    }
+  };
+
   return (
     <Card sx={{ overflow: 'hidden', m: 3, flex: 1, borderRadius: 2, boxShadow: 3, display: 'flex', flexDirection: 'column' }}>
       <CardHeader
@@ -214,7 +233,7 @@ export const Files = ({
         }
         subheader={
           repoStatus && (
-            <Tooltip title={repoStatus}>
+            <Tooltip title={getRemoteStatusText(repoStatus)}>
               {getStatusChip(repoStatus)}
             </Tooltip>
           )
