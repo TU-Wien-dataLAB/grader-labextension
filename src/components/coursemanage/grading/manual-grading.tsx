@@ -29,7 +29,7 @@ import { FilesList } from '../../util/file-list';
 import { enqueueSnackbar } from 'notistack';
 import { openBrowser } from '../overview/util';
 import { getFiles, lectureBasePath } from '../../../services/file.service';
-import { Link, useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { utcToLocalFormat } from '../../../services/datetime.service';
 import Toolbar from '@mui/material/Toolbar';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -44,8 +44,6 @@ import InfoIcon from '@mui/icons-material/Info';
 import { GraderLoadingButton } from '../../util/loading-button';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient } from '../../../widgets/assignmentmanage';
-import { Contents } from '@jupyterlab/services';
-import { GlobalObjects } from '../../..';
 
 const style = {
   position: 'absolute' as const,
@@ -122,10 +120,7 @@ export const ManualGrading = () => {
   };
 
   const rowIdx = rows.findIndex(s => s.id === manualGradeSubmission.id);
-  const submissionsLink = `/lecture/${lecture.id}/assignment/${assignment.id}/submissions`;
-  const navigate = useNavigate()
-  const reloadPage = () => navigate(0);
-  
+  const submissionsLink = `/lecture/${lecture.id}/assignment/${assignment.id}/submissions`;  
 
   const {
     data: submission = manualGradeSubmission,
@@ -176,18 +171,7 @@ export const ManualGrading = () => {
       }
     });
 
-    GlobalObjects.docManager.services.contents.fileChanged.connect(
-          (sender: Contents.IManager, change: Contents.IChangedArgs) => {
-            const { oldValue, newValue } = change;
-            if (
-              (newValue && !newValue.path.includes(manualPath)) ||
-              (oldValue && !oldValue.path.includes(manualPath))
-            ) {
-              return;
-            }
-            reloadPage();
-          }
-        );
+    
   }, [manualGradeSubmission.id]);
 
   const handleAutogradeSubmission = async () => {
@@ -324,7 +308,7 @@ export const ManualGrading = () => {
                 color="text.secondary"
                 sx={{ fontSize: 12, height: 35 }}
               >
-                Points
+                Achieved Points
               </Typography>
               <Typography
                 textAlign="right"
@@ -332,6 +316,13 @@ export const ManualGrading = () => {
                 sx={{ fontSize: 12, height: 35 }}
               >
                 Extra Credit
+              </Typography>
+              <Typography
+                textAlign="right"
+                color="text.secondary"
+                sx={{ fontSize: 12, height: 35 }}
+              >
+                Final Score
               </Typography>
               <Typography
                 textAlign="right"
@@ -386,6 +377,7 @@ export const ManualGrading = () => {
                       enqueueSnackbar('Updated submission scaling!', {
                         variant: 'success'
                       });
+                      refetchSubmission();
                     });
                     event.preventDefault();
                   }}
@@ -411,6 +403,12 @@ export const ManualGrading = () => {
                       Update
                     </Button>
                   </Stack>
+                  <Typography
+                    color="text.primary"
+                    sx={{ display: 'inline-block', fontSize: 16, height: 35 }}
+                  >
+                    {submission.score}
+                  </Typography>
                 </form>
               </Box>
             </Stack>
