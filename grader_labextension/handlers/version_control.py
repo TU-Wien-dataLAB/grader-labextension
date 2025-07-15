@@ -52,7 +52,8 @@ class GenerateHandler(ExtensionBaseHandler):
             input_dir=f"{self.root_dir}/{code}/source/{assignment_id}",
             output_dir=output_dir,
             file_pattern="*.ipynb",
-            assignment_settings=AssignmentSettings(allowed_files=["*"]),  # copy all files
+             # copy all files, except notebooks
+            assignment_settings=AssignmentSettings(allowed_files=["*[!.ipynb]"]),
         )
         generator.force = True
         generator.log = self.log
