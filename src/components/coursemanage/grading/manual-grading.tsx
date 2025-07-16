@@ -363,6 +363,12 @@ export const ManualGrading = () => {
               >
                 {gradeBook?.getExtraCredits()}
               </Typography>
+              <Typography
+                    color="text.primary"
+                    sx={{ display: 'inline-block', fontSize: 16, height: 35 }}
+                  >
+                    {submission.score}
+              </Typography>
               <Box sx={{ height: 75 }}>
                 <form
                   onSubmit={event => {
@@ -403,12 +409,6 @@ export const ManualGrading = () => {
                       Update
                     </Button>
                   </Stack>
-                  <Typography
-                    color="text.primary"
-                    sx={{ display: 'inline-block', fontSize: 16, height: 35 }}
-                  >
-                    {submission.score}
-                  </Typography>
                 </form>
               </Box>
             </Stack>
