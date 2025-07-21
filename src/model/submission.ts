@@ -17,7 +17,7 @@ export interface Submission {
     submitted_at?: string;
     auto_status?: AutoStatus;
     manual_status?: ManualStatus;
-    username?: string;
+    user_id?: number;
     user_display_name?: string;
     grading_score?: number;
     score_scaling?: number;
@@ -29,5 +29,3 @@ export interface Submission {
 }
 export namespace Submission {
 }
-
-
