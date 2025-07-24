@@ -313,7 +313,7 @@ class PushHandler(ExtensionBaseHandler):
             self.write_error(404)
 
         # Extract request parameters
-        sub_id, commit_message, selected_files, submit, username = self._extract_request_params()
+        sub_id, commit_message, selected_files, submit, user_id = self._extract_request_params()
 
         # Validate commit message for 'source' repo
         if repo == GitRepoType.SOURCE:
@@ -325,7 +325,7 @@ class PushHandler(ExtensionBaseHandler):
 
         # Handle 'edit' repo
         if repo == GitRepoType.EDIT:
-            sub_id = await self._handle_edit_repo(lecture_id, assignment_id, sub_id, username)
+            sub_id = await self._handle_edit_repo(lecture_id, assignment_id, sub_id, user_id)
 
         # Initialize GitService
         git_service = GitService(
@@ -335,7 +335,7 @@ class PushHandler(ExtensionBaseHandler):
             repo_type=GitRepoType(repo),
             config=self.config,
             sub_id=sub_id,
-            username=username,
+            user_id=user_id,
         )
 
         # Handle 'release' repo
@@ -358,20 +358,34 @@ class PushHandler(ExtensionBaseHandler):
     def _extract_request_params(
         self,
     ) -> (Optional[str], Optional[str], List[str], bool, Optional[str]):
-        sub_id = self.get_argument("subid", None)
+        sub_id_str = self.get_argument("subid", None)
         commit_message = self.get_argument("commit-message", None)
         selected_files = self.get_arguments("selected-files")
         submit = self.get_argument("submit", "false") == "true"
-        username = self.get_argument("for_user", None)
-        return sub_id, commit_message, selected_files, submit, username
+        user_id_str = self.get_argument("for_user", None)
+        try:
+            sub_id = int(sub_id_str)
+        except ValueError:
+            sub_id = None
+        try:
+            user_id = int(user_id_str)
+        except ValueError:
+            user_id = None
+        return sub_id, commit_message, selected_files, submit, user_id
 
     def _validate_commit_message(self, commit_message):
         if not commit_message:
             self.log.error("Commit message was not found")
             raise HTTPError(HTTPStatus.NOT_FOUND, reason="Commit message was not found")
 
-    async def _handle_edit_repo(self, lecture_id, assignment_id, sub_id, username):
+    async def _handle_edit_repo(
+        self, lecture_id: int, assignment_id: int, sub_id: Optional[int], user_id: Optional[int]
+    ) -> int:
         if sub_id is None:
+            if user_id is None:
+                self.log.error("User id has to be provided for an 'edit' repo")
+                raise HTTPError(HTTPStatus.BAD_REQUEST, reason="Missing for_user value in request")
+
             submission = Submission(commit_hash="0" * 40)
             response = await self.request_service.request(
                 "POST",
@@ -382,7 +396,7 @@ class PushHandler(ExtensionBaseHandler):
             )
             submission = Submission.from_dict(response)
             submission.submitted_at = response["submitted_at"]
-            submission.username = username
+            submission.user_id = user_id
             submission.edited = True
             await self.request_service.request(
                 "PUT",
@@ -392,7 +406,8 @@ class PushHandler(ExtensionBaseHandler):
                 header=self.grader_authentication_header,
             )
             self.log.info(
-                f"Created submission {submission.id} for user {username} and pushing to edit repo..."
+                f"Created submission {submission.id} for user with id {user_id} and pushing "
+                f"to edit repo..."
             )
             return str(submission.id)
         return sub_id

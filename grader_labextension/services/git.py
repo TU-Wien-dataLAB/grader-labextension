@@ -10,7 +10,7 @@ import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
 from grader_service.handlers import GitRepoType
@@ -53,9 +53,9 @@ class GitService(Configurable):
         lecture_code: str,
         assignment_id: int,
         repo_type: GitRepoType,
-        force_user_repo=False,
-        sub_id=None,
-        username=None,
+        force_user_repo: bool = False,
+        sub_id: Optional[int] = None,
+        user_id: Optional[int] = None,
         log=logging.getLogger("gitservice"),
         *args,
         **kwargs,
@@ -67,12 +67,14 @@ class GitService(Configurable):
         self.assignment_id = assignment_id
         self.repo_type = repo_type
 
-        self.path = self._determine_repo_path(force_user_repo, sub_id, username)
+        self.path = self._determine_repo_path(force_user_repo, sub_id, user_id)
         os.makedirs(self.path, exist_ok=True)
 
         self._initialize_git_logging()
 
-    def _determine_repo_path(self, force_user_repo: bool, sub_id: str, username: str) -> str:
+    def _determine_repo_path(
+        self, force_user_repo: bool, sub_id: Optional[int], user_id: Optional[int]
+    ) -> str:
         """Determine the path for the git repository based on the type."""
         if self.repo_type == GitRepoType.USER or force_user_repo:
             # For repo type USER, the subdirectory is called `assignments` (for historical reasons).
@@ -80,7 +82,8 @@ class GitService(Configurable):
                 self.git_root_dir, self.lecture_code, "assignments", str(self.assignment_id)
             )
         elif self.repo_type == GitRepoType.EDIT:
-            if username is not None:
+            if user_id is not None:
+                username = self._get_username_from_id(user_id)
                 return os.path.join(
                     self.git_root_dir,
                     self.lecture_code,
@@ -99,6 +102,10 @@ class GitService(Configurable):
         return os.path.join(
             self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id)
         )
+
+    def _get_username_from_id(self, user_id: int) -> str:
+        # TODO!
+        ...
 
     def _initialize_git_logging(self):
         """Initialize logging related to git configuration."""
