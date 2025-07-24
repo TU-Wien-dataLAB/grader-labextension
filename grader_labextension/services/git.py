@@ -128,39 +128,29 @@ class GitService(Configurable):
         self.log.info(f"Pushing to remote {origin} at {self.path}")
         self._run_command(f"git push {origin} main" + (" --force" if force else ""), cwd=self.path)
 
-    def set_remote(self, origin: str, sub_id: str = None):
+    def set_remote(self, origin: str, sub_id: Union[int, str, None] = None):
         """Set or update the remote repository.
 
         Args:
             origin (str): The remote name.
-            sub_id (str): Optional query parameter for feedback pull.
+            sub_id (str | int | None): Optional query parameter for feedback pull.
         """
-
+        if isinstance(sub_id, int):
+            # TODO:
+            sub_id = str(sub_id)
         url_path = posixpath.join(
             self.git_remote_url, self.lecture_code, str(self.assignment_id), self.repo_type
         )
-        url = self._build_remote_url(url_path, sub_id)
+        url = (
+            f"{self.git_http_scheme}://oauth:{self.git_access_token}@"
+            f"{posixpath.join(url_path, sub_id or '')}"
+        )
         self.log.info(f"Setting remote {origin} for {self.path} to {url}")
         try:
             self._run_command(f"git remote add {origin} {url}", cwd=self.path)
         except GitError:
             self.log.warning(f"Remote {origin} already exists. Updating URL.")
             self._run_command(f"git remote set-url {origin} {url}", cwd=self.path)
-
-    def _build_remote_url(self, base_url: str, sub_id: str = None) -> str:
-        """Build the complete remote URL for the git repository.
-
-        Args:
-            base_url (str): The base URL of the remote repository.
-            sub_id (str): Optional sub_id for the URL.
-
-        Returns:
-            str: The complete remote URL.
-        """
-        return (
-            f"{self.git_http_scheme}://oauth:{self.git_access_token}@"
-            f"{posixpath.join(base_url, sub_id or '')}"
-        )
 
     def switch_branch(self, branch: str):
         """Switch to the specified branch.

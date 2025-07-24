@@ -266,7 +266,7 @@ class PullHandler(ExtensionBaseHandler):
             repo_type=GitRepoType(repo),
             config=self.config,
             force_user_repo=repo == GitRepoType.RELEASE,
-            sub_id=sub_id,
+            sub_id=sub_id if sub_id is None else int(sub_id),
             log=self.log,
         )
         try:
@@ -344,7 +344,7 @@ class PushHandler(ExtensionBaseHandler):
                 git_service, lecture, assignment, lecture_id, assignment_id, selected_files
             )
 
-        # Perform Git operations
+        # Commit and push the files
         await self._perform_git_operations(
             git_service, repo, commit_message, selected_files, sub_id
         )
@@ -409,7 +409,7 @@ class PushHandler(ExtensionBaseHandler):
                 f"Created submission {submission.id} for user with id {user_id} and pushing "
                 f"to edit repo..."
             )
-            return str(submission.id)
+            return submission.id
         return sub_id
 
     async def _handle_release_repo(
@@ -499,7 +499,12 @@ class PushHandler(ExtensionBaseHandler):
             )
 
     async def _perform_git_operations(
-        self, git_service: GitService, repo: str, commit_message: str, selected_files, sub_id=None
+        self,
+        git_service: GitService,
+        repo: str,
+        commit_message: str,
+        selected_files,
+        sub_id: Optional[int] = None,
     ):
         try:
             if not git_service.is_git():
