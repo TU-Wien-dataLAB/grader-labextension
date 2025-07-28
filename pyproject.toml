@@ -24,7 +24,7 @@ classifiers = [
 ]
 dependencies = [
 
-    "grader-service>=0.8.0,<0.9",
+    "grader-service>=0.8.1,<0.9",
 
     "jupyter_server>=2.4.0,<3"
 ]
