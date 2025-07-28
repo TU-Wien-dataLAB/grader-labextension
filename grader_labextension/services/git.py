@@ -364,12 +364,12 @@ class GitService(Configurable):
 
     def remote_branch_exists(self, origin: str, branch: str) -> bool:
         try:
-            self._run_command(f"git ls-remote --exit-code {origin}  {branch}", cwd=self.path)
+            self._run_command(f"git ls-remote --exit-code {origin} {branch}", cwd=self.path)
         except GitError:
             return False
         return True
 
-    def get_log(self, history_count=10) -> List[Dict[str, str]]:
+    def get_log(self, history_count: int = 10) -> List[Dict[str, str]]:
         """
         Execute git log command & return the result.
         """

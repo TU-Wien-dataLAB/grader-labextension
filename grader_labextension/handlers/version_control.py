@@ -501,30 +501,31 @@ class PushHandler(ExtensionBaseHandler):
     async def _perform_git_operations(
         self,
         git_service: GitService,
-        repo: str,
+        repo: GitRepoType,
         commit_message: str,
         selected_files,
         sub_id: Optional[int] = None,
     ):
+        remote = f"grader_{repo}"
         try:
             if not git_service.is_git():
                 git_service.init()
                 git_service.set_author(author=self.user_name)
-            git_service.set_remote(f"grader_{repo}", sub_id)
+            git_service.set_remote(remote, sub_id)
         except GitError as e:
-            self.log.error("git error during git initiation process:" + e.error)
+            self.log.error("git error during git initiation process: %s", e.error)
             raise HTTPError(e.code, reason=e.error)
 
         try:
             git_service.commit(message=commit_message, selected_files=selected_files)
         except GitError as e:
-            self.log.error("git error during commit process:" + e.error)
+            self.log.error("git error during commit process: %s", e.error)
             raise HTTPError(e.code, reason=e.error)
 
         try:
-            git_service.push(f"grader_{repo}", force=True)
+            git_service.push(remote, force=True)
         except GitError as e:
-            self.log.error("git error during push process:" + e.error)
+            self.log.error("git error during push process: %s", e.error)
             git_service.undo_commit()
             raise HTTPError(e.code, reason=str(e.error))
 
@@ -532,7 +533,13 @@ class PushHandler(ExtensionBaseHandler):
         self.log.info(f"Submitting assignment {assignment_id}!")
         try:
             latest_commit_hash = git_service.get_log(history_count=1)[0]["commit"]
-            submission = Submission(commit_hash=latest_commit_hash)
+        except (KeyError, IndexError) as e:
+            self.log.error(e)
+            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
+
+        submission = Submission(commit_hash=latest_commit_hash)
+
+        try:
             response = await self.request_service.request(
                 "POST",
                 f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
@@ -540,13 +547,11 @@ class PushHandler(ExtensionBaseHandler):
                 body=submission.to_dict(),
                 header=self.grader_authentication_header,
             )
-            self.write(json.dumps(response))
-        except (KeyError, IndexError) as e:
-            self.log.error(e)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
+
+        self.write(json.dumps(response))
 
 
 @register_handler(
@@ -668,7 +673,7 @@ class NotebookAccessHandler(ExtensionBaseHandler):
                 self.write_error(400)
 
         try:
-            username = self.get_current_user()["name"]
+            username = self.current_user["name"]
         except TypeError as e:
             self.log.error(e)
             raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
