@@ -365,11 +365,11 @@ class PushHandler(ExtensionBaseHandler):
         user_id_str = self.get_argument("for_user", None)
         try:
             sub_id = int(sub_id_str)
-        except ValueError:
+        except (TypeError, ValueError):
             sub_id = None
         try:
             user_id = int(user_id_str)
-        except ValueError:
+        except TypeError:
             user_id = None
         return sub_id, commit_message, selected_files, submit, user_id
 
