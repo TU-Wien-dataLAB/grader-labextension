@@ -22,9 +22,8 @@ import {
 import ReplayIcon from '@mui/icons-material/Replay';
 import { SubmissionList } from './submission-list';
 import { AssignmentStatus } from './assignment-status';
-import { Files } from './files/files';
 import WarningIcon from '@mui/icons-material/Warning';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import {
   getAssignment,
   getAssignmentProperties,
@@ -40,8 +39,6 @@ import {
 } from '../../services/submissions.service';
 import { enqueueSnackbar } from 'notistack';
 import { showDialog } from '../util/dialog-provider';
-import { RepoType } from '../util/repo-type';
-import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import GradingIcon from '@mui/icons-material/Grading';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -54,6 +51,10 @@ import { GradeBook } from '../../services/gradebook';
 import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
+import { FilesList } from '../util/file-list';
+import { Contents } from '@jupyterlab/services';
+import { GlobalObjects } from '../..';
+import { RepoType } from '../util/repo-type';
 
 const calculateActiveStep = (submissions: Submission[]) => {
   const hasFeedback = submissions.reduce(
@@ -113,6 +114,8 @@ export const AssignmentComponent = () => {
 
   const [fileList, setFileList] = React.useState<string[]>([]);
   const [activeStatus, setActiveStatus] = React.useState(0);
+  const navigate = useNavigate();
+  const reloadPage = () => navigate(0);
 
   const {
     data: subLeft,
@@ -154,7 +157,22 @@ export const AssignmentComponent = () => {
         setActiveStatus(active_step);
         refetchSubleft();
       });
+      // Watch for file changes in the JupyterLab file browser
+      GlobalObjects.docManager.services.contents.fileChanged.connect(
+        (sender: Contents.IManager, change: Contents.IChangedArgs) => {
+          const { oldValue, newValue } = change;
+          if (
+            (newValue && !newValue.path.includes(path)) ||
+            (oldValue && !oldValue.path.includes(path))
+          ) {
+            return;
+          }
+          refetchFiles();
+          reloadPage();
+        }
+      );
     }
+
   }, [lecture, assignment, submissions.length]);
 
   if (
@@ -173,6 +191,9 @@ export const AssignmentComponent = () => {
   }
 
   const path = `${lectureBasePath}${lecture.code}/assignments/${assignment.id}`;
+  // Open the assignment in the JupyterLab file browser
+  openBrowser(path);
+
 
   const resetAssignmentHandler = async () => {
     showDialog(
@@ -183,11 +204,11 @@ export const AssignmentComponent = () => {
           await pushAssignment(
             lecture.id,
             assignment.id,
-            'assignment',
+            RepoType.USER,
             'Pre-Reset'
           );
           await resetAssignment(lecture, assignment);
-          await pullAssignment(lecture.id, assignment.id, 'assignment');
+          await pullAssignment(lecture.id, assignment.id, RepoType.USER);
           enqueueSnackbar('Successfully Reset Assignment', {
             variant: 'success'
           });
@@ -233,24 +254,11 @@ export const AssignmentComponent = () => {
     );
   };
 
-  const pushAssignmentHandler = async () => {
-    await pushAssignment(lecture.id, assignment.id, RepoType.ASSIGNMENT).then(
-      () =>
-        enqueueSnackbar('Successfully Pushed Assignment', {
-          variant: 'success'
-        }),
-      error =>
-        enqueueSnackbar(error.message, {
-          variant: 'error'
-        })
-    );
-  };
-
   /**
    * Pulls from given repository by sending a request to the grader git service.
    * @param repo input which repository should be fetched
    */
-  const fetchAssignmentHandler = async (repo: 'assignment' | 'release') => {
+  const fetchAssignmentHandler = async (repo: RepoType.USER | RepoType.RELEASE) => {
     await pullAssignment(lecture.id, assignment.id, repo).then(
       () => {
         enqueueSnackbar('Successfully Pulled Repo', {
@@ -328,7 +336,7 @@ export const AssignmentComponent = () => {
         </Box>
         <Box sx={{ mt: 2, ml: 2 }}>
           <DeadlineDetail
-            due_date={assignment.settings.deadline}
+            deadline={assignment.settings.deadline}
             late_submissions={assignment.settings.late_submission || []}
           />
         </Box>
@@ -349,40 +357,22 @@ export const AssignmentComponent = () => {
               </IconButton>
             </Tooltip>
           </Stack>
-          <Files lecture={lecture} assignment={assignment} files={fileList} />
+          <FilesList
+            files={files}
+            sx={{ m: 2, mt: 1 }}
+            lecture={lecture}
+            shouldContain={fileList}
+            assignment={assignment}
+            checkboxes={false}
+          />
           <Stack direction={'row'} spacing={1} sx={{ m: 1, ml: 2 }}>
-            {assignment.settings.assignment_type === 'group' && (
-              <Tooltip title={'Push Changes'}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={pushAssignmentHandler}
-                >
-                  <PublishRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-                  Push
-                </Button>
-              </Tooltip>
-            )}
-
-            {assignment.settings.assignment_type === 'group' && (
-              <Tooltip title={'Pull from Remote'}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => fetchAssignmentHandler('assignment')}
-                >
-                  <FileDownloadIcon fontSize="small" sx={{ mr: 1 }} />
-                  Pull
-                </Button>
-              </Tooltip>
-            )}
             {!isAssignmentFetched() ? (
               <Tooltip title={'Fetch Assignment'}>
                 <Button
                   variant="outlined"
                   color="primary"
                   size="small"
-                  onClick={() => fetchAssignmentHandler('assignment')}
+                  onClick={() => fetchAssignmentHandler(RepoType.USER)}
                 >
                   <FileDownloadIcon fontSize="small" sx={{ mr: 1 }} />
                   Fetch

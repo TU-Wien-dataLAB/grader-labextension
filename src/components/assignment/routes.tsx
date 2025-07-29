@@ -1,16 +1,12 @@
 import * as React from 'react';
 import {
   createRoutesFromElements,
-  Route,
-  useNavigation
+  Route
 } from 'react-router-dom';
-import Box from '@mui/material/Box';
-import { Typography } from '@mui/material';
-import { LinkRouter, Page } from '../util/breadcrumbs';
+import { Page } from '../util/breadcrumbs';
 import ErrorPage from '../util/error';
 
-import { UserPermissions } from '../../services/permission.service';
-import { getAllLectures, getLecture } from '../../services/lectures.service';
+import { getLecture } from '../../services/lectures.service';
 import { getAssignment } from '../../services/assignments.service';
 import { getAllSubmissions } from '../../services/submissions.service';
 
@@ -22,22 +18,6 @@ import { LectureComponent } from './lecture';
 import { AssignmentComponent } from './assignment';
 import { Feedback } from './feedback';
 import { QueryClient } from '@tanstack/react-query';
-
-export const loadPermissions = async () => {
-  try {
-    await UserPermissions.loadPermissions();
-    const [lectures, completedLectures] = await Promise.all([
-      getAllLectures(),
-      getAllLectures(true)
-    ]);
-    return { lectures, completedLectures };
-  } catch (error: any) {
-    enqueueSnackbar(error.message, {
-      variant: 'error'
-    });
-    throw new Error('Could not load data!');
-  }
-};
 
 export const loadLecture = async (
   lectureId: number,
@@ -96,6 +76,7 @@ export const loadSubmissions = async (
   }
 };
 
+/** Example Page
 function ExamplePage({ to }) {
   const navigation = useNavigation(); // router navigates to new route (and loads data)
   const loading = navigation.state === 'loading';
@@ -117,6 +98,7 @@ function ExamplePage({ to }) {
     </Box>
   );
 }
+*/
 
 export const getRoutes = (queryClient: QueryClient) => {
   const routes = createRoutesFromElements(

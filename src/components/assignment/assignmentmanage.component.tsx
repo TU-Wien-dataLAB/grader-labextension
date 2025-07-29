@@ -17,7 +17,6 @@ import {
   TableRow,
   Typography
 } from '@mui/material';
-import Box from '@mui/material/Box';
 import { ButtonTr, GraderTable } from '../util/table';
 import { useQuery } from '@tanstack/react-query';
 import { getAllLectures } from '../../services/lectures.service';

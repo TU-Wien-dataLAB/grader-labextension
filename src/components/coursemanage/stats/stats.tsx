@@ -2,7 +2,6 @@ import { Lecture } from '../../../model/lecture';
 import { Assignment } from '../../../model/assignment';
 import { Submission } from '../../../model/submission';
 import { Box, Card, IconButton, LinearProgress, Tooltip } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2';
 import { SectionTitle } from '../../util/section-title';
 import ReplayIcon from '@mui/icons-material/Replay';
 import * as React from 'react';
@@ -20,6 +19,7 @@ import {
 } from '../../../services/assignments.service';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 export const filterUserSubmissions = (
   submissions: Submission[],
@@ -39,6 +39,15 @@ export interface IStatsSubComponentProps {
 export const StatsComponent = () => {
   const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
 
+  const [allSubmissionsState, setAllSubmissionsState] = useState([])
+  const [latestSubmissionsState, setLatestSubmissionsState] = useState([])
+  const [usersState, setUsersState] = useState({
+    students: [],
+    tutors: [],
+    instructors: []
+  })
+  const [gb, setGb] = React.useState(null);
+
   const { data: lecture, isLoading: isLoadingLecture } = useQuery({
     queryKey: ['lecture', lectureId],
     queryFn: () => getLecture(lectureId),
@@ -51,98 +60,30 @@ export const StatsComponent = () => {
     enabled: !!lectureId && !!assignmentId
   });
 
-  const { data: usersData, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ['users', lectureId],
-    queryFn: () => getUsers(lectureId),
-    enabled: !!lectureId
-  });
+  const updateData = () => {
+    getAllSubmissions(lectureId, assignmentId,'none', true, false).then(
+      (data) => setAllSubmissionsState(data)
+    )
 
-  const { data: allSubmissions = [], isLoading: isLoadingAllSubmissions } =
-    useQuery({
-      queryKey: ['allSubmissions', lectureId, assignmentId],
-      queryFn: () => getAllSubmissions(lectureId, assignmentId, 'none', true),
-      enabled: !!lectureId && !!assignmentId
+    getAllSubmissions(lectureId, assignmentId,'latest', true, false).then(
+      (data) => setLatestSubmissionsState(data)
+    )
+    getUsers(lectureId).then(
+      (data) => setUsersState(data)
+    )
+
+    getAssignmentProperties(lectureId, assignmentId).then(properties => {
+      setGb(new GradeBook(properties));
     });
-
-  const {
-    data: latestSubmissions = [],
-    isLoading: isLoadingLatestSubmissions
-  } = useQuery({
-    queryKey: ['latestSubmissions', lectureId, assignmentId],
-    queryFn: () => getAllSubmissions(lectureId, assignmentId, 'latest', true),
-    enabled: !!lectureId && !!assignmentId
-  });
-
-  const [allSubmissionsState, setAllSubmissionsState] = React.useState([]);
-  const [latestSubmissionsState, setLatestSubmissionsState] = React.useState(
-    []
-  );
-  const [gb, setGb] = React.useState(null);
-  const [usersState, setUsersState] = React.useState({
-    students: [],
-    tutors: [],
-    instructors: []
-  });
-
-  const updateSubmissions = async () => {
-    const newAllSubmissions = await getAllSubmissions(
-      lectureId,
-      assignmentId,
-      'none',
-      true
-    );
-    const newLatestSubmissions = await getAllSubmissions(
-      lectureId,
-      assignmentId,
-      'latest',
-      true
-    );
-    const newUsers = await getUsers(lectureId);
-    const newGb = new GradeBook(
-      await getAssignmentProperties(lectureId, assignmentId)
-    );
-
-    setAllSubmissionsState(newAllSubmissions);
-    setLatestSubmissionsState(newLatestSubmissions);
-    setUsersState(newUsers);
-    setGb(newGb);
-  };
+  }
 
   React.useEffect(() => {
-    if (allSubmissions.length > 0) {
-      setAllSubmissionsState(allSubmissions);
-    }
-  }, [allSubmissions]);
-
-  React.useEffect(() => {
-    if (latestSubmissions.length > 0) {
-      setLatestSubmissionsState(latestSubmissions);
-    }
-  }, [latestSubmissions]);
-
-  React.useEffect(() => {
-    if (usersData === null) {
-      return;
-    }
-    if (Object.keys(usersData).length > 0) {
-      setUsersState(usersData);
-    }
-  }, [usersData]);
-
-  React.useEffect(() => {
-    if (lecture && assignment) {
-      getAssignmentProperties(lecture.id, assignment.id).then(properties => {
-        setGb(new GradeBook(properties));
-      });
-    }
-  }, [lecture, assignment]);
+    updateData()
+  }, [lecture, assignment])
 
   if (
     isLoadingLecture ||
-    isLoadingAssignment ||
-    isLoadingUsers ||
-    isLoadingAllSubmissions ||
-    isLoadingLatestSubmissions
+    isLoadingAssignment
   ) {
     return (
       <div>
@@ -165,7 +106,7 @@ export const StatsComponent = () => {
       <SectionTitle title={`${assignment.name} Stats`}>
         <Box sx={{ ml: 2 }} display="inline-block">
           <Tooltip title="Reload">
-            <IconButton aria-label="reload" onClick={updateSubmissions}>
+            <IconButton aria-label="reload" onClick={updateData}>
               <ReplayIcon />
             </IconButton>
           </Tooltip>

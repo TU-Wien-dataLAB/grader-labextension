@@ -5,15 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
-import shutil
+import os
 
+import tornado
 from tornado.web import HTTPError, authenticated
 
-from grader_labextension.registry import register_handler
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler
-from grader_labextension.services.request import RequestServiceError
-import tornado
-import os
+from grader_labextension.registry import register_handler
+from grader_labextension.services.request import RequestService, RequestServiceError
 
 
 @register_handler(path=r"api\/lectures\/(?P<lecture_id>\d*)\/assignments\/?")
@@ -34,7 +33,7 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
                 method="GET",
                 endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments",
                 header=self.grader_authentication_header,
-                response_callback=self.set_service_headers
+                response_callback=self.set_service_headers,
             )
 
             lecture = await self.request_service.request(
@@ -49,12 +48,24 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
         # Create directories for every assignment
         try:
             dirs = set(
-                filter(lambda e: e[0] != ".", os.listdir(os.path.expanduser(f'{self.root_dir}/{lecture["code"]}/assignments'))))
+                filter(
+                    lambda e: e[0] != ".",
+                    os.listdir(
+                        os.path.expanduser(f"{self.root_dir}/{lecture['code']}/assignments")
+                    ),
+                )
+            )
             for assignment in response:
                 if assignment["id"] not in dirs:
-                    self.log.info(f'Creating directory {self.root_dir}/{lecture["code"]}/assignments/{assignment["id"]}')
+                    self.log.info(
+                        f"Creating directory {self.root_dir}/{lecture['code']}/assignments/"
+                        f"{assignment['id']}"
+                    )
                     os.makedirs(
-                        os.path.expanduser(f'{self.root_dir}/{lecture["code"]}/assignments/{assignment["id"]}'), exist_ok=True
+                        os.path.expanduser(
+                            f"{self.root_dir}/{lecture['code']}/assignments/{assignment['id']}"
+                        ),
+                        exist_ok=True,
                     )
                 try:
                     dirs.remove(assignment["id"])
@@ -89,11 +100,11 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
-        # if we did not get an error when creating the assignment (i.e. the user is authorized etc.) then we can
-        # create the directory structure if it does not exist yet
+        # if we did not get an error when creating the assignment (i.e. the user is authorized
+        # etc.) then we can create the directory structure if it does not exist yet
         os.makedirs(
-            os.path.expanduser(f'{self.root_dir}/{lecture["code"]}/assignments/{response["id"]}'),
-            exist_ok=True
+            os.path.expanduser(f"{self.root_dir}/{lecture['code']}/assignments/{response['id']}"),
+            exist_ok=True,
         )
         os.makedirs(
             os.path.expanduser(f"{self.root_dir}/{lecture['code']}/source/{response['id']}"),
@@ -111,8 +122,8 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
 )
 class AssignmentObjectHandler(ExtensionBaseHandler):
     """
-        Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}.
-        """
+    Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}.
+    """
 
     async def put(self, lecture_id: int, assignment_id: int):
         """Sends a PUT-request to the grader service to update a assignment
@@ -124,10 +135,14 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
         """
 
         data = tornado.escape.json_decode(self.request.body)
+        query_params = RequestService.get_query_string(
+            {"recalc-scores": self.get_argument("recalc-scores", None)}
+        )
         try:
             response = await self.request_service.request(
                 method="PUT",
-                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/"
+                f"{assignment_id}{query_params}",
                 body=data,
                 header=self.grader_authentication_header,
             )
@@ -149,9 +164,10 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/"
+                f"{assignment_id}",
                 header=self.grader_authentication_header,
-                response_callback=self.set_service_headers
+                response_callback=self.set_service_headers,
             )
             lecture = await self.request_service.request(
                 "GET",
@@ -163,8 +179,8 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
             raise HTTPError(e.code, reason=e.message)
 
         os.makedirs(
-            os.path.expanduser(f'{self.root_dir}/{lecture["code"]}/assignments/{response["id"]}'),
-            exist_ok=True
+            os.path.expanduser(f"{self.root_dir}/{lecture['code']}/assignments/{response['id']}"),
+            exist_ok=True,
         )
         self.write(json.dumps(response))
 
@@ -180,13 +196,14 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
         try:
             await self.request_service.request(
                 method="DELETE",
-                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/"
+                f"{assignment_id}",
                 header=self.grader_authentication_header,
-                decode_response=False
+                decode_response=False,
             )
         except RequestServiceError as e:
             raise HTTPError(e.code, reason=e.message)
-            
+
         self.write({"status": "OK"})
 
 
@@ -195,7 +212,8 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
 )
 class AssignmentPropertiesHandler(ExtensionBaseHandler):
     """
-    Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/properties.
+    Tornado Handler class for http requests to
+    /lectures/{lecture_id}/assignments/{assignment_id}/properties.
     """
 
     @authenticated
@@ -211,12 +229,12 @@ class AssignmentPropertiesHandler(ExtensionBaseHandler):
         try:
             response = await self.request_service.request(
                 method="GET",
-                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/properties",
+                endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/"
+                f"{assignment_id}/properties",
                 header=self.grader_authentication_header,
-                response_callback=self.set_service_headers
+                response_callback=self.set_service_headers,
             )
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
         self.write(response)
-

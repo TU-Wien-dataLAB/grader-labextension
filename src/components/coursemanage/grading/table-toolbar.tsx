@@ -81,7 +81,7 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
   const [searchTerm, setSearchTerm] = React.useState(
     () => loadString('grader-search') || ''
   );
-  const searchTimeout = React.useRef<NodeJS.Timeout | null>(null);
+  const searchTimeout = React.useRef(null);
 
   const handleSearch = event => {
     const value = event.target.value;

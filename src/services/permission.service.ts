@@ -21,7 +21,7 @@ interface PermissionScopes {
 }
 
 export namespace UserPermissions {
-  let permissions: PermissionScopes = null;
+  let permissions: PermissionScopes;
 
   export async function loadPermissions(): Promise<void> {
     permissions = {};

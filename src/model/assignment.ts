@@ -18,13 +18,13 @@ export interface Assignment {
     settings?: AssignmentSettings;
 }
 export namespace Assignment {
-    export type StatusEnum = 'created' | 'pushed' | 'released' | 'complete';
     export const StatusEnum = {
-        Created: 'created' as StatusEnum,
-        Pushed: 'pushed' as StatusEnum,
-        Released: 'released' as StatusEnum,
-        Complete: 'complete' as StatusEnum
-    };
+        Created: 'created',
+        Pushed: 'pushed',
+        Released: 'released',
+        Complete: 'complete'
+    } as const;
+    export type StatusEnum = typeof StatusEnum[keyof typeof StatusEnum];
 }
 
 

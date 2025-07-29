@@ -5,7 +5,7 @@
 // LICENSE file in the root directory of this source tree.
 
 import { Cell } from '@jupyterlab/cells';
-import { Notebook, NotebookPanel } from '@jupyterlab/notebook';
+import { Notebook } from '@jupyterlab/notebook';
 import { PanelLayout } from '@lumino/widgets';
 import React from 'react';
 import { IModeSwitchProps } from '../slider';
@@ -63,7 +63,6 @@ export class CreationModeSwitch extends React.Component<IModeSwitchProps> {
     mode: false
   };
   private notebook: Notebook;
-  private notebookpanel: NotebookPanel;
 
   private onChange: any;
 
@@ -71,13 +70,11 @@ export class CreationModeSwitch extends React.Component<IModeSwitchProps> {
     super(props);
     this.state.mode = props.mode || false;
     this.notebook = props.notebook;
-    this.notebookpanel = props.notebookpanel;
     this.onChange = this.props.onChange;
   }
 
   protected handleChange = async () => {
     this.setState({ mode: !this.state.mode }, () => {
-      const ids = new Set();
       this.onChange(this.state.mode);
       this.notebook.widgets.map((c: Cell) => {
         const currentLayout = c.layout as PanelLayout;

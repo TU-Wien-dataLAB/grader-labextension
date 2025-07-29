@@ -8,11 +8,12 @@ import { Assignment } from '../model/assignment';
 import { Lecture } from '../model/lecture';
 import { Submission } from '../model/submission';
 import { request, HTTPMethod } from './request.service';
+import { RepoType } from '../components/util/repo-type';
 
 export function submitAssignment(
   lecture: Lecture,
   assignment: Assignment) {
-  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/push/assignment`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/push/${RepoType.USER}`;
   const searchParams = new URLSearchParams({
     submit: 'true'
   });
@@ -28,7 +29,7 @@ export async function pullFeedback(
 ) {
   return request<void>(
     HTTPMethod.GET,
-    `/api/lectures/${lecture.id}/assignments/${assignment.id}/grading/${submission.id}/pull/feedback`,
+    `/api/lectures/${lecture.id}/assignments/${assignment.id}/grading/${submission.id}/pull/${RepoType.FEEDBACK}`,
     null
   );
 }
@@ -38,7 +39,7 @@ export async function pullSubmissionFiles(
   assignment: Assignment,
   submission: Submission
 ) {
-  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/pull/edit`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/pull/${RepoType.EDIT}`;
 
   const searchParams = new URLSearchParams({
     subid: String(submission.id)
@@ -52,7 +53,7 @@ export async function createSubmissionFiles(
   assignment: Assignment,
   username: string
 ) {
-  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/push/edit`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/push/${RepoType.EDIT}`;
   const searchParams = new URLSearchParams({
     for_user: username
   });
@@ -65,7 +66,7 @@ export async function pushSubmissionFiles(
   assignment: Assignment,
   submission: Submission
 ) {
-  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/push/edit`;
+  let url = `/api/lectures/${lecture.id}/assignments/${assignment.id}/push/${RepoType.EDIT}`;
   const searchParams = new URLSearchParams({
     subid: String(submission.id)
   });

@@ -43,6 +43,7 @@ import { getFiles, lectureBasePath } from '../../services/file.service';
 import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
+import { RepoType } from '../util/repo-type';
 
 /*
  * Buttons for AssignmentTable
@@ -55,7 +56,7 @@ interface IEditProps {
 
 const EditButton = (props: IEditProps) => {
   const [assignmentPulled, setAssignmentPulled] = React.useState(false);
-  const fetchAssignmentHandler = async (repo: 'assignment' | 'release') => {
+  const fetchAssignmentHandler = async (repo: RepoType.USER | RepoType.RELEASE) => {
     await pullAssignment(props.lecture.id, props.assignment.id, repo).then(
       () => {
         enqueueSnackbar('Successfully Pulled Repo', {
@@ -86,7 +87,7 @@ const EditButton = (props: IEditProps) => {
             'Pull Assignment',
             'Do you really want to pull this assignment?',
             async () => {
-              await fetchAssignmentHandler('assignment');
+              await fetchAssignmentHandler(RepoType.USER);
             }
           );
           e.stopPropagation();
@@ -202,7 +203,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                 <TableCell style={{ width: headerWidth(headers, 'Deadline') }}>
                   <DeadlineComponent
                     component={'chip'}
-                    due_date={row.settings.deadline}
+                    deadline={row.settings.deadline}
                     compact={true}
                   />
                 </TableCell>
@@ -229,7 +230,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                             await pushAssignment(
                               props.lecture.id,
                               assignment.id,
-                              'assignment',
+                              RepoType.USER,
                               'Pre-Reset'
                             );
                             await resetAssignment(
@@ -239,7 +240,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                             await pullAssignment(
                               props.lecture.id,
                               assignment.id,
-                              'assignment'
+                              RepoType.USER
                             );
 
                             enqueueSnackbar('Assignment reset successfully', {

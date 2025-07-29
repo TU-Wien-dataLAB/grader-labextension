@@ -4,21 +4,16 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import functools
-from http.client import responses
-import json
-import traceback
-from typing import Optional, Awaitable
-
-from tornado import httputil
-from tornado.web import HTTPError
-
-from grader_labextension.api.models.error_message import ErrorMessage
-from grader_labextension.services.request import RequestService, RequestServiceError
-from jupyter_server.base.handlers import APIHandler
 import os
+from typing import Awaitable, Optional
+
+from jupyter_server.base.handlers import APIHandler
 from tornado.httpclient import HTTPResponse
+from tornado.web import HTTPError
 from traitlets.config.configurable import SingletonConfigurable
 from traitlets.traitlets import Unicode
+
+from grader_labextension.services.request import RequestService, RequestServiceError
 
 
 def cache(max_age: int):
@@ -37,19 +32,26 @@ def cache(max_age: int):
 
 
 class HandlerConfig(SingletonConfigurable):
-    hub_api_url = Unicode(os.environ.get("JUPYTERHUB_API_URL"), help="The url of the hubs api.").tag(config=True)
-    hub_api_token = Unicode(os.environ.get("JUPYTERHUB_API_TOKEN"),
-                            help="The authorization token to access the hub api").tag(config=True)
-    hub_user = Unicode(os.environ.get("JUPYTERHUB_USER"), help="The user name in jupyter hub.").tag(config=True)
-    grader_api_token = Unicode(os.environ.get("GRADER_API_TOKEN"),
-                               help="The authorization token to access the grader service api").tag(config=True)
+    hub_api_url = Unicode(
+        os.environ.get("JUPYTERHUB_API_URL"), help="The url of the hubs api."
+    ).tag(config=True)
+    hub_api_token = Unicode(
+        os.environ.get("JUPYTERHUB_API_TOKEN"), help="The authorization token to access the hub api"
+    ).tag(config=True)
+    hub_user = Unicode(os.environ.get("JUPYTERHUB_USER"), help="The user name in jupyter hub.").tag(
+        config=True
+    )
+    grader_api_token = Unicode(
+        os.environ.get("GRADER_API_TOKEN"),
+        help="The authorization token to access the grader service api",
+    ).tag(config=True)
     service_base_url = Unicode(
         os.environ.get("GRADER_BASE_URL", "/services/grader/"),
         help="Base URL to use for each request to the grader service",
     ).tag(config=True)
     lectures_base_path = Unicode(
         "lectures",
-        help="The path in each user home directory where lecture directories are created."
+        help="The path in each user home directory where lecture directories are created.",
     ).tag(config=True)
 
 
@@ -70,7 +72,9 @@ class ExtensionBaseHandler(APIHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, *kwargs)
         self.root_dir = os.path.expanduser(
-            os.path.join(self.settings["server_root_dir"], HandlerConfig.instance().lectures_base_path)
+            os.path.join(
+                self.settings["server_root_dir"], HandlerConfig.instance().lectures_base_path
+            )
         ).rstrip("/")
 
     @property
@@ -114,4 +118,3 @@ class ExtensionBaseHandler(APIHandler):
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
-

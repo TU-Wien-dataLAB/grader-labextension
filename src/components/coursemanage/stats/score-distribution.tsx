@@ -20,7 +20,6 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import moment from 'moment';
 import { loadNumber, storeNumber } from '../../../services/storage.service';
 import {
   NameType,

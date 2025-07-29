@@ -8,6 +8,7 @@ import { Assignment } from '../model/assignment';
 import { AssignmentDetail } from '../model/assignmentDetail';
 import { Lecture } from '../model/lecture';
 import { request, HTTPMethod } from './request.service';
+import { RepoType } from '../components/util/repo-type';
 
 export function createAssignment(
   lectureId: number,
@@ -64,11 +65,18 @@ export function getAssignmentProperties(
 
 export function updateAssignment(
   lectureId: number,
-  assignment: Assignment
+  assignment: Assignment,
+  recalcScores: boolean = false
 ): Promise<Assignment> {
+  const searchParams = new URLSearchParams({
+    'recalc-scores': String(recalcScores),
+  });
+  let url = `/api/lectures/${lectureId}/assignments/${assignment.id}`
+  url += '?' + searchParams;
+
   return request<Assignment, Assignment>(
     HTTPMethod.PUT,
-    `/api/lectures/${lectureId}/assignments/${assignment.id}`,
+    url,
     assignment
   );
 }
@@ -117,7 +125,7 @@ export function deleteAssignment(
 export function pushAssignment(
   lectureId: number,
   assignmentId: number,
-  repoType: string,
+  repoType: RepoType,
   commitMessage?: string,
   selectedFiles?: string[]
 ): Promise<void> {
@@ -142,7 +150,7 @@ export function pushAssignment(
 export function pullAssignment(
   lectureId: number,
   assignmentId: number,
-  repoType: string
+  repoType: RepoType
 ): Promise<void> {
   return request<void>(
     HTTPMethod.GET,

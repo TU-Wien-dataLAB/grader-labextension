@@ -6,12 +6,14 @@
 
 import json
 import os
-from grader_labextension.registry import register_handler
-from grader_labextension.handlers.base_handler import ExtensionBaseHandler
-from grader_labextension.services.request import RequestService, RequestServiceError
-import tornado
-from tornado.web import authenticated, HTTPError
 import urllib.parse
+
+import tornado
+from tornado.web import HTTPError, authenticated
+
+from grader_labextension.handlers.base_handler import ExtensionBaseHandler
+from grader_labextension.registry import register_handler
+from grader_labextension.services.request import RequestService, RequestServiceError
 
 
 @register_handler(path=r"api\/lectures\/?")
@@ -22,17 +24,16 @@ class LectureBaseHandler(ExtensionBaseHandler):
 
     @authenticated
     async def get(self):
-        """Sends a GET-request to the grader service and returns the autorized lectures
-        """
-        query_params = RequestService.get_query_string({
-            "complete": self.get_argument("complete", None)
-        })
+        """Sends a GET-request to the grader service and returns the autorized lectures"""
+        query_params = RequestService.get_query_string(
+            {"complete": self.get_argument("complete", None)}
+        )
         try:
             response = await self.request_service.request(
                 "GET",
                 f"{self.service_base_url}api/lectures{query_params}",
                 header=self.grader_authentication_header,
-                response_callback=self.set_service_headers
+                response_callback=self.set_service_headers,
             )
         except RequestServiceError as e:
             self.log.error(e)
@@ -41,8 +42,7 @@ class LectureBaseHandler(ExtensionBaseHandler):
 
     @authenticated
     async def post(self):
-        """Sends a POST-request to the grader service to create a lecture
-        """
+        """Sends a POST-request to the grader service to create a lecture"""
         data = tornado.escape.json_decode(self.request.body)
         try:
             response = await self.request_service.request(
@@ -96,7 +96,7 @@ class LectureObjectHandler(ExtensionBaseHandler):
                 "GET",
                 f"{self.service_base_url}api/lectures/{lecture_id}",
                 header=self.grader_authentication_header,
-                response_callback=self.set_service_headers
+                response_callback=self.set_service_headers,
             )
         except RequestServiceError as e:
             self.log.error(e)
@@ -123,9 +123,7 @@ class LectureObjectHandler(ExtensionBaseHandler):
         self.write({"status": "OK"})
 
 
-@register_handler(
-    path=r"api\/lectures\/(?P<lecture_id>\d*)\/users\/?"
-)
+@register_handler(path=r"api\/lectures\/(?P<lecture_id>\d*)\/users\/?")
 class LectureStudentsHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/users.
@@ -143,7 +141,7 @@ class LectureStudentsHandler(ExtensionBaseHandler):
                 method="GET",
                 endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/users",
                 header=self.grader_authentication_header,
-                response_callback=self.set_service_headers
+                response_callback=self.set_service_headers,
             )
         except RequestServiceError as e:
             self.log.error(e)
@@ -166,7 +164,7 @@ def get_content_type_from_response(response):
 
 @register_handler(path=r"api\/lectures\/(?P<lecture_id>\d*)\/submissions\/?")
 class SubmissionLectureHandler(ExtensionBaseHandler):
-    """"
+    """ "
     Tornado Handler class for http requests to /lectures/{lecture_id}/submissions
     """
 
@@ -174,30 +172,32 @@ class SubmissionLectureHandler(ExtensionBaseHandler):
     async def get(self, lecture_id: int):
         """Return the submissions of a specific lecture.
 
-         Two query parameter:
-         1 - filter
-         latest: only get the latest submissions of users.
-         best: only get the best submissions by score of users.
+        Two query parameter:
+        1 - filter
+        latest: only get the latest submissions of users.
+        best: only get the best submissions by score of users.
 
-         2 - format:
-         csv: return list as comma separated values
-         json: return list as JSON
+        2 - format:
+        csv: return list as comma separated values
+        json: return list as JSON
 
-         :param lecture_id: id of the lecture
-         :type lecture_id: int
-         :raises HTTPError: throws err if user is not authorized or
-         the assignment was not found
-         """
-        query_params = RequestService.get_query_string({
-            "filter": self.get_argument("filter", "best"),
-            "format": self.get_argument("format", "json")
-        })
+        :param lecture_id: id of the lecture
+        :type lecture_id: int
+        :raises HTTPError: throws err if user is not authorized or
+        the assignment was not found
+        """
+        query_params = RequestService.get_query_string(
+            {
+                "filter": self.get_argument("filter", "best"),
+                "format": self.get_argument("format", "json"),
+            }
+        )
         try:
             response = await self.request_service.request(
                 "GET",
                 f"{self.service_base_url}api/lectures/{lecture_id}/submissions{query_params}",
                 header=self.grader_authentication_header,
-                response_callback=self.set_service_headers
+                response_callback=self.set_service_headers,
             )
 
         except RequestServiceError as e:
@@ -208,22 +208,28 @@ class SubmissionLectureHandler(ExtensionBaseHandler):
         dir_path = os.path.join(self.root_dir, lecture["code"])
         os.makedirs(dir_path, exist_ok=True)
 
-        parsed_query_params = urllib.parse.parse_qs(query_params.lstrip('?'))
+        parsed_query_params = urllib.parse.parse_qs(query_params.lstrip("?"))
         filter_value = parsed_query_params.get("filter", ["none"])[0]
         format_value = parsed_query_params.get("format", ["json"])[0]
 
-        file_path = os.path.join(dir_path, f"{lecture['name']}_{filter_value}_submissions.{format_value}")
+        file_path = os.path.join(
+            dir_path, f"{lecture['name']}_{filter_value}_submissions.{format_value}"
+        )
         if format_value == "csv":
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(response)
         elif format_value == "json":
-            json_content = json.dumps(response, indent=2) if isinstance(response, dict) else response
+            json_content = (
+                json.dumps(response, indent=2) if isinstance(response, dict) else response
+            )
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(json_content)
         else:
             raise HTTPError(400, reason="Invalid format specified")
-        self.write({
-            "status": "OK",
-            "message": f"File saved successfully: {file_path}",
-            "file_path": file_path
-        })
+        self.write(
+            {
+                "status": "OK",
+                "message": f"File saved successfully: {file_path}",
+                "file_path": file_path,
+            }
+        )

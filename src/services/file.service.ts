@@ -6,12 +6,10 @@
 
 import { FileBrowserModel } from '@jupyterlab/filebrowser/lib/model';
 import { GlobalObjects } from '../index';
-import { Contents } from '@jupyterlab/services';
 import { Assignment } from '../model/assignment';
 import { HTTPMethod, request } from './request.service';
 import { Lecture } from '../model/lecture';
 import { RepoType } from '../components/util/repo-type';
-import IModel = Contents.IModel;
 import { PageConfig, PathExt } from '@jupyterlab/coreutils';
 import { enqueueSnackbar } from 'notistack';
 import { RemoteFileStatus } from '../model/remoteFileStatus';
@@ -147,7 +145,7 @@ export const makeDir = async (path: string, name: string) => {
     f = items.next();
   }
 
-  console.log('direcory: ' + name + ' exists: ' + exists);
+  console.log('directory: ' + name + ' exists: ' + exists);
   if (!exists) {
     const model = await GlobalObjects.docManager.newUntitled({
       path,
@@ -165,6 +163,7 @@ export const makeDir = async (path: string, name: string) => {
   return newPath;
 };
 
+// makeDirs creates multiple directories in a given path
 export const makeDirs = async (path: string, names: string[]) => {
   let p = path;
   for (let i = 0; i < names.length; i++) {

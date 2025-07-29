@@ -1,5 +1,4 @@
 import { Assignment } from '../../../model/assignment';
-import { Submission } from '../../../model/submission';
 import * as React from 'react';
 import { useFormik } from 'formik';
 import {
@@ -11,23 +10,18 @@ import {
   MenuItem,
   Stack,
   TextField,
-  Tooltip,
   Typography
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import {
-  updateAssignment,
-  deleteAssignment,
   getAssignment
 } from '../../../services/assignments.service';
 import { enqueueSnackbar } from 'notistack';
 import { Lecture } from '../../../model/lecture';
 import * as yup from 'yup';
 import { SectionTitle } from '../../util/section-title';
-import { useNavigate } from 'react-router-dom';
 import {
   getLateSubmissionInfo,
   ILateSubmissionInfo,
@@ -37,18 +31,25 @@ import { FormikValues } from 'formik/dist/types';
 import moment from 'moment';
 import { red } from '@mui/material/colors';
 import { AllowedFilePatterns } from './allowed-files-form';
-import { updateMenus } from '../../../menu';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { getLecture } from '../../../services/lectures.service';
 import { useQuery } from '@tanstack/react-query';
-import { queryClient } from '../../../widgets/assignmentmanage';
-import { AssignmentSettings } from '../../../model/assignmentSettings';
+import { SaveAssignmentSettingsDialog } from '../../util/dialog';
+import { TooltipComponent } from '../../util/tooltip';
 
-const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
-No Automatic Grading: No action is taken on submit.\n
-Automatic Grading: The assignment is being autograded as soon as the students makes a submission.\n
-Fully Automatic Grading: The assignment is autograded and feedback is generated as soon as the student makes a submission. 
-(requires all scores to be based on autograde results)`;
+
+
+const gradingBehaviourHelp = 
+  <React.Fragment>
+    Specifies the behaviour when a students submits an assignment.
+    <br />
+    <b>No Automatic Grading</b>: No action is taken on submit.
+    <br />
+    <b>Automatic Grading</b>: The assignment is being autograded as soon as the students makes a submission.
+    <br />
+    <b>Fully Automatic Grading</b>: The assignment is autograded and feedback is generated as soon as the student makes a submission. 
+    (requires all scores to be based on autograde results)
+  </React.Fragment>;
 
 const validationSchema = yup.object({
   name: yup
@@ -56,7 +57,7 @@ const validationSchema = yup.object({
     .min(4, 'Name should be 4-50 character length')
     .max(50, 'Name should be 4-50 character length')
     .required('Name is required'),
-  due_date: yup.date().nullable(),
+  deadline: yup.date().nullable(),
   type: yup.mixed().oneOf(['user', 'group']),
   automatic_grading: yup.mixed().oneOf(['unassisted', 'auto', 'full_auto']),
   max_submissions: yup
@@ -66,8 +67,7 @@ const validationSchema = yup.object({
 });
 
 export const SettingsComponent = () => {
-  const navigate = useNavigate();
-
+  
   const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
 
   const { data: lecture } = useQuery<Lecture>({
@@ -82,12 +82,16 @@ export const SettingsComponent = () => {
     enabled: !!lecture && !!assignmentId,
   });
 
+  const [newAssignment, setNewAssignment] = React.useState(null)
+
   const [checked, setChecked] = React.useState(
     assignment.settings.deadline !== null
   );
   const [checkedLimit, setCheckedLimit] = React.useState(
     Boolean(assignment.settings.max_submissions)
   );
+
+  const [saveDialogDisplay, setSaveDialogDisplay] = React.useState(false);
 
   const validateLateSubmissions = (values: FormikValues) => {
     const late_submissions: ILateSubmissionInfo[] = getLateSubmissionInfo(
@@ -185,28 +189,18 @@ export const SettingsComponent = () => {
             : null, // Convert Date to string or null
         },
       };
+      setNewAssignment(updatedAssignment)
 
-      updateAssignment(lecture.id, updatedAssignment).then(
-        async () => {
-          await updateMenus(true);
-          await queryClient.invalidateQueries({ queryKey: ['assignments'] });
-          await queryClient.invalidateQueries({ queryKey: ['assignment',assignmentId] });
-          enqueueSnackbar('Successfully Updated Assignment', {
-            variant: 'success',
-          });
-        },
-        (error: Error) => {
-          enqueueSnackbar(error.message, {
-            variant: 'error',
-          });
-        }
-      );
+      setSaveDialogDisplay(true);
+
+      
     },
     validate: validateLateSubmissions,
   });
 
   return (
     <Box sx={{ m: 5, flex: 1, overflow: 'auto' }}>
+      <SaveAssignmentSettingsDialog lecture={lecture} assignment={newAssignment} open={saveDialogDisplay} setOpen={setSaveDialogDisplay}/>
       <SectionTitle title="Settings" />
       <form onSubmit={formik.handleSubmit}>
         <Stack spacing={2} sx={{ ml: 2, mr: 2 }}>
@@ -241,7 +235,7 @@ export const SettingsComponent = () => {
             />
             <DateTimePicker
               ampm={false}
-              label="DateTimePicker"
+              label="Deadline"
               disabled={!checked}
               value={formik.values.settings.deadline}
               onChange={(date: Date) => {
@@ -281,7 +275,7 @@ export const SettingsComponent = () => {
             name="settings.max_submissions"
             placeholder="Submissions"
             value={formik.values.settings.max_submissions || null}
-            InputProps={{ inputProps: { min: 1 } }}
+            slotProps={{ htmlInput: { min: 1  } }}
             onChange={(e) => {
               formik.setFieldValue('settings.max_submissions', +e.target.value);
             }}
@@ -295,18 +289,16 @@ export const SettingsComponent = () => {
             }
           />
 
-          <InputLabel id="demo-simple-select-label-auto">
+          <InputLabel id="auto-grading-behaviour-label">
             Auto-Grading Behaviour
-            <Tooltip title={gradingBehaviourHelp}>
-              <HelpOutlineOutlinedIcon
-                fontSize="small"
-                sx={{ ml: 1.5, mt: 1.0 }}
-              />
-            </Tooltip>
+            <TooltipComponent 
+           
+            title={gradingBehaviourHelp} 
+             sx={{ ml:0.5 }}/>
           </InputLabel>
           <TextField
             select
-            id="assignment-type-select"
+            id="auto-grading-type-select"
             value={formik.values.settings.autograde_type}
             label="Auto-Grading Behaviour"
             placeholder="Grading"
@@ -329,14 +321,12 @@ export const SettingsComponent = () => {
           <Stack direction="column" spacing={2}>
             <InputLabel>
               Late Submissions
-              <Tooltip
-                title="Late submissions are defined by a period (in days and hours)..."
-              >
-                <HelpOutlineOutlinedIcon
-                  fontSize="small"
-                  sx={{ ml: 1.5, mt: 1.0 }}
+              <TooltipComponent 
+                title={`Allowing late submission periods enables students to 
+                        submit their assignments after the deadline, 
+                        subject to a score penalty.`}
+                sx={{ ml:0.5}}
                 />
-              </Tooltip>
             </InputLabel>
             <Stack direction="column" spacing={2} sx={{ pl: 3 }}>
               {formik.values.settings.deadline !== null ? (

@@ -3,16 +3,18 @@
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
+import os
 import shutil
+import urllib.parse
 
-from grader_labextension.services.request import RequestService, RequestServiceError
-from grader_labextension.registry import register_handler
-from grader_labextension.handlers.base_handler import ExtensionBaseHandler
+from grader_service.handlers import GitRepoType
 from tornado.httpclient import HTTPResponse
 from tornado.web import HTTPError, authenticated
+
+from grader_labextension.handlers.base_handler import ExtensionBaseHandler
+from grader_labextension.registry import register_handler
 from grader_labextension.services.git import GitError, GitService
-import urllib.parse
-import os
+from grader_labextension.services.request import RequestService, RequestServiceError
 
 
 @register_handler(
@@ -22,6 +24,7 @@ class ExportGradesHandler(ExtensionBaseHandler):
     """
     Tornado Handler class for http requests to /lectures/{lecture_id}/assignments/{assignment_id}/submissions/save.
     """
+
     async def put(self, lecture_id: int, assignment_id: int):
         """
         Exports submissions of an assignment to the csv format.
@@ -34,7 +37,7 @@ class ExportGradesHandler(ExtensionBaseHandler):
             {
                 "instructor-version": "true",
                 "filter": self.get_argument("filter", "none"),
-                "format": "csv"
+                "format": "csv",
             }
         )
         try:
@@ -42,7 +45,7 @@ class ExportGradesHandler(ExtensionBaseHandler):
                 method="GET",
                 endpoint=f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions{query_params}",
                 header=self.grader_authentication_header,
-                decode_response=False
+                decode_response=False,
             )
         except RequestServiceError as e:
             self.log.error(e)
@@ -50,18 +53,18 @@ class ExportGradesHandler(ExtensionBaseHandler):
 
         lecture = await self.get_lecture(lecture_id)
         assignment = await self.get_assignment(lecture_id, assignment_id)
-        dir_path = os.path.join(self.root_dir, lecture["code"], "assignments", str(assignment["id"]))
+        dir_path = os.path.join(
+            self.root_dir, lecture["code"], "assignments", str(assignment["id"])
+        )
         os.makedirs(dir_path, exist_ok=True)
         csv_content = response.body.decode("utf-8")
-        parsed_query_params = urllib.parse.parse_qs(query_params.lstrip('?'))
+        parsed_query_params = urllib.parse.parse_qs(query_params.lstrip("?"))
         filter_value = parsed_query_params.get("filter", ["none"])[0]
         file_path = os.path.join(dir_path, f"{assignment['name']}_{filter_value}_submissions.csv")
         with open(file_path, "w") as f:
             f.write(csv_content)
 
         self.write({"status": "OK"})
-
-
 
 
 @register_handler(
@@ -72,6 +75,7 @@ class GradingAutoHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/auto.
     """
+
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
         """Sends a GET-request to the grader service to autograde a submission
@@ -103,6 +107,7 @@ class GradingManualHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/manual.
     """
+
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
         """Generates a local git repository and pulls autograded files of a submission in the user directory
@@ -141,7 +146,7 @@ class GradingManualHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type="autograde",
+            repo_type=GitRepoType.AUTOGRADE,
             config=self.config,
         )
         git_service.path = os.path.join(
@@ -155,15 +160,16 @@ class GradingManualHandler(ExtensionBaseHandler):
         if os.path.exists(git_service.path):
             shutil.rmtree(git_service.path, ignore_errors=True)
 
-
         os.makedirs(git_service.path, exist_ok=True)
         try:
             if not git_service.is_git():
                 git_service.init()
-            git_service.set_remote("autograde", sub_id=sub_id)
-            git_service.pull("autograde", branch=f"submission_{submission['commit_hash']}")
+            git_service.set_remote(GitRepoType.AUTOGRADE, sub_id=sub_id)
+            git_service.pull(
+                GitRepoType.AUTOGRADE, branch=f"submission_{submission['commit_hash']}"
+            )
         except GitError as e:
-            self.log.error(f"Giterror: {e.error}")
+            self.log.error(f"Git error: {e.error}")
             raise HTTPError(e.code, reason=e.error)
 
 
@@ -175,6 +181,7 @@ class GenerateFeedbackHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/feedback.
     """
+
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
         """Sends a GET-request to the grader service to generate feedback for a graded submission
@@ -207,9 +214,10 @@ class PullFeedbackHandler(ExtensionBaseHandler):
     Tornado Handler class for http requests to
     /lectures/{lecture_id}/assignments/{assignment_id}/submissions/{submission_id}/pull/feedback.
     """
+
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
-        """Generates a local git repository and pulls the feedback files of a submission in the user directory 
+        """Generates a local git repository and pulls the feedback files of a submission in the user directory
 
         :param lecture_id: id of the lecture
         :type lecture_id: int
@@ -244,7 +252,7 @@ class PullFeedbackHandler(ExtensionBaseHandler):
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type="feedback",
+            repo_type=GitRepoType.FEEDBACK,
             config=self.config,
         )
         git_service.path = os.path.join(
@@ -260,6 +268,8 @@ class PullFeedbackHandler(ExtensionBaseHandler):
 
         if not git_service.is_git():
             git_service.init()
-        git_service.set_remote("feedback", sub_id=sub_id)
-        git_service.pull("feedback", branch=f"feedback_{submission['commit_hash']}", force=False)
+        git_service.set_remote(GitRepoType.FEEDBACK, sub_id=sub_id)
+        git_service.pull(
+            GitRepoType.FEEDBACK, branch=f"feedback_{submission['commit_hash']}", force=True
+        )
         self.write({"status": "Pulled Feedback"})

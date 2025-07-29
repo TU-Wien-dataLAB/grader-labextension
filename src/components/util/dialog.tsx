@@ -36,16 +36,15 @@ import {
   Alert,
   AlertTitle,
   FormControl,
-  Switch
+  Switch,
 } from '@mui/material';
 import { Assignment } from '../../model/assignment';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { createAssignment } from '../../services/assignments.service';
+import { createAssignment, updateAssignment } from '../../services/assignments.service';
 import { Lecture } from '../../model/lecture';
 import AutogradeTypeEnum = AssignmentSettings.AutogradeTypeEnum;
-import AssignementTypeEnum = AssignmentSettings.AssignmentTypeEnum;
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import AddIcon from '@mui/icons-material/Add';
 import { enqueueSnackbar } from 'notistack';
@@ -68,6 +67,8 @@ import { ltiSyncSubmissions } from '../../services/submissions.service';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import { openBrowser } from '../coursemanage/overview/util';
 import { AssignmentSettings } from '../../model/assignmentSettings';
+import { TooltipComponent } from './tooltip';
+import { useQuery } from '@tanstack/react-query';
 
 const gradingBehaviourHelp = `Specifies the behaviour when a students submits an assignment.\n
 No Automatic Grading: No action is taken on submit.\n
@@ -75,13 +76,15 @@ Automatic Grading: The assignment is being autograded as soon as the students ma
 Fully Automatic Grading: The assignment is autograded and feedback is generated as soon as the student makes a submission. 
 (requires all scores to be based on autograde results)`;
 
+const recalculateScoreExplaination = 'Using this action will result in the recalculation of all submission scores \n based on the deadline/late submission settings.';
+
 const validationSchema = yup.object({
   name: yup
     .string()
     .min(4, 'Name should be 4-50 character length')
     .max(50, 'Name should be 4-50 character length')
     .required('Name is required'),
-  due_date: yup
+  deadline: yup
     .date()
     .min(new Date(), 'Deadline must be set in the future')
     .nullable(),
@@ -118,6 +121,81 @@ const EditLectureNameTooltip = styled(
     maxWidth: 220
   }
 }));
+
+
+export const SaveAssignmentSettingsDialog = (props) => {
+  const formik = useFormik({
+    initialValues: {
+      recalcScores: false
+    },
+    onSubmit: values => {
+      updateAssignment(props.lecture.id, props.assignment, values.recalcScores).then(
+              async () => {
+                await updateMenus(true);
+                await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+                await queryClient.invalidateQueries({ queryKey: ['assignment',props.assignment.id] });
+                enqueueSnackbar('Successfully Updated Assignment', {
+                  variant: 'success',
+                });
+              },
+              (error: Error) => {
+                enqueueSnackbar(error.message, {
+                  variant: 'error',
+                });
+
+              }
+            );
+      props.setOpen(false)
+    }
+  })
+  return ( 
+  <Dialog
+    open={props.open}
+    onClose={() => {
+      props.setOpen(false)
+    }}
+    fullWidth
+    maxWidth="sm"
+  >
+    <DialogTitle>Save Assignment Settings</DialogTitle>
+    <form onSubmit={formik.handleSubmit}>
+      <DialogContent>
+        <Stack spacing={0.5} direction="row" useFlexGap>
+              
+                <Checkbox
+                checked={formik.values.recalcScores}
+                onChange={e => {
+                  formik.setFieldValue('recalcScores', e.target.checked);
+              
+                }}
+               />
+               <Typography sx={{pt:"9px"}}>
+                  Recalculate scores
+               </Typography>
+               <TooltipComponent title={recalculateScoreExplaination} sx={{mt:"9px"}} />
+            
+              
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button
+          color="primary"
+          variant="outlined"
+          onClick={() => {
+            props.setOpen(false)
+          }}
+        >
+          Cancel
+        </Button>
+        <Button color="primary" variant="contained" type="submit">
+          Save
+        </Button>
+      </DialogActions>
+    </form>
+  </Dialog>)
+
+
+}
 
 export const EditLectureDialog = (props: IEditLectureProps) => {
   const formik = useFormik({
@@ -174,7 +252,7 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
 
       <Dialog
         open={open || openDialog}
-        onBackdropClick={() => {
+        onClose={() => {
           setOpen(false);
           handleClose();
         }}
@@ -203,7 +281,7 @@ export const EditLectureDialog = (props: IEditLectureProps) => {
                 {props.lecture.code === props.lecture.name && (
                   <Typography variant="body2" color="text.secondary">
                     The current name matches the lecture code. Consider updating
-                    updating it to something more descriptive.
+                    it to something more descriptive.
                   </Typography>
                 )}
               </Stack>
@@ -316,7 +394,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
     initialValues: {
       name: 'Assignment',
       deadline: null,
-      assignment_type: 'user' as AssignementTypeEnum,
       autograde_type: 'auto' as AutogradeTypeEnum,
       max_submissions: undefined as number,
     },
@@ -333,7 +410,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
         status: "created",
         settings: {allowed_files: [],
                    deadline: values.deadline,
-                   assignment_type: values.assignment_type as AssignementTypeEnum,
                    max_submissions: values.max_submissions,
                    autograde_type: values.autograde_type as AutogradeTypeEnum
         }
@@ -387,7 +463,6 @@ export const CreateDialog = (props: ICreateDialogProps) => {
       </Tooltip>
       <Dialog
         open={openDialog}
-        onBackdropClick={() => setOpen(false)}
         onClose={() => setOpen(false)}
       >
         <DialogTitle>Create Assignment</DialogTitle>
@@ -429,7 +504,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                   label="DateTimePicker"
                   value={formik.values?.deadline}
                   onChange={date => {
-                    formik.setFieldValue('due_date', date);
+                    formik.setFieldValue('deadline', date);
                     if (new Date(date).getTime() < Date.now()) {
                       handleOpenSnackBar();
                     }
@@ -484,7 +559,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 error={formik.values.max_submissions < 1}
               />
 
-              <InputLabel id="demo-simple-select-label-auto">
+              <InputLabel id="auto-grading-behaviour-label">
                 Auto-Grading Behaviour
                 <Tooltip title={gradingBehaviourHelp}>
                   <HelpOutlineOutlinedIcon
@@ -495,7 +570,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
               </InputLabel>
               <TextField
                 select
-                id="assignment-type-select"
+                id="auto-grade=ing-type-select"
                 value={formik.values.autograde_type}
                 label="Auto-Grading Behaviour"
                 placeholder="Grading"
@@ -586,30 +661,36 @@ export interface ICommitDialogProps {
 export const CommitDialog = (props: ICommitDialogProps) => {
   const [open, setOpen] = React.useState(false);
   const [message, setMessage] = React.useState('');
-  const [selectedDir, setSelectedDir] = React.useState('source');
+  const selectedDir = 'source';
   const [filesListVisible, setFilesListVisible] = React.useState(false);
-  const [selectedFiles, setSelectedFiles] = React.useState<string[]>();
+  const [selectedFiles, setSelectedFiles] = React.useState<string[]>([]);
+
   const path = `${lectureBasePath}${props.lecture.code}/${selectedDir}/${props.assignment.id}`;
 
-  const fetchFilesForSelectedDir = async () => {
-    try {
-      const files = await getFiles(path);
-      const filePaths = files.flatMap(file =>
-        extractRelativePaths(file, 'source')
-      );
-      setSelectedFiles(filePaths);
-    } catch (error) {
-      console.error('Error fetching files:', error);
+  const { data: files = [], refetch } = useQuery({
+    queryKey: ['commitDialogFiles', path],
+    queryFn: () => getFiles(path),
+    enabled: false // only fetch when explicitly triggered
+  });
+
+  const toggleFilesList = async () => {
+    const newVisible = !filesListVisible;
+    setFilesListVisible(newVisible);
+
+    if (newVisible) {
+      try {
+        const fetchedFiles = await refetch();
+        const filePaths = fetchedFiles.data.flatMap(file =>
+          extractRelativePaths(file, 'source')
+        );
+        setSelectedFiles(filePaths);
+      } catch (error) {
+        console.error('Error fetching files:', error);
+      }
     }
   };
 
-  const toggleFilesList = () => {
-    setFilesListVisible(!filesListVisible);
-    fetchFilesForSelectedDir();
-  };
-
   const handleFileSelectChange = (filePath: string, isSelected: boolean) => {
-    // console.log(`<File select change:> ${filePath} - ${isSelected}`);
     setSelectedFiles(prevSelectedFiles => {
       if (isSelected) {
         if (!prevSelectedFiles.includes(filePath)) {
@@ -627,12 +708,11 @@ export const CommitDialog = (props: ICommitDialogProps) => {
       <Box onClick={() => setOpen(true)}>{props.children}</Box>
       <Dialog
         open={open}
-        onBackdropClick={() => setOpen(false)}
         onClose={() => setOpen(false)}
-        fullWidth={true}
-        maxWidth={'sm'}
+        fullWidth
+        maxWidth="sm"
       >
-        <Stack direction={'row'} justifyContent={'space-between'}>
+        <Stack direction="row" justifyContent="space-between">
           <DialogTitle>Commit Files</DialogTitle>
           <InfoModal />
         </Stack>
@@ -647,17 +727,16 @@ export const CommitDialog = (props: ICommitDialogProps) => {
           </Button>
           {filesListVisible && (
             <FilesList
-              path={path}
+              files={files}
               lecture={props.lecture}
               assignment={props.assignment}
-              checkboxes={true}
+              checkboxes
               onFileSelectChange={handleFileSelectChange}
-              checkStatus={true}
+              checkStatus
             />
           )}
           <TextField
             sx={{ mt: 2, width: '100%' }}
-            id="outlined-textarea"
             label="Commit Message"
             placeholder="Commit Message"
             value={message}
@@ -671,7 +750,7 @@ export const CommitDialog = (props: ICommitDialogProps) => {
             variant="outlined"
             onClick={() => {
               setOpen(false);
-              toggleFilesList();
+              setFilesListVisible(false);
             }}
           >
             Cancel
@@ -680,13 +759,11 @@ export const CommitDialog = (props: ICommitDialogProps) => {
           <Button
             color="primary"
             variant="contained"
-            type="submit"
             disabled={message === ''}
             onClick={() => {
-              // console.log("See selected files: " + selectedFiles);
               props.handleCommit(message, selectedFiles);
               setOpen(false);
-              toggleFilesList();
+              setFilesListVisible(false);
             }}
           >
             Commit

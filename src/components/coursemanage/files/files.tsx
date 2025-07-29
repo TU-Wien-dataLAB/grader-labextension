@@ -3,16 +3,10 @@
 //
 // This source code is licensed under the BSD-style license found in the
 // LICENSE file in the root directory of this source tree.
-
 import * as React from 'react';
 import { Assignment } from '../../../model/assignment';
 import { Lecture } from '../../../model/lecture';
-import {
-  generateAssignment,
-  getAssignment,
-  pullAssignment,
-  pushAssignment
-} from '../../../services/assignments.service';
+import { generateAssignment, pullAssignment, pushAssignment } from '../../../services/assignments.service';
 import GetAppRoundedIcon from '@mui/icons-material/GetAppRounded';
 import OpenInBrowserIcon from '@mui/icons-material/OpenInBrowser';
 import { CommitDialog } from '../../util/dialog';
@@ -28,8 +22,7 @@ import {
   IconButton,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
-  Typography
+  Tooltip
 } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
 import TerminalIcon from '@mui/icons-material/Terminal';
@@ -42,15 +35,11 @@ import { Contents } from '@jupyterlab/services';
 import { openBrowser, openTerminal } from '../overview/util';
 import { PageConfig } from '@jupyterlab/coreutils';
 import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
-import {
-  getRemoteStatus,
-  lectureBasePath
-} from '../../../services/file.service';
+import { getFiles, getRemoteStatus, lectureBasePath } from '../../../services/file.service';
 import { RepoType } from '../../util/repo-type';
 import { enqueueSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getLecture } from '../../../services/lectures.service';
 import { loadString, storeString } from '../../../services/storage.service';
 import { queryClient } from '../../../widgets/assignmentmanage';
 import { RemoteFileStatus } from '../../../model/remoteFileStatus';
@@ -71,42 +60,32 @@ export const Files = ({
   const reloadPage = () => navigate(0);
   const serverRoot = PageConfig.getOption('serverRoot');
 
-  const { data: updatedLecture = lecture } = useQuery({
-    queryKey: ['lecture', lecture.id],
-    queryFn: () => getLecture(lecture.id, true)
+  const { data: selectedDir = 'source', refetch: refetchSelectedDir } = useQuery({
+    queryKey: ['selectedDir'],
+    queryFn: async () => {
+      const data = loadString('files-selected-dir');
+      // default to 'source' if no value is stored
+      return data || 'source';
+    }
   });
-
-  const { data: updatedAssignment = assignment } = useQuery({
-    queryKey: ['assignment', lecture.id, assignment.id],
-    queryFn: () => getAssignment(lecture.id, assignment.id, true)
-  });
-
-  const { data: selectedDir = 'source', refetch: refetchSelectedDir } =
-    useQuery({
-      queryKey: ['selectedDir'],
-      queryFn: async () => {
-        const data = loadString('files-selected-dir');
-        if (data) {
-          return data as 'source' | 'release';
-        } else {
-          return 'source';
-        }
-      }
-    });
 
   const { data: repoStatus, refetch: refetchRepoStatus } = useQuery({
     queryKey: ['repoStatus', lecture.id, assignment.id],
     queryFn: async () => {
-      const response = await getRemoteStatus(
-        lecture,
-        assignment,
-        RepoType.SOURCE,
-        true
-      );
+      const response = await getRemoteStatus(lecture, assignment, RepoType.SOURCE, true);
       return response.status;
     }
   });
 
+  const { data: files = [], refetch: refetchFiles } = useQuery({
+    queryKey: ['files', lecture.id, assignment.id, selectedDir],
+    queryFn: async () => {
+      const path = `${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`;
+      return await getFiles(path);
+    }
+  });
+
+  // open the selected directory on load
   openBrowser(
     `${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`
   );
@@ -124,36 +103,21 @@ export const Files = ({
         }
         reloadPage();
         refetchRepoStatus();
-      },
-      this
+        refetchFiles();
+      }
     );
   }, [assignment, lecture]);
 
-  /**
-   * Switches between source and release directory.
-   * @param dir dir which should be switched to
-   */
   const handleSwitchDir = async (dir: 'source' | 'release') => {
-    if (dir === selectedDir) {
-      return;
-    }
+    if (dir === selectedDir) return;
     if (dir === 'release') {
-      await generateAssignment(lecture.id, assignment)
-        .then(() => {
-          enqueueSnackbar('Generated Student Version Notebooks', {
-            variant: 'success'
-          });
-          setSelectedDir(dir);
-        })
-        .catch(error => {
-          console.log(error);
-          enqueueSnackbar(
-            'Error Generating Student Version Notebooks: ' + error.message,
-            {
-              variant: 'error'
-            }
-          );
-        });
+      try {
+        await generateAssignment(lecture.id, assignment);
+        enqueueSnackbar('Generated Student Version Notebooks', { variant: 'success' });
+        await setSelectedDir(dir);
+      } catch (error: any) {
+        enqueueSnackbar(`Error Generating Notebooks: ${error.message}`, { variant: 'error' });
+      }
     } else {
       await setSelectedDir(dir);
     }
@@ -168,29 +132,14 @@ export const Files = ({
     });
   };
 
-  const handlePushAssignment = async (
-    commitMessage: string,
-    selectedFiles: string[]
-  ) => {
+  const handlePushAssignment = async (commitMessage: string, selectedFiles: string[]) => {
     try {
-      // Note: has to be in this order (release -> source)
-      await pushAssignment(
-        lecture.id,
-        assignment.id,
-        'release',
-        commitMessage,
-        selectedFiles
-      );
-      await pushAssignment(
-        lecture.id,
-        assignment.id,
-        'source',
-        commitMessage,
-        selectedFiles
-      );
+      await pushAssignment(lecture.id, assignment.id, RepoType.RELEASE, commitMessage, selectedFiles);
+      await pushAssignment(lecture.id, assignment.id, RepoType.SOURCE, commitMessage, selectedFiles);
       await queryClient.invalidateQueries({ queryKey: ['assignments'] });
       enqueueSnackbar('Successfully Pushed Assignment', { variant: 'success' });
       refetchRepoStatus();
+      refetchFiles();
     } catch (err) {
       enqueueSnackbar(`Error Pushing Assignment: ${err}`, { variant: 'error' });
     }
@@ -198,12 +147,60 @@ export const Files = ({
 
   const handlePullAssignment = async () => {
     try {
-      await pullAssignment(lecture.id, assignment.id, 'source');
+      await pullAssignment(lecture.id, assignment.id, RepoType.SOURCE);
       enqueueSnackbar('Successfully Pulled Assignment', { variant: 'success' });
-      await refetchRepoStatus();
+      refetchRepoStatus();
+      refetchFiles();
     } catch (err) {
       enqueueSnackbar(`Error Pulling Assignment: ${err}`, { variant: 'error' });
     }
+  };
+
+  const newUntitled = async () => {
+    const res = await GlobalObjects.docManager.newUntitled({
+      type: 'notebook',
+      path: `${lectureBasePath}${lecture.code}/source/${assignment.id}`
+    });
+    GlobalObjects.docManager.openOrReveal(res.path);
+  };
+
+  const getStatusChip = (status: RemoteFileStatus.StatusEnum) => {
+    const statusMap: Record<
+      RemoteFileStatus.StatusEnum,
+      {
+        label: string;
+        color:
+          | 'default'
+          | 'primary'
+          | 'secondary'
+          | 'error'
+          | 'warning'
+          | 'info'
+          | 'success';
+        icon: JSX.Element;
+      }> = {
+      UP_TO_DATE: { label: 'Up To Date', color: 'success', icon: <CheckIcon /> },
+      PULL_NEEDED: { label: 'Pull Needed', color: 'warning', icon: <GetAppRoundedIcon /> },
+      PUSH_NEEDED: { label: 'Push Needed', color: 'warning', icon: <PublishRoundedIcon /> },
+      DIVERGENT: { label: 'Divergent', color: 'error', icon: <ErrorOutlineIcon /> },
+      NO_REMOTE_REPO: { label: 'No Remote Repository', color: 'primary', icon: <CheckIcon /> }
+    };
+
+    
+
+    // Fallback if the status is not in the statusMap (it should be)
+    const { label, color, icon } = statusMap[status] || {};
+
+    // Return the Chip component with appropriate props or null if status is invalid
+    return label ? (
+      <Chip
+        sx={{ mb: 1 }}
+        label={label}
+        color={color}
+        size="small"
+        icon={icon}
+      />
+    ) : null;
   };
 
   const getRemoteStatusText = (status: RemoteFileStatus.StatusEnum) => {
@@ -223,91 +220,13 @@ export const Files = ({
     }
   };
 
-  const newUntitled = async () => {
-    const res = await GlobalObjects.docManager.newUntitled({
-      type: 'notebook',
-      path: `${lectureBasePath}${lecture.code}/source/${assignment.id}`
-    });
-    GlobalObjects.docManager.openOrReveal(res.path);
-  };
-
-  const getStatusChip = (status: RemoteFileStatus.StatusEnum) => {
-    // Define the statusMap with allowed `Chip` color values
-    const statusMap: Record<
-      RemoteFileStatus.StatusEnum,
-      {
-        label: string;
-        color:
-          | 'default'
-          | 'primary'
-          | 'secondary'
-          | 'error'
-          | 'warning'
-          | 'info'
-          | 'success';
-        icon: JSX.Element;
-      }
-    > = {
-      UP_TO_DATE: {
-        label: 'Up To Date',
-        color: 'success',
-        icon: <CheckIcon />
-      },
-      PULL_NEEDED: {
-        label: 'Pull Needed',
-        color: 'warning',
-        icon: <GetAppRoundedIcon />
-      },
-      PUSH_NEEDED: {
-        label: 'Push Needed',
-        color: 'warning',
-        icon: <PublishRoundedIcon />
-      },
-      DIVERGENT: {
-        label: 'Divergent',
-        color: 'error',
-        icon: <ErrorOutlineIcon />
-      },
-      NO_REMOTE_REPO: {
-        label: 'No Remote Repository',
-        color: 'primary',
-        icon: <CheckIcon />
-      }
-    };
-
-    // Fallback if the status is not in the statusMap (it should be)
-    const { label, color, icon } = statusMap[status] || {};
-
-    // Return the Chip component with appropriate props or null if status is invalid
-    return label ? (
-      <Chip
-        sx={{ mb: 1 }}
-        label={label}
-        color={color}
-        size="small"
-        icon={icon}
-      />
-    ) : null;
-  };
-
   return (
-    <Card
-      sx={{
-        overflow: 'hidden',
-        m: 3,
-        flex: 1,
-        borderRadius: 2,
-        boxShadow: 3,
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-    >
+    <Card sx={{ overflow: 'hidden', m: 3, flex: 1, borderRadius: 2, boxShadow: 3, display: 'flex', flexDirection: 'column' }}>
       <CardHeader
         title="Manage Assignment Files"
-        titleTypographyProps={{ display: 'inline' }}
         action={
           <Tooltip title="Reload">
-            <IconButton aria-label="reload" onClick={reloadPage}>
+            <IconButton onClick={reloadPage}>
               <ReplayIcon />
             </IconButton>
           </Tooltip>
@@ -319,24 +238,11 @@ export const Files = ({
             </Tooltip>
           )
         }
-        subheaderTypographyProps={{ display: 'inline', ml: 2 }}
+        slotProps={{ title: { display: 'inline' }, subheader: { display: 'inline', ml: 2 } }}
       />
       <Divider />
-      <Box
-        sx={{
-          display: 'flex',
-          width: '100%',
-          spacing: 2,
-          alignItems: 'center'
-        }}
-      >
-        <ToggleButtonGroup
-          value={selectedDir}
-          exclusive
-          onChange={(e, dir) => handleSwitchDir(dir)}
-          aria-label="View toggle"
-          sx={{ flex: 1, display: 'flex', padding: 2 }}
-        >
+      <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', p: 2 }}>
+        <ToggleButtonGroup value={selectedDir} exclusive onChange={(e, dir) => handleSwitchDir(dir)} sx={{ flex: 1 }}>
           <Tooltip
             title={
               'Source code version of notebooks with grading cells. Add notebooks or files to the file browser, and they will appear in the file list below. You can edit your notebooks, add grading cells, assign points, and create tests for your students.'
@@ -379,99 +285,33 @@ export const Files = ({
           </Tooltip>
         </ToggleButtonGroup>
       </Box>
-
       <Divider />
-
-      <CardContent sx={{ flex: 1, overflowY: 'auto', padding: 2 }}>
-        <FilesList
-          path={`${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`}
-          lecture={lecture}
-          assignment={assignment}
-          checkboxes={false}
-        />
+      <CardContent sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+        <FilesList files={files} lecture={lecture} assignment={assignment} checkboxes={false}/>
       </CardContent>
-
       <Divider />
-
-      <CardActions
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          padding: 2
-        }}
-      >
+      <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', p: 2 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <CommitDialog
-            handleCommit={handlePushAssignment}
-            lecture={lecture}
-            assignment={assignment}
-          >
-            <Tooltip title="Commit changes to the repository">
-              <Button
-                variant={
-                  repoStatus === 'PUSH_NEEDED' ? 'contained' : 'outlined'
-                }
-                size="small"
-                color={repoStatus === 'PUSH_NEEDED' ? 'warning' : 'primary'}
-              >
-                <PublishRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-                Push Changes
-              </Button>
-            </Tooltip>
+          <CommitDialog handleCommit={handlePushAssignment} lecture={lecture} assignment={assignment}>
+            <Button variant={repoStatus === 'PUSH_NEEDED' ? 'contained' : 'outlined'} color={repoStatus === 'PUSH_NEEDED' ? 'warning' : 'primary'}>
+              <PublishRoundedIcon sx={{ mr: 1 }} /> Push Changes
+            </Button>
           </CommitDialog>
-          <Tooltip title="Pull the latest changes from the repository">
-            <Button
-              variant={repoStatus === 'PULL_NEEDED' ? 'contained' : 'outlined'}
-              size="small"
-              color={repoStatus === 'PULL_NEEDED' ? 'warning' : 'primary'}
-              onClick={handlePullAssignment}
-            >
-              <GetAppRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-              Pull Changes
-            </Button>
-          </Tooltip>
+          <Button variant={repoStatus === 'PULL_NEEDED' ? 'contained' : 'outlined'} color={repoStatus === 'PULL_NEEDED' ? 'warning' : 'primary'} onClick={handlePullAssignment}>
+            <GetAppRoundedIcon sx={{ mr: 1 }} /> Pull Changes
+          </Button>
         </Box>
-
-        <Box
-          sx={{
-            alignItems: 'center'
-          }}
-        >
-          <Tooltip title="Create a new Jupyter Notebook">
-            <Button variant="outlined" size="small" onClick={newUntitled}>
-              <AddIcon fontSize="small" sx={{ mr: 1 }} />
-              New Notebook
-            </Button>
-          </Tooltip>
-
+        <Box>
+          <Button variant="outlined" onClick={newUntitled}>
+            <AddIcon sx={{ mr: 1 }} /> New Notebook
+          </Button>
           <GitLogModal lecture={lecture} assignment={assignment} />
-
-          <Tooltip title="Open the current folder in the file browser">
-            <IconButton
-              color="primary"
-              onClick={() =>
-                openBrowser(
-                  `${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`
-                )
-              }
-            >
-              <OpenInBrowserIcon />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Open the current folder in the terminal">
-            <IconButton
-              color="primary"
-              onClick={() =>
-                openTerminal(
-                  `${serverRoot}/${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`
-                )
-              }
-            >
-              <TerminalIcon />
-            </IconButton>
-          </Tooltip>
+          <IconButton onClick={() => openBrowser(`${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`)}>
+            <OpenInBrowserIcon />
+          </IconButton>
+          <IconButton onClick={() => openTerminal(`${serverRoot}/${lectureBasePath}${lecture.code}/${selectedDir}/${assignment.id}`)}>
+            <TerminalIcon />
+          </IconButton>
         </Box>
       </CardActions>
     </Card>

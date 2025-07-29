@@ -1,7 +1,7 @@
-import { LoadingButton, LoadingButtonProps } from "@mui/lab";
+import { Button, ButtonProps } from "@mui/material";
 import * as React from 'react';
 
-interface GraderLoadingButtonProps extends LoadingButtonProps{
+interface GraderLoadingButtonProps extends ButtonProps{
     onClick: () => void | Promise<void>;
 }
 
@@ -23,11 +23,11 @@ export function GraderLoadingButton({
     };
   
     return (
-      <LoadingButton
+      <Button
         loading={loading}
         onClick={handleClick}
         {...props} 
       >
-      </LoadingButton>
+      </Button>
     );
   }

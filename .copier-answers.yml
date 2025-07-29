@@ -1,8 +1,8 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: v4.3.5
+_commit: v4.3.8
 _src_path: https://github.com/jupyterlab/extension-template
 author_email: datalab@tuwien.ac.at
-author_name: Florian Jaeger, Marijana Petojevic, Matthias Matt
+author_name: Florian Jaeger, Matthias Matt
 has_binder: true
 has_settings: true
 kind: server

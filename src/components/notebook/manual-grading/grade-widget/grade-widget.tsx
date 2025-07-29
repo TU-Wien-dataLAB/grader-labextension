@@ -7,8 +7,6 @@
 import { ReactWidget } from '@jupyterlab/apputils';
 import * as React from 'react';
 import { Cell } from '@jupyterlab/cells';
-
-import { ReactElement, JSXElementConstructor } from 'react';
 import { GradeBook } from '../../../../services/gradebook';
 import { GradeComponent } from './grade-component';
 import { CellModel, NbgraderData, ToolData } from '../../model';
@@ -40,9 +38,7 @@ export class GradeWidget extends ReactWidget {
     );
   }
 
-  protected render():
-    | ReactElement<any, string | JSXElementConstructor<any>>[]
-    | ReactElement<any, string | JSXElementConstructor<any>> {
+  protected render(): any {
     if (this.toolData.type !== '' && this.toolData.type !== 'readonly') {
       return (
         <GradeComponent

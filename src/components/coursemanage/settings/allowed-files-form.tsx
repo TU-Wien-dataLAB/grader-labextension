@@ -1,7 +1,8 @@
-import { Box, Button, IconButton, InputLabel, Stack, TextField, Tooltip, Typography } from "@mui/material";
-import { AddCircleOutline, DeleteOutline, HelpOutlineOutlined as HelpIcon } from '@mui/icons-material';
+import { Box, Button, IconButton, InputLabel, Stack, TextField, Typography } from "@mui/material";
+import { AddCircleOutline, DeleteOutline} from '@mui/icons-material';
 import { red } from "@mui/material/colors";
 import React, { useState } from "react";
+import { TooltipComponent } from "../../util/tooltip";
 
 export const AllowedFilePatterns = ({ patterns, onChange }) => {
     const [newPattern, setNewPattern] = useState('');
@@ -17,13 +18,12 @@ export const AllowedFilePatterns = ({ patterns, onChange }) => {
       onChange(patterns.filter((pattern) => pattern !== patternToRemove));
     };
   
+    const whitelistTooltip = " Add patterns to allow additional submissions files. Specify allowed file patterns (e.g., submission.py, *.txt, output_dir/*.pdf) using glob patterns.";
     return (
       <Box>
         <InputLabel>
           Whitelist File Patterns
-          <Tooltip title=" Add patterns to allow additional submissions files. Specify allowed file patterns (e.g., submission.py, *.txt, output_dir/*.pdf) using glob patterns.">
-            <HelpIcon fontSize="small" sx={{ ml: 1.5, mt: 1 }} />
-          </Tooltip>
+          <TooltipComponent title={whitelistTooltip} sx={{ ml:0.5}}/>
         </InputLabel>
         <Stack spacing={2} sx={{ mt: 2 }}>
           {patterns.length > 0 ? (

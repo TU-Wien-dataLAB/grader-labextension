@@ -24,7 +24,6 @@ export const GradeComponent = (props: GradeComponentProps) => {
   if (model.getMetadata('updated') != undefined) {
     model.setMetadata('updated', false);
   }
-  const metadata = model.metadata;
   const gradableCell =
     props.toolData.type !== 'readonly' &&
     props.toolData.type !== 'solution' &&

@@ -5,7 +5,6 @@
 // LICENSE file in the root directory of this source tree.
 
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-import React from 'react';
 import { ReactWidget } from '@jupyterlab/apputils';
 import { Notebook, NotebookPanel } from '@jupyterlab/notebook';
 import { SwitchModeFactory } from './switch-factory';
