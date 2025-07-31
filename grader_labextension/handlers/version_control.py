@@ -313,7 +313,7 @@ class PushHandler(ExtensionBaseHandler):
             self.write_error(404)
 
         # Extract request parameters
-        sub_id, commit_message, selected_files, submit, user_id = self._extract_request_params()
+        sub_id, commit_message, selected_files, submit, username = self._extract_request_params()
 
         # Validate commit message for 'source' repo
         if repo == GitRepoType.SOURCE:
@@ -323,9 +323,9 @@ class PushHandler(ExtensionBaseHandler):
         lecture = await self.get_lecture(lecture_id)
         assignment = await self.get_assignment(lecture_id, assignment_id)
 
-        # Handle 'edit' repo
-        if repo == GitRepoType.EDIT:
-            sub_id = await self._handle_edit_repo(lecture_id, assignment_id, sub_id, user_id)
+        if repo == GitRepoType.EDIT and sub_id is None:
+            # Create a new submission for the student `username`
+            sub_id = await self._create_submission_for_user(lecture_id, assignment_id, username)
 
         # Initialize GitService
         git_service = GitService(
@@ -335,7 +335,7 @@ class PushHandler(ExtensionBaseHandler):
             repo_type=GitRepoType(repo),
             config=self.config,
             sub_id=sub_id,
-            user_id=user_id,
+            username=username,
         )
 
         # Handle 'release' repo
@@ -362,55 +362,48 @@ class PushHandler(ExtensionBaseHandler):
         commit_message = self.get_argument("commit-message", None)
         selected_files = self.get_arguments("selected-files")
         submit = self.get_argument("submit", "false") == "true"
-        user_id_str = self.get_argument("for_user", None)
+        username = self.get_argument("for_user", None)
         try:
             sub_id = int(sub_id_str)
         except (TypeError, ValueError):
             sub_id = None
-        try:
-            user_id = int(user_id_str)
-        except TypeError:
-            user_id = None
-        return sub_id, commit_message, selected_files, submit, user_id
+        return sub_id, commit_message, selected_files, submit, username
 
     def _validate_commit_message(self, commit_message):
         if not commit_message:
             self.log.error("Commit message was not found")
             raise HTTPError(HTTPStatus.NOT_FOUND, reason="Commit message was not found")
 
-    async def _handle_edit_repo(
-        self, lecture_id: int, assignment_id: int, sub_id: Optional[int], user_id: Optional[int]
+    async def _create_submission_for_user(
+        self, lecture_id: int, assignment_id: int, username: Optional[str]
     ) -> int:
-        if sub_id is None:
-            if user_id is None:
-                self.log.error("User id has to be provided for an 'edit' repo")
-                raise HTTPError(HTTPStatus.BAD_REQUEST, reason="Missing for_user value in request")
+        """Creates a new submission for the user `username`."""
+        if username is None:
+            self.log.error("Username has to be provided when creating a submission")
+            raise HTTPError(HTTPStatus.BAD_REQUEST, reason="Missing 'for_user' value in request")
 
-            submission = Submission(commit_hash="0" * 40)
-            response = await self.request_service.request(
-                "POST",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
-                f"submissions",
-                body=submission.to_dict(),
-                header=self.grader_authentication_header,
-            )
-            submission = Submission.from_dict(response)
-            submission.submitted_at = response["submitted_at"]
-            submission.user_id = user_id
-            submission.edited = True
-            await self.request_service.request(
-                "PUT",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
-                f"submissions/{submission.id}",
-                body=submission.to_dict(),
-                header=self.grader_authentication_header,
-            )
-            self.log.info(
-                f"Created submission {submission.id} for user with id {user_id} and pushing "
-                f"to edit repo..."
-            )
-            return submission.id
-        return sub_id
+        response = await self.request_service.request(
+            "POST",
+            f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+            f"submissions",
+            body={"commit_hash": "0" * 40, "username": username},
+            header=self.grader_authentication_header,
+        )
+        submission = Submission.from_dict(response)
+        submission.submitted_at = response["submitted_at"]
+        submission.edited = True
+
+        self.log.info(
+            "Created submission %s for user %s and pushing to edit repo...", submission.id, username
+        )
+        await self.request_service.request(
+            "PUT",
+            f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+            f"submissions/{submission.id}",
+            body=submission.to_dict(),
+            header=self.grader_authentication_header,
+        )
+        return submission.id
 
     async def _handle_release_repo(
         self, git_service, lecture, assignment, lecture_id, assignment_id, selected_files

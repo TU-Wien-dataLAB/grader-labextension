@@ -55,7 +55,7 @@ class GitService(Configurable):
         repo_type: GitRepoType,
         force_user_repo: bool = False,
         sub_id: Optional[int] = None,
-        user_id: Optional[int] = None,
+        username: Optional[str] = None,
         log=logging.getLogger("gitservice"),
         *args,
         **kwargs,
@@ -67,13 +67,13 @@ class GitService(Configurable):
         self.assignment_id = assignment_id
         self.repo_type = repo_type
 
-        self.path = self._determine_repo_path(force_user_repo, sub_id, user_id)
+        self.path = self._determine_repo_path(force_user_repo, sub_id, username)
         os.makedirs(self.path, exist_ok=True)
 
         self._initialize_git_logging()
 
     def _determine_repo_path(
-        self, force_user_repo: bool, sub_id: Optional[int], user_id: Optional[int]
+        self, force_user_repo: bool, sub_id: Optional[int], username: Optional[str]
     ) -> str:
         """Determine the path for the git repository based on the type."""
         if self.repo_type == GitRepoType.USER or force_user_repo:
@@ -82,8 +82,7 @@ class GitService(Configurable):
                 self.git_root_dir, self.lecture_code, "assignments", str(self.assignment_id)
             )
         elif self.repo_type == GitRepoType.EDIT:
-            if user_id is not None:
-                username = self._get_username_from_id(user_id)
+            if username is not None:
                 return os.path.join(
                     self.git_root_dir,
                     self.lecture_code,
@@ -102,10 +101,6 @@ class GitService(Configurable):
         return os.path.join(
             self.git_root_dir, self.lecture_code, self.repo_type, str(self.assignment_id)
         )
-
-    def _get_username_from_id(self, user_id: int) -> str:
-        # TODO!
-        ...
 
     def _initialize_git_logging(self):
         """Initialize logging related to git configuration."""
@@ -136,7 +131,6 @@ class GitService(Configurable):
             sub_id (str | int | None): Optional query parameter for feedback pull.
         """
         if isinstance(sub_id, int):
-            # TODO:
             sub_id = str(sub_id)
         url_path = posixpath.join(
             self.git_remote_url, self.lecture_code, str(self.assignment_id), self.repo_type
