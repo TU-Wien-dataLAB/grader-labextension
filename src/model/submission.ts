@@ -7,13 +7,16 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { FeedbackStatus } from './feedbackStatus';
+import { ManualStatus } from './manualStatus';
+import { AutoStatus } from './autoStatus';
 
 
 export interface Submission { 
     id?: number;
     submitted_at?: string;
-    auto_status?: Submission.AutoStatusEnum;
-    manual_status?: Submission.ManualStatusEnum;
+    auto_status?: AutoStatus;
+    manual_status?: ManualStatus;
     username?: string;
     user_display_name?: string;
     grading_score?: number;
@@ -21,32 +24,10 @@ export interface Submission {
     score?: number;
     assignid?: number;
     commit_hash?: string;
-    feedback_status?: Submission.FeedbackStatusEnum;
+    feedback_status?: FeedbackStatus;
     edited?: boolean;
 }
 export namespace Submission {
-    export const AutoStatusEnum = {
-        NotGraded: 'not_graded',
-        Pending: 'pending',
-        AutomaticallyGraded: 'automatically_graded',
-        GradingFailed: 'grading_failed'
-    } as const;
-    export type AutoStatusEnum = typeof AutoStatusEnum[keyof typeof AutoStatusEnum];
-    export const ManualStatusEnum = {
-        NotGraded: 'not_graded',
-        ManuallyGraded: 'manually_graded',
-        BeingEdited: 'being_edited',
-        GradingFailed: 'grading_failed'
-    } as const;
-    export type ManualStatusEnum = typeof ManualStatusEnum[keyof typeof ManualStatusEnum];
-    export const FeedbackStatusEnum = {
-        NotGenerated: 'not_generated',
-        Generating: 'generating',
-        Generated: 'generated',
-        GenerationFailed: 'generation_failed',
-        FeedbackOutdated: 'feedback_outdated'
-    } as const;
-    export type FeedbackStatusEnum = typeof FeedbackStatusEnum[keyof typeof FeedbackStatusEnum];
 }
 
 
