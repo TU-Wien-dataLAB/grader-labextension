@@ -39,6 +39,7 @@ import { Assignment } from '../../model/assignment';
 import { Lecture } from '../../model/lecture';
 import { enqueueSnackbar } from 'notistack';
 import { queryClient } from '../../widgets/assignmentmanage';
+import { FeedbackStatus } from '../../model/feedbackStatus';
 
 /**
  * Props for SubmissionListComponent.
@@ -79,8 +80,8 @@ export const SubmissionList = (props: ISubmissionListProps) => {
             <ListItemText
               primary={utcToLocalFormat(value.submitted_at)}
               secondary={
-                value.feedback_status === 'generated' ||
-                value.feedback_status === 'feedback_outdated'
+                value.feedback_status === FeedbackStatus.Generated ||
+                value.feedback_status === FeedbackStatus.FeedbackOutdated
                   ? `${value.score} Point` + (value.score === 1 ? '' : 's')
                   : null
               }
@@ -124,7 +125,7 @@ export const SubmissionList = (props: ISubmissionListProps) => {
                   Restore
                 </Button>
               }
-              {value.feedback_status === 'not_generated' && (
+              {value.feedback_status === FeedbackStatus.NotGenerated && (
                 <Button
                   sx={{ ml: 3 }}
                   startIcon={<DeleteIcon />}
@@ -176,8 +177,8 @@ export const SubmissionList = (props: ISubmissionListProps) => {
                   Delete Submission
                 </Button>
               )}
-              {value.feedback_status === 'generated' ||
-              value.feedback_status === 'feedback_outdated' ? (
+              {value.feedback_status === FeedbackStatus.Generated ||
+              value.feedback_status === FeedbackStatus.FeedbackOutdated ? (
                 <Button
                   sx={{ ml: 3 }}
                   startIcon={<ChatRoundedIcon />}

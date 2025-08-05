@@ -32,6 +32,9 @@ import { getLecture } from '../../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { SubmissionLogs } from '../../util/submission-logs';
 import AddIcon from '@mui/icons-material/Add';
+import { ManualStatus } from '../../../model/manualStatus';
+import { AutoStatus } from '../../../model/autoStatus';
+import { FeedbackStatus } from '../../../model/feedbackStatus';
 
 /**
  * Calculates chip color based on submission status.
@@ -40,18 +43,22 @@ import AddIcon from '@mui/icons-material/Add';
  */
 const getColor = (value: string) => {
   if (
-    value === 'not_graded' ||
-    value === 'not_generated' ||
-    value === 'feedback_outdated'
+    value === AutoStatus.NotGraded.valueOf() ||
+    value === ManualStatus.NotGraded.valueOf() ||
+    value === FeedbackStatus.NotGenerated.valueOf() ||
+    value === FeedbackStatus.FeedbackOutdated.valueOf()
   ) {
     return 'warning';
   } else if (
-    value === 'automatically_graded' ||
-    value === 'manually_graded' ||
-    value === 'generated'
+    value === AutoStatus.AutomaticallyGraded.valueOf() ||
+    value === ManualStatus.ManuallyGraded.valueOf() ||
+    value === FeedbackStatus.Generated.valueOf()
   ) {
     return 'success';
-  } else if (value === 'grading_failed' || value === 'generation_failed') {
+  } else if (
+    value === AutoStatus.GradingFailed.valueOf() ||
+    value === FeedbackStatus.GenerationFailed.valueOf()
+  ) {
     return 'error';
   }
   return 'primary';

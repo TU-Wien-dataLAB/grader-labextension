@@ -26,6 +26,7 @@ import { GradeWidget } from './grade-widget/grade-widget';
 import { Button, Stack, Typography } from '@mui/material';
 import { AntSwitch } from '../create-assignment/creation-switch';
 import { lectureSubPaths } from '../../../services/file.service';
+import { ManualStatus } from '../../../model/manualStatus';
 
 export class GradingModeSwitch extends React.Component<IModeSwitchProps> {
   public state = {
@@ -97,7 +98,7 @@ export class GradingModeSwitch extends React.Component<IModeSwitchProps> {
         this.assignment.id,
         this.subID
       );
-      submission.manual_status = 'being_edited';
+      submission.manual_status = ManualStatus.BeingEdited;
       updateSubmission(
         this.lecture.id,
         this.assignment.id,
