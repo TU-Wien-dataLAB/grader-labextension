@@ -108,7 +108,7 @@ export const SubmissionList = (props: ISubmissionListProps) => {
                         } catch (e) {
                           if (e instanceof Error) {
                             enqueueSnackbar(
-                              'Error Reset Assignment: ' + e.message,
+                              'Error Restore Submission: ' + e.message,
                               { variant: 'error' }
                             );
                           } else {
