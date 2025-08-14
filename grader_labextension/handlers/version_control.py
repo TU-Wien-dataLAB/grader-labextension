@@ -530,14 +530,12 @@ class PushHandler(ExtensionBaseHandler):
             self.log.error(e)
             raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
 
-        submission = Submission(commit_hash=latest_commit_hash)
-
         try:
             response = await self.request_service.request(
                 "POST",
                 f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
                 f"submissions",
-                body=submission.to_dict(),
+                body={"commit_hash": latest_commit_hash},
                 header=self.grader_authentication_header,
             )
         except RequestServiceError as e:
