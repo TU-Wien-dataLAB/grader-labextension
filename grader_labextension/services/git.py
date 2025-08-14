@@ -446,5 +446,4 @@ class GitService(Configurable):
             return result.stdout
         except subprocess.CalledProcessError as e:
             error_message = f"Command '{command}' failed with error: {e.stderr}"
-            self.log.error(error_message)
             raise GitError(500, error_message)
