@@ -23,7 +23,7 @@ class SubmissionHandler(ExtensionBaseHandler):
 
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int):
-        """Sends a GET-request to the grader service and returns submissions of a assignment
+        """Sends a GET-request to the grader service and returns submissions of an assignment
 
         :param lecture_id: id of the lecture
         :type lecture_id: int
@@ -148,7 +148,7 @@ class SubmissionPropertiesHandler(ExtensionBaseHandler):
 )
 class SubmissionEditHandler(ExtensionBaseHandler):
     async def put(self, lecture_id: int, assignment_id: int, submission_id: int):
-        """Sends a PUT-request to the grader service to create or overide an edit repository of the submission
+        """Sends a PUT-request to the grader service to create or override an edit repository of the submission
 
         :param lecture_id: id of the lecture
         :type lecture_id: int
@@ -209,7 +209,7 @@ class SubmissionObjectHandler(ExtensionBaseHandler):
         self.write(json.dumps(response))
 
     async def put(self, lecture_id: int, assignment_id: int, submission_id: int):
-        """Sends a PUT-request to the grader service to update the a submission
+        """Sends a PUT-request to the grader service to update a submission
 
         :param lecture_id: id of the lecture
         :type lecture_id: int
@@ -233,7 +233,7 @@ class SubmissionObjectHandler(ExtensionBaseHandler):
         self.write({"status": "OK"})
 
     async def delete(self, lecture_id: int, assignment_id: int, submission_id: int):
-        """Sends a DELETE-request to the grader service to "soft"-delete a assignment
+        """Sends a DELETE-request to the grader service to "soft"-delete an assignment
 
         :param lecture_id: id of the lecture
         :type lecture_id: int
