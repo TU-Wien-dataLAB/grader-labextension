@@ -34,6 +34,8 @@ import { SyncSubmissionGradesDialog } from '../../util/dialog';
 import { openBrowser } from '../overview/util';
 import { loadString, storeString } from '../../../services/storage.service';
 import { ltiSyncSubmissions } from '../../../services/submissions.service';
+import { AutoStatus } from '../../../model/autoStatus';
+import { FeedbackStatus } from '../../../model/feedbackStatus';
 
 export const autogradeSubmissionsDialog = async handleAgree => {
   showDialog(
@@ -137,7 +139,7 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
         await Promise.all(
           selected.map(async id => {
             const row = rows.find(value => value.id === id);
-            row.auto_status = 'pending';
+            row.auto_status = AutoStatus.Pending;
             await autogradeSubmission(lecture, assignment, row);
             await queryClient.invalidateQueries({
               queryKey: ['submissionLogs', lecture.id, assignment.id, row.id]
@@ -163,7 +165,7 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
         await Promise.all(
           selected.map(async id => {
             const row = rows.find(value => value.id === id);
-            row.feedback_status = 'generating';
+            row.feedback_status = FeedbackStatus.Generating;
             await generateFeedback(lecture, assignment, row);
           })
         );
@@ -198,7 +200,7 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
     let available = true;
     selected.forEach(async id => {
       const row = rows.find(value => value.id === id);
-      if (row.auto_status !== 'automatically_graded') {
+      if (row.auto_status !== AutoStatus.AutomaticallyGraded) {
         available = false;
       }
     });

@@ -44,6 +44,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 import { RepoType } from '../util/repo-type';
+import { FeedbackStatus } from '../../model/feedbackStatus';
 
 /*
  * Buttons for AssignmentTable
@@ -302,8 +303,8 @@ const feedbackAvailable = (submissions: Submission[]): boolean => {
   /* If we have a submission, check if it has feedback */
   for (const submission of submissions) {
     if (
-      submission.feedback_status === 'generated' ||
-      submission.feedback_status === 'feedback_outdated'
+      submission.feedback_status === FeedbackStatus.Generated ||
+      submission.feedback_status === FeedbackStatus.FeedbackOutdated
     ) {
       return true;
     }

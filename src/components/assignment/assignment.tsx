@@ -55,13 +55,14 @@ import { FilesList } from '../util/file-list';
 import { Contents } from '@jupyterlab/services';
 import { GlobalObjects } from '../..';
 import { RepoType } from '../util/repo-type';
+import { FeedbackStatus } from '../../model/feedbackStatus';
 
 const calculateActiveStep = (submissions: Submission[]) => {
   const hasFeedback = submissions.reduce(
     (accum: boolean, curr: Submission) =>
       accum ||
-      curr.feedback_status === 'generated' ||
-      curr.feedback_status === 'feedback_outdated',
+      curr.feedback_status === FeedbackStatus.Generated ||
+      curr.feedback_status === FeedbackStatus.FeedbackOutdated,
     false
   );
   if (hasFeedback) {
