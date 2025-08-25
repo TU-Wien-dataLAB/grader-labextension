@@ -266,7 +266,7 @@ class PullHandler(ExtensionBaseHandler):
             repo_type=GitRepoType(repo),
             config=self.config,
             force_user_repo=repo == GitRepoType.RELEASE,
-            sub_id=sub_id,
+            sub_id=sub_id if sub_id is None else int(sub_id),
             log=self.log,
         )
         try:
@@ -323,9 +323,9 @@ class PushHandler(ExtensionBaseHandler):
         lecture = await self.get_lecture(lecture_id)
         assignment = await self.get_assignment(lecture_id, assignment_id)
 
-        # Handle 'edit' repo
-        if repo == GitRepoType.EDIT:
-            sub_id = await self._handle_edit_repo(lecture_id, assignment_id, sub_id, username)
+        if repo == GitRepoType.EDIT and sub_id is None:
+            # Create a new submission for the student `username`
+            sub_id = await self._create_submission_for_user(lecture_id, assignment_id, username)
 
         # Initialize GitService
         git_service = GitService(
@@ -344,7 +344,7 @@ class PushHandler(ExtensionBaseHandler):
                 git_service, lecture, assignment, lecture_id, assignment_id, selected_files
             )
 
-        # Perform Git operations
+        # Commit and push the files
         await self._perform_git_operations(
             git_service, repo, commit_message, selected_files, sub_id
         )
@@ -358,11 +358,15 @@ class PushHandler(ExtensionBaseHandler):
     def _extract_request_params(
         self,
     ) -> (Optional[str], Optional[str], List[str], bool, Optional[str]):
-        sub_id = self.get_argument("subid", None)
+        sub_id_str = self.get_argument("subid", None)
         commit_message = self.get_argument("commit-message", None)
         selected_files = self.get_arguments("selected-files")
         submit = self.get_argument("submit", "false") == "true"
         username = self.get_argument("for_user", None)
+        try:
+            sub_id = int(sub_id_str)
+        except (TypeError, ValueError):
+            sub_id = None
         return sub_id, commit_message, selected_files, submit, username
 
     def _validate_commit_message(self, commit_message):
@@ -370,32 +374,36 @@ class PushHandler(ExtensionBaseHandler):
             self.log.error("Commit message was not found")
             raise HTTPError(HTTPStatus.NOT_FOUND, reason="Commit message was not found")
 
-    async def _handle_edit_repo(self, lecture_id, assignment_id, sub_id, username):
-        if sub_id is None:
-            submission = Submission(commit_hash="0" * 40)
-            response = await self.request_service.request(
-                "POST",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
-                f"submissions",
-                body=submission.to_dict(),
-                header=self.grader_authentication_header,
-            )
-            submission = Submission.from_dict(response)
-            submission.submitted_at = response["submitted_at"]
-            submission.username = username
-            submission.edited = True
-            await self.request_service.request(
-                "PUT",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
-                f"submissions/{submission.id}",
-                body=submission.to_dict(),
-                header=self.grader_authentication_header,
-            )
-            self.log.info(
-                f"Created submission {submission.id} for user {username} and pushing to edit repo..."
-            )
-            return str(submission.id)
-        return sub_id
+    async def _create_submission_for_user(
+        self, lecture_id: int, assignment_id: int, username: Optional[str]
+    ) -> int:
+        """Creates a new submission for the user `username`."""
+        if username is None:
+            self.log.error("Username has to be provided when creating a submission")
+            raise HTTPError(HTTPStatus.BAD_REQUEST, reason="Missing 'for_user' value in request")
+
+        response = await self.request_service.request(
+            "POST",
+            f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+            f"submissions",
+            body={"commit_hash": "0" * 40, "username": username},
+            header=self.grader_authentication_header,
+        )
+        submission = Submission.from_dict(response)
+        submission.submitted_at = response["submitted_at"]
+        submission.edited = True
+
+        self.log.info(
+            "Created submission %s for user %s and pushing to edit repo...", submission.id, username
+        )
+        await self.request_service.request(
+            "PUT",
+            f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+            f"submissions/{submission.id}",
+            body=submission.to_dict(),
+            header=self.grader_authentication_header,
+        )
+        return submission.id
 
     async def _handle_release_repo(
         self, git_service, lecture, assignment, lecture_id, assignment_id, selected_files
@@ -484,27 +492,33 @@ class PushHandler(ExtensionBaseHandler):
             )
 
     async def _perform_git_operations(
-        self, git_service: GitService, repo: str, commit_message: str, selected_files, sub_id=None
+        self,
+        git_service: GitService,
+        repo: GitRepoType,
+        commit_message: str,
+        selected_files,
+        sub_id: Optional[int] = None,
     ):
+        remote = f"grader_{repo}"
         try:
             if not git_service.is_git():
                 git_service.init()
                 git_service.set_author(author=self.user_name)
-            git_service.set_remote(f"grader_{repo}", sub_id)
+            git_service.set_remote(remote, sub_id)
         except GitError as e:
-            self.log.error("git error during git initiation process:" + e.error)
+            self.log.error("git error during git initiation process: %s", e.error)
             raise HTTPError(e.code, reason=e.error)
 
         try:
             git_service.commit(message=commit_message, selected_files=selected_files)
         except GitError as e:
-            self.log.error("git error during commit process:" + e.error)
+            self.log.error("git error during commit process: %s", e.error)
             raise HTTPError(e.code, reason=e.error)
 
         try:
-            git_service.push(f"grader_{repo}", force=True)
+            git_service.push(remote, force=True)
         except GitError as e:
-            self.log.error("git error during push process:" + e.error)
+            self.log.error("git error during push process: %s", e.error)
             git_service.undo_commit()
             raise HTTPError(e.code, reason=str(e.error))
 
@@ -512,21 +526,23 @@ class PushHandler(ExtensionBaseHandler):
         self.log.info(f"Submitting assignment {assignment_id}!")
         try:
             latest_commit_hash = git_service.get_log(history_count=1)[0]["commit"]
-            submission = Submission(commit_hash=latest_commit_hash)
+        except (KeyError, IndexError) as e:
+            self.log.error(e)
+            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
+
+        try:
             response = await self.request_service.request(
                 "POST",
                 f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
                 f"submissions",
-                body=submission.to_dict(),
+                body={"commit_hash": latest_commit_hash},
                 header=self.grader_authentication_header,
             )
-            self.write(json.dumps(response))
-        except (KeyError, IndexError) as e:
-            self.log.error(e)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
+
+        self.write(json.dumps(response))
 
 
 @register_handler(
@@ -648,7 +664,7 @@ class NotebookAccessHandler(ExtensionBaseHandler):
                 self.write_error(400)
 
         try:
-            username = self.get_current_user()["name"]
+            username = self.current_user["name"]
         except TypeError as e:
             self.log.error(e)
             raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))

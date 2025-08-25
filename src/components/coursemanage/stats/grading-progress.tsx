@@ -60,7 +60,7 @@ const GradingProgressTooltip = ({
 
 const getData = (
   submissions: Submission[],
-  users: { students: string[]; tutors: string[]; instructors: string[] }
+  users: { students: number[]; tutors: number[]; instructors: number[] }
 ): GradingProgressData => {
   if (users === null) {
     return { auto: 0, manual: 0, feedback: 0 };

@@ -95,7 +95,7 @@ class ExtensionBaseHandler(APIHandler):
     def user_name(self):
         return self.current_user.name
 
-    async def get_lecture(self, lecture_id) -> dict:
+    async def get_lecture(self, lecture_id: int) -> dict:
         try:
             lecture = await self.request_service.request(
                 "GET",
@@ -107,7 +107,7 @@ class ExtensionBaseHandler(APIHandler):
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
 
-    async def get_assignment(self, lecture_id, assignment_id):
+    async def get_assignment(self, lecture_id: int, assignment_id: int) -> dict:
         try:
             assignment = await self.request_service.request(
                 "GET",

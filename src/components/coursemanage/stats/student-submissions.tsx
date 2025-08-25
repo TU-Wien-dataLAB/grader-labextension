@@ -12,7 +12,7 @@ import { useTheme } from '@mui/material/styles';
 
 const getData = (
   submissions: Submission[],
-  users: { students: string[]; tutors: string[]; instructors: string[] }
+  users: { students: number[]; tutors: number[]; instructors: number[] }
 ): number => {
   if (users.students.length === 0) {
     return 0;

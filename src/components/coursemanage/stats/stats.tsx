@@ -23,9 +23,9 @@ import { useState } from 'react';
 
 export const filterUserSubmissions = (
   submissions: Submission[],
-  users: string[]
+  users: number[]
 ): Submission[] => {
-  return submissions.filter((v, i, a) => !users.includes(v.username));
+  return submissions.filter((v, i, a) => !users.includes(v.user_id));
 };
 
 export interface IStatsSubComponentProps {
@@ -33,7 +33,7 @@ export interface IStatsSubComponentProps {
   assignment: Assignment;
   allSubmissions: Submission[];
   latestSubmissions: Submission[];
-  users: { students: string[]; tutors: string[]; instructors: string[] };
+  users: { students: number[]; tutors: number[]; instructors: number[] };
 }
 
 export const StatsComponent = () => {
