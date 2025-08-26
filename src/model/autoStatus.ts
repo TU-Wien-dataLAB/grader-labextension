@@ -9,11 +9,12 @@
  */
 
 
+export type AutoStatus = 'not_graded' | 'pending' | 'automatically_graded' | 'grading_failed';
+
 export const AutoStatus = {
-    NotGraded: 'not_graded',
-    Pending: 'pending',
-    AutomaticallyGraded: 'automatically_graded',
-    GradingFailed: 'grading_failed'
-} as const;
-export type AutoStatus = typeof AutoStatus[keyof typeof AutoStatus];
+    NotGraded: 'not_graded' as AutoStatus,
+    Pending: 'pending' as AutoStatus,
+    AutomaticallyGraded: 'automatically_graded' as AutoStatus,
+    GradingFailed: 'grading_failed' as AutoStatus
+};
 

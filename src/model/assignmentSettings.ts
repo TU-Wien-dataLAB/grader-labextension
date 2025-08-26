@@ -18,12 +18,12 @@ export interface AssignmentSettings {
     autograde_type?: AssignmentSettings.AutogradeTypeEnum;
 }
 export namespace AssignmentSettings {
+    export type AutogradeTypeEnum = 'auto' | 'full_auto' | 'unassisted';
     export const AutogradeTypeEnum = {
-        Auto: 'auto',
-        FullAuto: 'full_auto',
-        Unassisted: 'unassisted'
-    } as const;
-    export type AutogradeTypeEnum = typeof AutogradeTypeEnum[keyof typeof AutogradeTypeEnum];
+        Auto: 'auto' as AutogradeTypeEnum,
+        FullAuto: 'full_auto' as AutogradeTypeEnum,
+        Unassisted: 'unassisted' as AutogradeTypeEnum
+    };
 }
 
 
