@@ -357,7 +357,7 @@ class PushHandler(ExtensionBaseHandler):
 
     def _extract_request_params(
         self,
-    ) -> (Optional[str], Optional[str], List[str], bool, Optional[str]):
+    ) -> tuple[Optional[str], Optional[str], List[str], bool, Optional[str]]:
         sub_id_str = self.get_argument("subid", None)
         commit_message = self.get_argument("commit-message", None)
         selected_files = self.get_arguments("selected-files")

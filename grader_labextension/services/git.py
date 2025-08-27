@@ -212,11 +212,23 @@ class GitService(Configurable):
         self._run_command("git gc", cwd=self.path)
 
     def revert(self, commit_hash: str):
+        """Revert the repository to a previous commit.
+        If the commit hash equal the HEAD commit, all local changes will be undone.
+        Otherwise, the files will be reset to the specified commit.
+
+        Args:
+            commit_hash (str): The hash of the commit to revert to.
+        """
         self.log.info(f"Reverting to {commit_hash}")
-        self._run_command(f"git revert --no-commit {commit_hash}..HEAD", cwd=self.path)
-        self._run_command(
-            f'git commit -m "reverting to {commit_hash}" --allow-empty', cwd=self.path
-        )
+        if commit_hash == self._run_command("git rev-parse HEAD", cwd=self.path).strip():
+            # If the commit hash is the HEAD commit, all local changes will be undone.
+            self._run_command("git reset --hard", cwd=self.path)
+        else:
+            # If the commit hash is not the HEAD commit, revert to the specified commit and create a new revert commit.
+            self._run_command(f"git revert --no-commit {commit_hash}..HEAD", cwd=self.path)
+            self._run_command(
+                f'git commit -m "reverting to {commit_hash}" --allow-empty', cwd=self.path
+            )
 
     def is_git(self) -> bool:
         """Check if the directory is a git repository.
