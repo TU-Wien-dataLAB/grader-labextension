@@ -152,7 +152,7 @@ const headCells: readonly HeadCell[] = [
     label: 'ID'
   },
   {
-    id: 'user_id',
+    id: 'user_display_name',
     numeric: true,
     disablePadding: false,
     label: 'User'
@@ -412,7 +412,7 @@ export default function GradingTable() {
     page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
 
   const submissionString = (s: Submission): string => {
-    return `${s.id} ${s.user_id} ${utcToLocalFormat(s.submitted_at)} ${s.auto_status.split('_').join(' ')} ${s.manual_status.split('_').join(' ')} ${s.feedback_status.split('_').join(' ')} ${s.score}`.toLowerCase();
+    return `${s.id} ${s.user_display_name} ${utcToLocalFormat(s.submitted_at)} ${s.auto_status.split('_').join(' ')} ${s.manual_status.split('_').join(' ')} ${s.feedback_status.split('_').join(' ')} ${s.score}`.toLowerCase();
   };
 
   const filteredRows = React.useMemo(() => {
