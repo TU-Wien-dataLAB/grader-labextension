@@ -80,8 +80,8 @@ Automatic Grading: The assignment is being autograded as soon as the students ma
 Fully Automatic Grading: The assignment is autograded and feedback is generated as soon as the student makes a submission. 
 (requires all scores to be based on autograde results)`;
 
-const groupFeatureDescription = `By entering a group name, you can order assignments in different groups \n
-based on specific topics (e.g., Assignment 1 and 2 are in Group 1, Assignment 3 in Group 2 etc.)`;
+const groupFeatureDescription = `By entering a group name, you can visually group assignments \n
+based on specific topics (e.g., Assignments 1 and 2 are in "Chapter Variables", Assignment 3 in "Track AI" etc.)`;
 
 const recalculateScoreExplaination =
   'Using this action will result in the recalculation of all submission scores \n based on the deadline/late submission settings.';
@@ -490,7 +490,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
               />
 
               {/* group field */}
-              <InputLabel id="auto-grading-behaviour-label">
+              <InputLabel id="group-description-label">
                 Group
                 <Tooltip title={groupFeatureDescription}>
                   <HelpOutlineOutlinedIcon
