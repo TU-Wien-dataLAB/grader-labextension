@@ -36,13 +36,16 @@ import {
   Alert,
   AlertTitle,
   FormControl,
-  Switch,
+  Switch
 } from '@mui/material';
 import { Assignment } from '../../model/assignment';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { createAssignment, updateAssignment } from '../../services/assignments.service';
+import {
+  createAssignment,
+  updateAssignment
+} from '../../services/assignments.service';
 import { Lecture } from '../../model/lecture';
 import AutogradeTypeEnum = AssignmentSettings.AutogradeTypeEnum;
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
@@ -57,7 +60,8 @@ import { FilesList } from './file-list';
 import {
   extractRelativePaths,
   getFiles,
-  lectureBasePath, openFile
+  lectureBasePath,
+  openFile
 } from '../../services/file.service';
 import InfoIcon from '@mui/icons-material/Info';
 import { queryClient } from '../../widgets/assignmentmanage';
@@ -76,7 +80,8 @@ Automatic Grading: The assignment is being autograded as soon as the students ma
 Fully Automatic Grading: The assignment is autograded and feedback is generated as soon as the student makes a submission. 
 (requires all scores to be based on autograde results)`;
 
-const recalculateScoreExplaination = 'Using this action will result in the recalculation of all submission scores \n based on the deadline/late submission settings.';
+const recalculateScoreExplaination =
+  'Using this action will result in the recalculation of all submission scores \n based on the deadline/late submission settings.';
 
 const validationSchema = yup.object({
   name: yup
@@ -122,80 +127,80 @@ const EditLectureNameTooltip = styled(
   }
 }));
 
-
-export const SaveAssignmentSettingsDialog = (props) => {
+export const SaveAssignmentSettingsDialog = props => {
   const formik = useFormik({
     initialValues: {
       recalcScores: false
     },
     onSubmit: values => {
-      updateAssignment(props.lecture.id, props.assignment, values.recalcScores).then(
-              async () => {
-                await updateMenus(true);
-                await queryClient.invalidateQueries({ queryKey: ['assignments'] });
-                await queryClient.invalidateQueries({ queryKey: ['assignment',props.assignment.id] });
-                enqueueSnackbar('Successfully Updated Assignment', {
-                  variant: 'success',
-                });
-              },
-              (error: Error) => {
-                enqueueSnackbar(error.message, {
-                  variant: 'error',
-                });
-
-              }
-            );
-      props.setOpen(false)
+      updateAssignment(
+        props.lecture.id,
+        props.assignment,
+        values.recalcScores
+      ).then(
+        async () => {
+          await updateMenus(true);
+          await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+          await queryClient.invalidateQueries({
+            queryKey: ['assignment', props.assignment.id]
+          });
+          enqueueSnackbar('Successfully Updated Assignment', {
+            variant: 'success'
+          });
+        },
+        (error: Error) => {
+          enqueueSnackbar(error.message, {
+            variant: 'error'
+          });
+        }
+      );
+      props.setOpen(false);
     }
-  })
-  return ( 
-  <Dialog
-    open={props.open}
-    onClose={() => {
-      props.setOpen(false)
-    }}
-    fullWidth
-    maxWidth="sm"
-  >
-    <DialogTitle>Save Assignment Settings</DialogTitle>
-    <form onSubmit={formik.handleSubmit}>
-      <DialogContent>
-        <Stack spacing={0.5} direction="row" useFlexGap>
-              
-                <Checkbox
-                checked={formik.values.recalcScores}
-                onChange={e => {
-                  formik.setFieldValue('recalcScores', e.target.checked);
-              
-                }}
-               />
-               <Typography sx={{pt:"9px"}}>
-                  Recalculate scores
-               </Typography>
-               <TooltipComponent title={recalculateScoreExplaination} sx={{mt:"9px"}} />
-            
-              
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button
-          color="primary"
-          variant="outlined"
-          onClick={() => {
-            props.setOpen(false)
-          }}
-        >
-          Cancel
-        </Button>
-        <Button color="primary" variant="contained" type="submit">
-          Save
-        </Button>
-      </DialogActions>
-    </form>
-  </Dialog>)
-
-
-}
+  });
+  return (
+    <Dialog
+      open={props.open}
+      onClose={() => {
+        props.setOpen(false);
+      }}
+      fullWidth
+      maxWidth="sm"
+    >
+      <DialogTitle>Save Assignment Settings</DialogTitle>
+      <form onSubmit={formik.handleSubmit}>
+        <DialogContent>
+          <Stack spacing={0.5} direction="row" useFlexGap>
+            <Checkbox
+              checked={formik.values.recalcScores}
+              onChange={e => {
+                formik.setFieldValue('recalcScores', e.target.checked);
+              }}
+            />
+            <Typography sx={{ pt: '9px' }}>Recalculate scores</Typography>
+            <TooltipComponent
+              title={recalculateScoreExplaination}
+              sx={{ mt: '9px' }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="primary"
+            variant="outlined"
+            onClick={() => {
+              props.setOpen(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button color="primary" variant="contained" type="submit">
+            Save
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+};
 
 export const EditLectureDialog = (props: IEditLectureProps) => {
   const formik = useFormik({
@@ -393,9 +398,10 @@ export const CreateDialog = (props: ICreateDialogProps) => {
   const formik = useFormik({
     initialValues: {
       name: 'Assignment',
+      group: '',
       deadline: null,
       autograde_type: 'auto' as AutogradeTypeEnum,
-      max_submissions: undefined as number,
+      max_submissions: undefined as number
     },
     validationSchema: validationSchema,
     onSubmit: values => {
@@ -407,11 +413,13 @@ export const CreateDialog = (props: ICreateDialogProps) => {
       }
       const newAssignment: Assignment = {
         name: values.name,
-        status: "created",
-        settings: {allowed_files: [],
-                   deadline: values.deadline,
-                   max_submissions: values.max_submissions,
-                   autograde_type: values.autograde_type as AutogradeTypeEnum
+        status: 'created',
+        settings: {
+          group: values.group,
+          allowed_files: [],
+          deadline: values.deadline,
+          max_submissions: values.max_submissions,
+          autograde_type: values.autograde_type as AutogradeTypeEnum
         }
       };
       createAssignment(props.lecture.id, newAssignment).then(
@@ -461,10 +469,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
           New
         </Button>
       </Tooltip>
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpen(false)}
-      >
+      <Dialog open={openDialog} onClose={() => setOpen(false)}>
         <DialogTitle>Create Assignment</DialogTitle>
         <form onSubmit={formik.handleSubmit}>
           <DialogContent>
@@ -479,6 +484,16 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 onChange={formik.handleChange}
                 error={formik.touched.name && Boolean(formik.errors.name)}
                 helperText={formik.touched.name && formik.errors.name}
+              />
+
+              {/* group field */}
+              <TextField
+                variant={'outlined'}
+                id={'group'}
+                name={'group'}
+                label={'Group'}
+                value={formik.values?.group}
+                onChange={formik.handleChange}
               />
 
               <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -977,20 +992,22 @@ export const SyncSubmissionGradesDialog = ({
   const handleSyncSubmission = async () => {
     setLoading(true);
     try {
-      await ltiSyncSubmissions(lecture.id, assignment.id, filter).then(response => {
-        enqueueSnackbar(
-          'Successfully matched ' +
-            response.syncable_users +
-            ' submissions with learning platform',
-          { variant: 'success' }
-        );
-        enqueueSnackbar(
-          'Successfully synced latest submissions with feedback of ' +
-            response.synced_user +
-            ' users',
-          { variant: 'success' }
-        );
-      });
+      await ltiSyncSubmissions(lecture.id, assignment.id, filter).then(
+        response => {
+          enqueueSnackbar(
+            'Successfully matched ' +
+              response.syncable_users +
+              ' submissions with learning platform',
+            { variant: 'success' }
+          );
+          enqueueSnackbar(
+            'Successfully synced latest submissions with feedback of ' +
+              response.synced_user +
+              ' users',
+            { variant: 'success' }
+          );
+        }
+      );
     } catch (error: any) {
       enqueueSnackbar(
         'Error while trying to sync submissions: ' + error.message,
