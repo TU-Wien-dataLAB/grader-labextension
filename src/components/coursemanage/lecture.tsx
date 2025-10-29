@@ -18,7 +18,7 @@ import {
   Alert,
   Chip,
   Select,
-  MenuItem
+  MenuItem, InputLabel, FormControl
 } from '@mui/material';
 import * as React from 'react';
 import { Assignment } from '../../model/assignment';
@@ -258,12 +258,12 @@ export const LectureComponent = () => {
         ) : null}
       </Typography>
       <Stack
-        direction="row"
+        direction="column"
         justifyContent="space-between"
-        alignItems="center"
+        alignItems="left"
         sx={{ mt: 2, mb: 1 }}
       >
-        <Stack direction="row" alignItems="center" sx={{ mr: 2 }}>
+        <Stack direction="row" alignItems="center" sx={{ mr: 2, mb: 2 }}>
           {lecture.code === lecture.name ? (
             <Alert severity="info">
               The name of the lecture is identical to the lecture code. You
@@ -282,40 +282,53 @@ export const LectureComponent = () => {
             </Alert>
           ) : null}
         </Stack>
-
-        <Stack direction="row" alignItems="center" spacing={2} sx={{ mr: 2 }}>
-          <CreateDialog
-            lecture={lecture}
-            handleSubmit={async () => {
-              await refreshAssignments();
-            }}
-          />
-          <ExportGradesForLectureDialog lecture={lecture} />
-          <EditLectureDialog
-            lecture={lecture}
-            handleSubmit={handleUpdateLecture}
-            open={isEditDialogOpen}
-            handleClose={() => setEditDialogOpen(false)}
-          />
-        </Stack>
-      </Stack>
-
-      <Stack direction={'row'} spacing={2}>
-        <Typography variant={'h6'}>Assignments</Typography>
-        <Select
-          labelId="demo-simple-select-label"
-          id="demo-simple-select"
-          value={chosenGroup}
-          label="Group"
-          onChange={e => setChosenGroup(e.target.value)}
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ mt: 2, mb: 1 }}
         >
-          <MenuItem value={'All'}>All</MenuItem>
-          {assignment_groups.map((group, index) => (
-            <MenuItem key={index} value={group}>
-              {group}
-            </MenuItem>
-          ))}
-        </Select>
+          <Stack direction={'row'} spacing={2} justifyContent={'center'}>
+            <Typography variant={'h6'}>Assignments</Typography>
+            <FormControl size={'small'}>
+              <InputLabel id={'group-select-label'}>Group</InputLabel>
+              <Select
+                labelId="group-select-label"
+                id="group-select"
+                value={chosenGroup}
+                label="Group"
+                onChange={e => setChosenGroup(e.target.value)}
+              >
+                <MenuItem value={'All'}>All</MenuItem>
+                {assignment_groups.map((group, index) => (
+                  <MenuItem key={index} value={group}>
+                    {group}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
+          <Stack
+            direction={'row'}
+            alignItems="center"
+            spacing={2}
+            sx={{ mr: 2 }}
+          >
+            <CreateDialog
+              lecture={lecture}
+              handleSubmit={async () => {
+                await refreshAssignments();
+              }}
+            />
+            <ExportGradesForLectureDialog lecture={lecture} />
+            <EditLectureDialog
+              lecture={lecture}
+              handleSubmit={handleUpdateLecture}
+              open={isEditDialogOpen}
+              handleClose={() => setEditDialogOpen(false)}
+            />
+          </Stack>
+        </Stack>
       </Stack>
       <AssignmentTable
         lecture={lecture}
