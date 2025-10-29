@@ -178,6 +178,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
 export const LectureComponent = () => {
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const { lectureId } = extractIdsFromBreadcrumbs();
+  const [chosenGroup, setChosenGroup] = React.useState('All');
 
   const { data: lecture, refetch: refetchLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
@@ -194,6 +195,14 @@ export const LectureComponent = () => {
     queryFn: () => getAllAssignments(lectureId),
     enabled: true
   });
+
+  const assignment_groups = Array.from(
+    new Set(
+      assignments
+        .map(a => a.settings?.group)
+        .filter((g): g is string => Boolean(g))
+    )
+  );
 
   const handleUpdateLecture = updatedLecture => {
     updateLecture(updatedLecture).then(
@@ -290,22 +299,33 @@ export const LectureComponent = () => {
           />
         </Stack>
       </Stack>
+
       <Stack direction={'row'} spacing={2}>
         <Typography variant={'h6'}>Assignments</Typography>
         <Select
           labelId="demo-simple-select-label"
           id="demo-simple-select"
-          value={10}
-          label="Age"
+          value={chosenGroup}
+          label="Group"
+          onChange={e => setChosenGroup(e.target.value)}
         >
-          <MenuItem value={10}>Ten</MenuItem>
-          <MenuItem value={20}>Twenty</MenuItem>
-          <MenuItem value={30}>Thirty</MenuItem>
+          <MenuItem value={'All'}>All</MenuItem>
+          {assignment_groups.map((group, index) => (
+            <MenuItem key={index} value={group}>
+              {group}
+            </MenuItem>
+          ))}
         </Select>
       </Stack>
       <AssignmentTable
         lecture={lecture}
-        rows={assignments}
+        rows={
+          chosenGroup === 'All'
+            ? assignments
+            : assignments.filter(
+                assignment => assignment.settings.group === chosenGroup
+              )
+        }
         refreshAssignments={refreshAssignments}
       />
     </Stack>
