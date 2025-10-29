@@ -80,6 +80,9 @@ Automatic Grading: The assignment is being autograded as soon as the students ma
 Fully Automatic Grading: The assignment is autograded and feedback is generated as soon as the student makes a submission. 
 (requires all scores to be based on autograde results)`;
 
+const groupFeatureDescription = `By entering a group name, you can order assignments in different groups \n
+based on specific topics (e.g., Assignment 1 and 2 are in Group 1, Assignment 3 in Group 2 etc.)`;
+
 const recalculateScoreExplaination =
   'Using this action will result in the recalculation of all submission scores \n based on the deadline/late submission settings.';
 
@@ -398,7 +401,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
   const formik = useFormik({
     initialValues: {
       name: 'Assignment',
-      group: '',
+      group: "",
       deadline: null,
       autograde_type: 'auto' as AutogradeTypeEnum,
       max_submissions: undefined as number
@@ -487,12 +490,21 @@ export const CreateDialog = (props: ICreateDialogProps) => {
               />
 
               {/* group field */}
+              <InputLabel id="auto-grading-behaviour-label">
+                Group
+                <Tooltip title={groupFeatureDescription}>
+                  <HelpOutlineOutlinedIcon
+                    fontSize={'small'}
+                    sx={{ ml: 1.5, mt: 2 }}
+                  />
+                </Tooltip>
+              </InputLabel>
               <TextField
                 variant={'outlined'}
                 id={'group'}
                 name={'group'}
                 label={'Group'}
-                value={formik.values?.group}
+                value={formik.values.group}
                 onChange={formik.handleChange}
               />
 
@@ -516,7 +528,7 @@ export const CreateDialog = (props: ICreateDialogProps) => {
                 <DateTimePicker
                   ampm={false}
                   disabled={formik.values.deadline === null}
-                  label="DateTimePicker"
+                  label="Pick a Date"
                   value={formik.values?.deadline}
                   onChange={date => {
                     formik.setFieldValue('deadline', date);
