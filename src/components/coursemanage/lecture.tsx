@@ -1,8 +1,10 @@
-// Copyright (c) 2022, TU Wien
-// All rights reserved.
-//
-// This source code is licensed under the BSD-style license found in the
-// LICENSE file in the root directory of this source tree.
+/**
+ * Copyright (c) 2022, TU Wien
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 import {
   IconButton,
@@ -14,7 +16,9 @@ import {
   Typography,
   Tooltip,
   Alert,
-  Chip
+  Chip,
+  Select,
+  MenuItem
 } from '@mui/material';
 import * as React from 'react';
 import { Assignment } from '../../model/assignment';
@@ -286,9 +290,18 @@ export const LectureComponent = () => {
           />
         </Stack>
       </Stack>
-
-      <Stack>
+      <Stack direction={'row'} spacing={2}>
         <Typography variant={'h6'}>Assignments</Typography>
+        <Select
+          labelId="demo-simple-select-label"
+          id="demo-simple-select"
+          value={10}
+          label="Age"
+        >
+          <MenuItem value={10}>Ten</MenuItem>
+          <MenuItem value={20}>Twenty</MenuItem>
+          <MenuItem value={30}>Thirty</MenuItem>
+        </Select>
       </Stack>
       <AssignmentTable
         lecture={lecture}
