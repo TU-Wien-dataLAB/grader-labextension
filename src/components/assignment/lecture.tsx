@@ -45,6 +45,8 @@ import { getLecture } from '../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 import { RepoType } from '../util/repo-type';
 import { FeedbackStatus } from '../../model/feedbackStatus';
+import { GroupsDropdownMenu } from '../util/groups-dropdown-menu';
+import { useState } from 'react';
 
 /*
  * Buttons for AssignmentTable
@@ -57,7 +59,9 @@ interface IEditProps {
 
 const EditButton = (props: IEditProps) => {
   const [assignmentPulled, setAssignmentPulled] = React.useState(false);
-  const fetchAssignmentHandler = async (repo: RepoType.USER | RepoType.RELEASE) => {
+  const fetchAssignmentHandler = async (
+    repo: RepoType.USER | RepoType.RELEASE
+  ) => {
     await pullAssignment(props.lecture.id, props.assignment.id, repo).then(
       () => {
         enqueueSnackbar('Successfully Pulled Repo', {
@@ -347,6 +351,7 @@ const transformAssignments = (
  */
 export const LectureComponent = () => {
   const { lectureId } = extractIdsFromBreadcrumbs();
+  const [chosenGroup, setChosenGroup] = useState('All');
 
   const { data: lecture, isLoading: isLoadingLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
@@ -393,11 +398,23 @@ export const LectureComponent = () => {
           />
         ) : null}
       </Typography>
-      <Stack>
+      <Stack direction={'row'} spacing={2}>
         <Typography variant={'h6'}>Assignments</Typography>
+        <GroupsDropdownMenu
+          assignments={assignments}
+          chosenGroup={chosenGroup}
+          setChosenGroup={setChosenGroup}
+        />
       </Stack>
 
-      <AssignmentTable lecture={lecture} rows={assignmentsState} />
+      <AssignmentTable
+        lecture={lecture}
+        rows={
+          chosenGroup === 'All'
+            ? assignmentsState
+            : assignmentsState.filter(a => a.settings.group === chosenGroup)
+        }
+      />
     </Stack>
   );
 };
