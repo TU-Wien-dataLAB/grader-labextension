@@ -2,13 +2,13 @@ import { AssignmentDetail } from '../../model/assignmentDetail';
 import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import * as React from 'react';
 
-interface GroupsDropdownMenuI {
+interface IGroupsDropdownMenu {
   assignments: AssignmentDetail[];
   chosenGroup: string;
   setChosenGroup: React.Dispatch<React.SetStateAction<string>>;
 }
 
-export const GroupsDropdownMenu = (props: GroupsDropdownMenuI) => {
+export const GroupsDropDownMenu = (props: IGroupsDropdownMenu) => {
   const assignment_groups = Array.from(
     new Set(
       props.assignments
