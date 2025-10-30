@@ -201,6 +201,7 @@ export const LectureComponent = () => {
       assignments
         .map(a => a.settings?.group)
         .filter((g): g is string => Boolean(g))
+        .sort()
     )
   );
 
