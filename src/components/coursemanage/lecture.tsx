@@ -16,9 +16,7 @@ import {
   Typography,
   Tooltip,
   Alert,
-  Chip,
-  Select,
-  MenuItem, InputLabel, FormControl
+  Chip
 } from '@mui/material';
 import * as React from 'react';
 import { Assignment } from '../../model/assignment';
@@ -47,6 +45,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AssignmentDetail } from '../../model/assignmentDetail';
 import { queryClient } from '../../widgets/assignmentmanage';
 import CheckIcon from '@mui/icons-material/Check';
+import { GroupsDropdownMenu } from '../util/groups-dropdown-menu';
 
 interface IAssignmentTableProps {
   lecture: Lecture;
@@ -196,15 +195,6 @@ export const LectureComponent = () => {
     enabled: true
   });
 
-  const assignment_groups = Array.from(
-    new Set(
-      assignments
-        .map(a => a.settings?.group)
-        .filter((g): g is string => Boolean(g))
-        .sort()
-    )
-  );
-
   const handleUpdateLecture = updatedLecture => {
     updateLecture(updatedLecture).then(
       async response => {
@@ -291,23 +281,11 @@ export const LectureComponent = () => {
         >
           <Stack direction={'row'} spacing={2} justifyContent={'center'}>
             <Typography variant={'h6'}>Assignments</Typography>
-            <FormControl size={'small'}>
-              <InputLabel id={'group-select-label'}>Group</InputLabel>
-              <Select
-                labelId="group-select-label"
-                id="group-select"
-                value={chosenGroup}
-                label="Group"
-                onChange={e => setChosenGroup(e.target.value)}
-              >
-                <MenuItem value={'All'}>All</MenuItem>
-                {assignment_groups.map((group, index) => (
-                  <MenuItem key={index} value={group}>
-                    {group}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <GroupsDropdownMenu
+              assignments={assignments}
+              chosenGroup={chosenGroup}
+              setChosenGroup={setChosenGroup}
+            />
           </Stack>
           <Stack
             direction={'row'}
