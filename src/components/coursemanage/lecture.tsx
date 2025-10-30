@@ -45,7 +45,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AssignmentDetail } from '../../model/assignmentDetail';
 import { queryClient } from '../../widgets/assignmentmanage';
 import CheckIcon from '@mui/icons-material/Check';
-import { GroupsDropdownMenu } from '../util/groups-dropdown-menu';
+import { GroupsDropDownMenu } from '../util/groups-drop-down-menu';
 
 interface IAssignmentTableProps {
   lecture: Lecture;
@@ -57,6 +57,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
   const navigate = useNavigate();
   const headers = [
     { name: 'Name' },
+    { name: 'Group', width: 200 },
     { name: 'Points', width: 100 },
     { name: 'Deadline', width: 200 },
     { name: 'Status', width: 130 },
@@ -93,7 +94,16 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                     {row.name}
                   </Typography>
                 </TableCell>
-                <TableCell>{row.points}</TableCell>
+                <TableCell align={'left'}>
+                  {row.settings.group !== '' && row.settings.group !== null && (
+                    <Chip
+                      label={row.settings.group}
+                      color={'primary'}
+                      variant={'outlined'}
+                    />
+                  )}
+                </TableCell>
+                <TableCell align={'center'}>{row.points}</TableCell>
                 <TableCell>
                   <DeadlineComponent
                     component={'chip'}
@@ -281,7 +291,7 @@ export const LectureComponent = () => {
         >
           <Stack direction={'row'} spacing={2} justifyContent={'center'}>
             <Typography variant={'h6'}>Assignments</Typography>
-            <GroupsDropdownMenu
+            <GroupsDropDownMenu
               assignments={assignments}
               chosenGroup={chosenGroup}
               setChosenGroup={setChosenGroup}

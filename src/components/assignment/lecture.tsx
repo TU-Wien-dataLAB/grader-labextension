@@ -1,8 +1,10 @@
-// Copyright (c) 2022, TU Wien
-// All rights reserved.
-//
-// This source code is licensed under the BSD-style license found in the
-// LICENSE file in the root directory of this source tree.
+/**
+ * Copyright (c) 2022, TU Wien
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -45,7 +47,7 @@ import { getLecture } from '../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 import { RepoType } from '../util/repo-type';
 import { FeedbackStatus } from '../../model/feedbackStatus';
-import { GroupsDropdownMenu } from '../util/groups-dropdown-menu';
+import { GroupsDropDownMenu } from '../util/groups-drop-down-menu';
 import { useState } from 'react';
 
 /*
@@ -137,6 +139,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
   const navigate = useNavigate();
   const headers = [
     { name: 'Name' },
+    { name: 'Group', width: 200 },
     { name: 'Points', width: 100 },
     { name: 'Deadline', width: 200 },
     { name: 'Edit', width: 75 },
@@ -201,6 +204,16 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                       (complete)
                     </Typography>
                   ) : null}
+                </TableCell>
+                <TableCell align={'left'}>
+                    {row.settings.group !== '' &&
+                      row.settings.group !== null && (
+                        <Chip
+                          label={row.settings.group}
+                          color={'primary'}
+                          variant={'outlined'}
+                        />
+                      )}
                 </TableCell>
                 <TableCell style={{ width: headerWidth(headers, 'Points') }}>
                   {row.points}
@@ -400,7 +413,7 @@ export const LectureComponent = () => {
       </Typography>
       <Stack direction={'row'} spacing={2}>
         <Typography variant={'h6'}>Assignments</Typography>
-        <GroupsDropdownMenu
+        <GroupsDropDownMenu
           assignments={assignments}
           chosenGroup={chosenGroup}
           setChosenGroup={setChosenGroup}
