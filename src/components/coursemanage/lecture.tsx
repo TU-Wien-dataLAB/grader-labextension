@@ -46,6 +46,7 @@ import { AssignmentDetail } from '../../model/assignmentDetail';
 import { queryClient } from '../../widgets/assignmentmanage';
 import CheckIcon from '@mui/icons-material/Check';
 import { GroupsDropDownMenu } from '../util/groups-drop-down-menu';
+import { useState } from 'react';
 
 interface IAssignmentTableProps {
   lecture: Lecture;
@@ -187,7 +188,8 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
 export const LectureComponent = () => {
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const { lectureId } = extractIdsFromBreadcrumbs();
-  const [chosenGroup, setChosenGroup] = React.useState('All');
+  const allGroupsValue = 'All';
+  const [chosenGroup, setChosenGroup] = useState(allGroupsValue);
 
   const { data: lecture, refetch: refetchLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
@@ -295,6 +297,7 @@ export const LectureComponent = () => {
               assignments={assignments}
               chosenGroup={chosenGroup}
               setChosenGroup={setChosenGroup}
+              allGroupsValue={allGroupsValue}
             />
           </Stack>
           <Stack
@@ -322,7 +325,7 @@ export const LectureComponent = () => {
       <AssignmentTable
         lecture={lecture}
         rows={
-          chosenGroup === 'All'
+          chosenGroup === allGroupsValue
             ? assignments
             : assignments.filter(
                 assignment => assignment.settings.group === chosenGroup

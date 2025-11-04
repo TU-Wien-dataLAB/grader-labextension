@@ -364,7 +364,8 @@ const transformAssignments = (
  */
 export const LectureComponent = () => {
   const { lectureId } = extractIdsFromBreadcrumbs();
-  const [chosenGroup, setChosenGroup] = useState('All');
+  const allGroupsValue = 'All';
+  const [chosenGroup, setChosenGroup] = useState(allGroupsValue);
 
   const { data: lecture, isLoading: isLoadingLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
@@ -417,13 +418,14 @@ export const LectureComponent = () => {
           assignments={assignments}
           chosenGroup={chosenGroup}
           setChosenGroup={setChosenGroup}
+          allGroupsValue={allGroupsValue}
         />
       </Stack>
 
       <AssignmentTable
         lecture={lecture}
         rows={
-          chosenGroup === 'All'
+          chosenGroup === allGroupsValue
             ? assignmentsState
             : assignmentsState.filter(a => a.settings.group === chosenGroup)
         }
