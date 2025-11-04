@@ -6,6 +6,7 @@ interface IGroupsDropdownMenu {
   assignments: AssignmentDetail[];
   chosenGroup: string;
   setChosenGroup: React.Dispatch<React.SetStateAction<string>>;
+  allGroupsValue: string;
 }
 
 export const GroupsDropDownMenu = (props: IGroupsDropdownMenu) => {
@@ -29,8 +30,8 @@ export const GroupsDropDownMenu = (props: IGroupsDropdownMenu) => {
         onChange={e => props.setChosenGroup(e.target.value)}
       >
         <MenuItem value={'All'}>All</MenuItem>
-        {assignment_groups.map((group, index) => (
-          <MenuItem key={index} value={group}>
+        {assignment_groups.map(group => (
+          <MenuItem key={group} value={group}>
             {group}
           </MenuItem>
         ))}
