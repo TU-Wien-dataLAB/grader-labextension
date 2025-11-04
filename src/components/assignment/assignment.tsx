@@ -173,7 +173,6 @@ export const AssignmentComponent = () => {
         }
       );
     }
-
   }, [lecture, assignment, submissions.length]);
 
   if (
@@ -194,7 +193,6 @@ export const AssignmentComponent = () => {
   const path = `${lectureBasePath}${lecture.code}/assignments/${assignment.id}`;
   // Open the assignment in the JupyterLab file browser
   openBrowser(path);
-
 
   const resetAssignmentHandler = async () => {
     showDialog(
@@ -259,7 +257,9 @@ export const AssignmentComponent = () => {
    * Pulls from given repository by sending a request to the grader git service.
    * @param repo input which repository should be fetched
    */
-  const fetchAssignmentHandler = async (repo: RepoType.USER | RepoType.RELEASE) => {
+  const fetchAssignmentHandler = async (
+    repo: RepoType.USER | RepoType.RELEASE
+  ) => {
     await pullAssignment(lecture.id, assignment.id, repo).then(
       () => {
         enqueueSnackbar('Successfully Pulled Repo', {
@@ -392,7 +392,8 @@ export const AssignmentComponent = () => {
                     : isLateSubmissionOver() ||
                       isMaxSubmissionReached() ||
                       isAssignmentCompleted() ||
-                      files.length === 0
+                      files.length === 0 ||
+                      isDeadlineOver()
                 }
                 onClick={() => submitAssignmentHandler()}
               >
