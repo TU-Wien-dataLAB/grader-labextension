@@ -16,6 +16,7 @@ export interface AssignmentSettings {
     allowed_files?: Array<string>;
     late_submission?: Array<SubmissionPeriod>;
     autograde_type?: AssignmentSettings.AutogradeTypeEnum;
+    group?: string;
 }
 export namespace AssignmentSettings {
     export const AutogradeTypeEnum = {

@@ -1,8 +1,10 @@
-// Copyright (c) 2022, TU Wien
-// All rights reserved.
-//
-// This source code is licensed under the BSD-style license found in the
-// LICENSE file in the root directory of this source tree.
+/**
+ * Copyright (c) 2022, TU Wien
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 import {
   IconButton,
@@ -43,6 +45,8 @@ import { useQuery } from '@tanstack/react-query';
 import { AssignmentDetail } from '../../model/assignmentDetail';
 import { queryClient } from '../../widgets/assignmentmanage';
 import CheckIcon from '@mui/icons-material/Check';
+import { GroupsDropDownMenu } from '../util/groups-drop-down-menu';
+import { useState } from 'react';
 
 interface IAssignmentTableProps {
   lecture: Lecture;
@@ -54,6 +58,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
   const navigate = useNavigate();
   const headers = [
     { name: 'Name' },
+    { name: 'Group', width: 200 },
     { name: 'Points', width: 100 },
     { name: 'Deadline', width: 200 },
     { name: 'Status', width: 130 },
@@ -90,7 +95,16 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                     {row.name}
                   </Typography>
                 </TableCell>
-                <TableCell>{row.points}</TableCell>
+                <TableCell align={'left'}>
+                  {row.settings.group !== '' && row.settings.group !== null && (
+                    <Chip
+                      label={row.settings.group}
+                      color={'primary'}
+                      variant={'outlined'}
+                    />
+                  )}
+                </TableCell>
+                <TableCell align={'center'}>{row.points}</TableCell>
                 <TableCell>
                   <DeadlineComponent
                     component={'chip'}
@@ -174,6 +188,8 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
 export const LectureComponent = () => {
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const { lectureId } = extractIdsFromBreadcrumbs();
+  const allGroupsValue = 'All';
+  const [chosenGroup, setChosenGroup] = useState(allGroupsValue);
 
   const { data: lecture, refetch: refetchLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
@@ -245,12 +261,12 @@ export const LectureComponent = () => {
         ) : null}
       </Typography>
       <Stack
-        direction="row"
+        direction="column"
         justifyContent="space-between"
-        alignItems="center"
+        alignItems="left"
         sx={{ mt: 2, mb: 1 }}
       >
-        <Stack direction="row" alignItems="center" sx={{ mr: 2 }}>
+        <Stack direction="row" alignItems="center" sx={{ mr: 2, mb: 2 }}>
           {lecture.code === lecture.name ? (
             <Alert severity="info">
               The name of the lecture is identical to the lecture code. You
@@ -269,30 +285,52 @@ export const LectureComponent = () => {
             </Alert>
           ) : null}
         </Stack>
-
-        <Stack direction="row" alignItems="center" spacing={2} sx={{ mr: 2 }}>
-          <CreateDialog
-            lecture={lecture}
-            handleSubmit={async () => {
-              await refreshAssignments();
-            }}
-          />
-          <ExportGradesForLectureDialog lecture={lecture} />
-          <EditLectureDialog
-            lecture={lecture}
-            handleSubmit={handleUpdateLecture}
-            open={isEditDialogOpen}
-            handleClose={() => setEditDialogOpen(false)}
-          />
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ mt: 2, mb: 1 }}
+        >
+          <Stack direction={'row'} spacing={2} justifyContent={'center'}>
+            <Typography variant={'h6'}>Assignments</Typography>
+            <GroupsDropDownMenu
+              assignments={assignments}
+              chosenGroup={chosenGroup}
+              setChosenGroup={setChosenGroup}
+              allGroupsValue={allGroupsValue}
+            />
+          </Stack>
+          <Stack
+            direction={'row'}
+            alignItems="center"
+            spacing={2}
+            sx={{ mr: 2 }}
+          >
+            <CreateDialog
+              lecture={lecture}
+              handleSubmit={async () => {
+                await refreshAssignments();
+              }}
+            />
+            <ExportGradesForLectureDialog lecture={lecture} />
+            <EditLectureDialog
+              lecture={lecture}
+              handleSubmit={handleUpdateLecture}
+              open={isEditDialogOpen}
+              handleClose={() => setEditDialogOpen(false)}
+            />
+          </Stack>
         </Stack>
-      </Stack>
-
-      <Stack>
-        <Typography variant={'h6'}>Assignments</Typography>
       </Stack>
       <AssignmentTable
         lecture={lecture}
-        rows={assignments}
+        rows={
+          chosenGroup === allGroupsValue
+            ? assignments
+            : assignments.filter(
+                assignment => assignment.settings.group === chosenGroup
+              )
+        }
         refreshAssignments={refreshAssignments}
       />
     </Stack>
