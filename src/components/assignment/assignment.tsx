@@ -1,8 +1,10 @@
-// Copyright (c) 2022, TU Wien
-// All rights reserved.
-//
-// This source code is licensed under the BSD-style license found in the
-// LICENSE file in the root directory of this source tree.
+/**
+ * Copyright (c) 2022, TU Wien
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 import * as React from 'react';
 import { Lecture } from '../../model/lecture';
@@ -57,7 +59,10 @@ import { GlobalObjects } from '../..';
 import { RepoType } from '../util/repo-type';
 import { FeedbackStatus } from '../../model/feedbackStatus';
 
-const calculateActiveStep = (submissions: Submission[]) => {
+const calculateActiveStep = (
+  submissions: Submission[],
+  isAssignmentFetched: boolean
+) => {
   const hasFeedback = submissions.reduce(
     (accum: boolean, curr: Submission) =>
       accum ||
@@ -66,12 +71,15 @@ const calculateActiveStep = (submissions: Submission[]) => {
     false
   );
   if (hasFeedback) {
-    return 3;
+    return 2;
   }
   if (submissions.length > 0) {
     return 1;
   }
-  return 0;
+  if (isAssignmentFetched) {
+    return 0;
+  }
+  return -1;
 };
 
 interface ISubmissionsLeft {
@@ -114,7 +122,7 @@ export const AssignmentComponent = () => {
   });
 
   const [fileList, setFileList] = React.useState<string[]>([]);
-  const [activeStatus, setActiveStatus] = React.useState(0);
+  const [activeStatus, setActiveStatus] = React.useState(-1);
   const navigate = useNavigate();
   const reloadPage = () => navigate(0);
 
@@ -146,15 +154,22 @@ export const AssignmentComponent = () => {
     enabled: !!lecture && !!assignment
   });
 
+  const isAssignmentFetched = () => {
+    return files.length > 0;
+  };
+
   React.useEffect(() => {
-    if (lecture && assignment) {
+    if (lecture && assignment && files) {
       getAssignmentProperties(lecture.id, assignment.id).then(properties => {
         const gb = new GradeBook(properties);
         setFileList([
           ...gb.getNotebooks().map(n => n + '.ipynb'),
           ...gb.getExtraFiles()
         ]);
-        const active_step = calculateActiveStep(submissions);
+        const active_step = calculateActiveStep(
+          submissions,
+          isAssignmentFetched()
+        );
         setActiveStatus(active_step);
         refetchSubleft();
       });
@@ -173,7 +188,7 @@ export const AssignmentComponent = () => {
         }
       );
     }
-  }, [lecture, assignment, submissions.length]);
+  }, [lecture, assignment, submissions.length, files]);
 
   if (
     isLoadingAssignment ||
@@ -236,7 +251,10 @@ export const AssignmentComponent = () => {
         await submitAssignment(lecture, assignment).then(
           () => {
             refetchSubleft().then(() => {
-              const active_step = calculateActiveStep(submissions);
+              const active_step = calculateActiveStep(
+                submissions,
+                isAssignmentFetched()
+              );
               setActiveStatus(active_step);
             });
             enqueueSnackbar('Successfully Submitted Assignment', {
@@ -265,7 +283,10 @@ export const AssignmentComponent = () => {
         enqueueSnackbar('Successfully Pulled Repo', {
           variant: 'success'
         });
-        refetchFiles();
+        refetchFiles().then(() => {
+          const active_step = calculateActiveStep(submissions, true);
+          setActiveStatus(active_step);
+        });
       },
       error => {
         enqueueSnackbar(error.message, {
@@ -313,9 +334,6 @@ export const AssignmentComponent = () => {
     );
   };
 
-  const isAssignmentFetched = () => {
-    return files.length > 0;
-  };
 
   const hasPermissions = () => {
     const permissions = UserPermissions.getPermissions();
