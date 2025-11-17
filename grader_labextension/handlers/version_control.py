@@ -55,7 +55,7 @@ class GenerateHandler(ExtensionBaseHandler):
             # Note: The `allowed_files` parameter is set to copy all files except notebooks.
             # this is needed to not overwrite converted notebooks with the original ones
             # as currently the the copying process is done after the conversion
-            assignment_settings=AssignmentSettings(allowed_files=["*[!.ipynb]"]),
+            assignment_settings=AssignmentSettings(allowed_files=["*"]),
         )
         generator.force = True
         generator.log = self.log
@@ -443,7 +443,7 @@ class PushHandler(ExtensionBaseHandler):
             input_dir=src_path,
             output_dir=output_path,
             file_pattern="*.ipynb",
-            assignment_settings=AssignmentSettings(allowed_files=["*[!.ipynb]"]),
+            assignment_settings=AssignmentSettings(allowed_files=["*"]),
             # Note: The `allowed_files` parameter is set to copy all files except notebooks.
             # this is needed to not overwrite converted notebooks with the original ones
             # as currently the the copying process is done after the conversion
