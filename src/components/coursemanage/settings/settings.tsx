@@ -306,7 +306,7 @@ export const SettingsComponent = () => {
             id="max-submissions"
             name="settings.max_submissions"
             placeholder="Submissions"
-            value={formik.values.settings.max_submissions || null}
+            value={formik.values.settings.max_submissions ?? ''}
             slotProps={{ htmlInput: { min: 1 } }}
             onChange={e => {
               formik.setFieldValue('settings.max_submissions', +e.target.value);
@@ -316,8 +316,8 @@ export const SettingsComponent = () => {
               formik.errors.settings?.max_submissions
             }
             error={
-              Boolean(formik.values.settings.max_submissions) &&
-              formik.values.settings.max_submissions < 1
+              formik.touched.settings?.max_submissions &&
+              Boolean(formik.errors.settings?.max_submissions)
             }
           />
 
