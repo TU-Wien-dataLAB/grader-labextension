@@ -184,7 +184,8 @@ export const SettingsComponent = () => {
         allowed_files:
           assignment.settings.allowed_files === null
             ? []
-            : assignment.settings.allowed_files
+            : assignment.settings.allowed_files,
+        cell_timeout: assignment.settings.cell_timeout || null
       }
     },
     validationSchema: validationSchema,
@@ -195,6 +196,8 @@ export const SettingsComponent = () => {
         settings: {
           ...assignment.settings,
           ...values.settings,
+          cell_timeout: values.settings.cell_timeout
+            ? values.settings.cell_timeout : null,
           deadline: values.settings.deadline
             ? new Date(values.settings.deadline).toISOString()
             : null // Convert Date to string or null
@@ -336,6 +339,27 @@ export const SettingsComponent = () => {
             <MenuItem value="full_auto">Fully Automatic Grading</MenuItem>
             <MenuItem value="unassisted">No Automatic Grading</MenuItem>
           </TextField>
+
+          <InputLabel id="cell-timeout-label">
+            Cell Timeout
+            <TooltipComponent title="Set a custom timeout for notebook cells in seconds" sx={{ ml: 0.5 }} />
+          </InputLabel>
+          <TextField
+            variant={'outlined'}
+            name={'settings.cell_timeout'}
+            label={'Cell Timeout'}
+            type={'number'}
+            //slotProps={{ htmlInput: { min: 10 } }}
+            value={formik.values.settings.cell_timeout ?? null}
+            onChange={formik.handleChange}
+            helperText={
+              formik.touched.settings?.cell_timeout &&
+              formik.errors.settings?.cell_timeout
+            }
+            error={
+              Boolean(formik.errors.settings?.cell_timeout) &&
+              formik.touched.settings?.cell_timeout}
+          />
 
           <AllowedFilePatterns
             patterns={formik.values.settings.allowed_files || []}
