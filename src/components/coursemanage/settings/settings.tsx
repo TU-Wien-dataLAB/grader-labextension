@@ -53,17 +53,24 @@ const gradingBehaviourHelp = (
 const validationSchema = yup.object({
   name: yup
     .string()
-    .min(4, 'Name should be 4-50 character length')
-    .max(50, 'Name should be 4-50 character length')
+    .min(4, 'Name should be 4-50 characters long')
+    .max(50, 'Name should be 4-50 characters long')
     .required('Name is required'),
-  group: yup.string().nullable().notRequired(),
-  deadline: yup.date().nullable(),
-  type: yup.mixed().oneOf(['user', 'group']),
-  automatic_grading: yup.mixed().oneOf(['unassisted', 'auto', 'full_auto']),
-  max_submissions: yup
-    .number()
-    .nullable()
-    .min(1, 'Students must be able to at least submit once')
+  settings: yup.object({
+    group: yup.string().nullable().notRequired(),
+    deadline: yup.date().nullable(),
+    autograde_type: yup.mixed().oneOf(['unassisted', 'auto', 'full_auto']),
+    max_submissions: yup
+      .number()
+      .nullable()
+      .min(1, 'Students must be able to at least submit once')
+      .max(100, 'Students can submit up to 100 times'),
+    cell_timeout: yup
+      .number()
+      .nullable()
+      .min(10, 'Cell timeout must be at least ten seconds')
+      .max(86400, "Cell timeout can't exceed 24 hours")
+  })
 });
 
 export const SettingsComponent = () => {
