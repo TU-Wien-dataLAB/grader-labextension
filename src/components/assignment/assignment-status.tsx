@@ -1,8 +1,10 @@
-// Copyright (c) 2022, TU Wien
-// All rights reserved.
-//
-// This source code is licensed under the BSD-style license found in the
-// LICENSE file in the root directory of this source tree.
+/**
+ * Copyright (c) 2022, TU Wien
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 import {
   Card,
@@ -78,7 +80,7 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
           ))}
         </Stepper>
         <Typography sx={{ mt: 2, ml: 2 }}>
-          {steps[props.activeStep < 2 ? props.activeStep : 2].description}
+          {props.activeStep >= 0 && steps[props.activeStep].description}
         </Typography>
       </CardContent>
     </Card>
