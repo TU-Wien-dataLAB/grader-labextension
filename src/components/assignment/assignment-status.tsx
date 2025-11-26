@@ -18,13 +18,14 @@ import * as React from 'react';
 
 import { Submission } from '../../model/submission';
 import ChatRoundedIcon from '@mui/icons-material/ChatRounded';
+import { AssignmentStatusEnum } from '../util/assignment-status-enum';
 
 /**
  * Props for AssignmentComponent.
  */
 export interface IAssignmentStatusProps {
   submissions: Submission[];
-  activeStep: number;
+  activeStep: AssignmentStatusEnum;
 }
 
 /**
@@ -80,7 +81,7 @@ export const AssignmentStatus = (props: IAssignmentStatusProps) => {
           ))}
         </Stepper>
         <Typography sx={{ mt: 2, ml: 2 }}>
-          {props.activeStep >= 0 && steps[props.activeStep].description}
+          {props.activeStep != AssignmentStatusEnum.NOT_FETCHED && steps[props.activeStep].description}
         </Typography>
       </CardContent>
     </Card>
