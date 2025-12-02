@@ -597,12 +597,12 @@ export const CreateDialog = (props: ICreateDialogProps) => {
               </InputLabel>
               <TextField
                 select
-                id="auto-grade=ing-type-select"
+                id="auto-grading-type-select"
                 value={formik.values.autograde_type}
                 label="Auto-Grading Behaviour"
                 placeholder="Grading"
                 onChange={e => {
-                  formik.setFieldValue('automatic_grading', e.target.value);
+                  formik.setFieldValue('autograde_type', e.target.value);
                 }}
               >
                 <MenuItem value={'unassisted'}>No Automatic Grading</MenuItem>

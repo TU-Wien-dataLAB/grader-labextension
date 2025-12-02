@@ -58,6 +58,7 @@ import { Contents } from '@jupyterlab/services';
 import { GlobalObjects } from '../..';
 import { RepoType } from '../util/repo-type';
 import { FeedbackStatus } from '../../model/feedbackStatus';
+import { AssignmentStatusEnum } from '../util/assignment-status-enum';
 
 const calculateActiveStep = (
   submissions: Submission[],
@@ -71,15 +72,15 @@ const calculateActiveStep = (
     false
   );
   if (hasFeedback) {
-    return 2;
+    return AssignmentStatusEnum.FEEDBACK_AVAILABLE;
   }
   if (submissions.length > 0) {
-    return 1;
+    return AssignmentStatusEnum.SUBMITTED;
   }
   if (isAssignmentFetched) {
-    return 0;
+    return AssignmentStatusEnum.PULLED;
   }
-  return -1;
+  return AssignmentStatusEnum.NOT_FETCHED;
 };
 
 interface ISubmissionsLeft {
@@ -122,7 +123,7 @@ export const AssignmentComponent = () => {
   });
 
   const [fileList, setFileList] = React.useState<string[]>([]);
-  const [activeStatus, setActiveStatus] = React.useState(-1);
+  const [activeStatus, setActiveStatus] = React.useState(AssignmentStatusEnum.NOT_FETCHED);
   const navigate = useNavigate();
   const reloadPage = () => navigate(0);
 
