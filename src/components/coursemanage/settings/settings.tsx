@@ -15,7 +15,7 @@ import {
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { getAssignment } from '../../../services/assignments.service';
+import { getAssignment, getConfig } from '../../../services/assignments.service';
 import { enqueueSnackbar } from 'notistack';
 import { Lecture } from '../../../model/lecture';
 import * as yup from 'yup';
@@ -50,28 +50,68 @@ const gradingBehaviourHelp = (
   </React.Fragment>
 );
 
-const validationSchema = yup.object({
-  name: yup
-    .string()
-    .min(4, 'Name should be 4-50 characters long')
-    .max(50, 'Name should be 4-50 characters long')
-    .required('Name is required'),
-  settings: yup.object({
-    group: yup.string().nullable().notRequired(),
-    deadline: yup.date().nullable(),
-    autograde_type: yup.mixed().oneOf(['unassisted', 'auto', 'full_auto']),
-    max_submissions: yup
-      .number()
-      .nullable()
-      .min(1, 'Students must be able to at least submit once')
-      .max(100, 'Students can submit up to 100 times'),
-    cell_timeout: yup
-      .number()
-      .nullable()
-      .min(10, 'Cell timeout must be at least ten seconds')
-      .max(86400, "Cell timeout can't exceed 24 hours")
-  })
-});
+function determineMaxCellTimeoutMessage(max_cell_timeout: number){
+  let hours: number,
+    minutes: number,
+    seconds = 0;
+  if (max_cell_timeout > 3600){
+    hours = Math.floor(max_cell_timeout / 3600);
+    max_cell_timeout =  max_cell_timeout % 3600;
+  }
+  if (max_cell_timeout > 60){
+    minutes = Math.floor(max_cell_timeout / 60);
+    seconds = max_cell_timeout % 60
+  }
+
+  let result = "Cell timeout can't exceed ";
+
+  if (hours > 0 || minutes > 0){
+    const maxCellTimeoutValues = {
+      'hour(s)': hours,
+      'minute(s)': minutes,
+    };
+    result += Object.entries(maxCellTimeoutValues)
+      .filter(([_, value]) => value > 0)
+      .map(([key, value]) => ` ${value} ${key}`)
+      .join(',');
+
+    result += ` and ${seconds} second(s).`;
+  } else {
+    result += `${max_cell_timeout} seconds.`;
+  }
+
+  return result;
+}
+
+const validationSchema = (props: {
+  min_cell_timeout: number;
+  max_cell_timeout?: number;
+}) =>
+  yup.object({
+    name: yup
+      .string()
+      .min(4, 'Name should be 4-50 characters long')
+      .max(50, 'Name should be 4-50 characters long')
+      .required('Name is required'),
+    settings: yup.object({
+      group: yup.string().nullable().notRequired(),
+      deadline: yup.date().nullable(),
+      autograde_type: yup.mixed().oneOf(['unassisted', 'auto', 'full_auto']),
+      max_submissions: yup
+        .number()
+        .nullable()
+        .min(1, 'Students must be able to at least submit once')
+        .max(100, 'Students can submit up to 100 times'),
+      cell_timeout: yup
+        .number()
+        .nullable()
+        .min(
+          props.min_cell_timeout,
+          `Cell timeout must be at least ${props.min_cell_timeout} seconds`
+        ) //TODO: use a function to determine the message
+        .max(props.max_cell_timeout, determineMaxCellTimeoutMessage(props.max_cell_timeout))
+    })
+  });
 
 export const SettingsComponent = () => {
   const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
@@ -86,6 +126,11 @@ export const SettingsComponent = () => {
     queryKey: ['assignment', assignmentId],
     queryFn: () => getAssignment(lectureId, assignmentId),
     enabled: !!lecture && !!assignmentId
+  });
+
+  const { data: config } = useQuery<any>({
+    queryKey: ['config'],
+    queryFn: () => getConfig()
   });
 
   const [newAssignment, setNewAssignment] = React.useState(null);
@@ -188,7 +233,7 @@ export const SettingsComponent = () => {
         cell_timeout: assignment.settings.cell_timeout || null
       }
     },
-    validationSchema: validationSchema,
+    validationSchema: validationSchema({min_cell_timeout: config?.min_cell_timeout, max_cell_timeout: config?.max_cell_timeout}),
     onSubmit: values => {
       const updatedAssignment: Assignment = {
         ...assignment,
