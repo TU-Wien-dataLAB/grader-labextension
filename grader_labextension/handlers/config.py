@@ -14,11 +14,11 @@ class ConfigHandler(ExtensionBaseHandler):
             data = self.settings["page_config_data"]
             cell_timeout_keys = ["default_cell_timeout", "min_cell_timeout", "max_cell_timeout"]
             cell_timeout_data = {k: data[k] for k in cell_timeout_keys}
-            self.log.info("Retrived config values for cell timeout " + str(cell_timeout_data))
+            self.log.info("Retrived config values for cell timeout: %s", cell_timeout_data)
             self.write(data)
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
-        except Exception as e:
-            self.log.error(f"Unexpected Error: {e}")
-            raise HTTPError(e)
+        except KeyError as e:
+            self.log.error(e)
+            raise KeyError(e.message)
