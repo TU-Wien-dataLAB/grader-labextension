@@ -51,36 +51,31 @@ const gradingBehaviourHelp = (
 );
 
 function determineMaxCellTimeoutMessage(max_cell_timeout: number){
-  let hours: number,
-    minutes: number,
-    seconds = 0;
-  if (max_cell_timeout > 3600){
-    hours = Math.floor(max_cell_timeout / 3600);
-    max_cell_timeout =  max_cell_timeout % 3600;
-  }
-  if (max_cell_timeout > 60){
-    minutes = Math.floor(max_cell_timeout / 60);
-    seconds = max_cell_timeout % 60
-  }
+  const hours = Math.floor(max_cell_timeout / 3600);
+  const minutes = Math.floor((max_cell_timeout % 3600) / 60);
+  const seconds = Math.floor(max_cell_timeout % 60);
 
   let result = "Cell timeout can't exceed ";
 
-  if (hours > 0 || minutes > 0){
-    const maxCellTimeoutValues = {
+  const maxCellTimeoutValues = {
       'hour(s)': hours,
       'minute(s)': minutes,
-    };
-    result += Object.entries(maxCellTimeoutValues)
+  };
+
+  result += Object.entries(maxCellTimeoutValues)
       .filter(([_, value]) => value > 0)
       .map(([key, value]) => ` ${value} ${key}`)
       .join(',');
 
-    result += ` and ${seconds} second(s).`;
-  } else {
-    result += `${max_cell_timeout} seconds.`;
+  if (seconds > 0){
+    if (hours > 0 || minutes > 0){
+      result += ` and ${seconds} second(s)`;
+    } else {
+      result += `${seconds} second(s)`;
+    }
   }
 
-  return result;
+  return result += '.';
 }
 
 const validationSchema = (props: {
@@ -394,7 +389,6 @@ export const SettingsComponent = () => {
             name={'settings.cell_timeout'}
             label={'Cell Timeout'}
             type={'number'}
-            //slotProps={{ htmlInput: { min: 10 } }}
             value={formik.values.settings.cell_timeout ?? null}
             onChange={formik.handleChange}
             helperText={
