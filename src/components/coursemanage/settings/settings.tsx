@@ -15,7 +15,7 @@ import {
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { getAssignment } from '../../../services/assignments.service';
+import { getAssignment, getConfig } from '../../../services/assignments.service';
 import { enqueueSnackbar } from 'notistack';
 import { Lecture } from '../../../model/lecture';
 import * as yup from 'yup';
@@ -50,21 +50,63 @@ const gradingBehaviourHelp = (
   </React.Fragment>
 );
 
-const validationSchema = yup.object({
-  name: yup
-    .string()
-    .min(4, 'Name should be 4-50 character length')
-    .max(50, 'Name should be 4-50 character length')
-    .required('Name is required'),
-  group: yup.string().nullable().notRequired(),
-  deadline: yup.date().nullable(),
-  type: yup.mixed().oneOf(['user', 'group']),
-  automatic_grading: yup.mixed().oneOf(['unassisted', 'auto', 'full_auto']),
-  max_submissions: yup
-    .number()
-    .nullable()
-    .min(1, 'Students must be able to at least submit once')
-});
+function determineMaxCellTimeoutMessage(max_cell_timeout: number){
+  const hours = Math.floor(max_cell_timeout / 3600);
+  const minutes = Math.floor((max_cell_timeout % 3600) / 60);
+  const seconds = Math.floor(max_cell_timeout % 60);
+
+  let result = "Cell timeout can't exceed ";
+
+  const maxCellTimeoutValues = {
+      'hour(s)': hours,
+      'minute(s)': minutes,
+  };
+
+  result += Object.entries(maxCellTimeoutValues)
+      .filter(([_, value]) => value > 0)
+      .map(([key, value]) => ` ${value} ${key}`)
+      .join(',');
+
+  if (seconds > 0){
+    if (hours > 0 || minutes > 0){
+      result += ` and ${seconds} second(s)`;
+    } else {
+      result += `${seconds} second(s)`;
+    }
+  }
+
+  return result += '.';
+}
+
+const validationSchema = (props: {
+  min_cell_timeout: number;
+  max_cell_timeout?: number;
+}) =>
+  yup.object({
+    name: yup
+      .string()
+      .min(4, 'Name should be 4-50 characters long')
+      .max(50, 'Name should be 4-50 characters long')
+      .required('Name is required'),
+    settings: yup.object({
+      group: yup.string().nullable().notRequired(),
+      deadline: yup.date().nullable(),
+      autograde_type: yup.mixed().oneOf(['unassisted', 'auto', 'full_auto']),
+      max_submissions: yup
+        .number()
+        .nullable()
+        .min(1, 'Students must be able to at least submit once')
+        .max(100, 'Students can submit up to 100 times'),
+      cell_timeout: yup
+        .number()
+        .nullable()
+        .min(
+          props.min_cell_timeout,
+          `Cell timeout must be at least ${props.min_cell_timeout} seconds`
+        ) //TODO: use a function to determine the message
+        .max(props.max_cell_timeout, determineMaxCellTimeoutMessage(props.max_cell_timeout))
+    })
+  });
 
 export const SettingsComponent = () => {
   const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
@@ -79,6 +121,11 @@ export const SettingsComponent = () => {
     queryKey: ['assignment', assignmentId],
     queryFn: () => getAssignment(lectureId, assignmentId),
     enabled: !!lecture && !!assignmentId
+  });
+
+  const { data: config } = useQuery<any>({
+    queryKey: ['config'],
+    queryFn: () => getConfig()
   });
 
   const [newAssignment, setNewAssignment] = React.useState(null);
@@ -177,10 +224,11 @@ export const SettingsComponent = () => {
         allowed_files:
           assignment.settings.allowed_files === null
             ? []
-            : assignment.settings.allowed_files
+            : assignment.settings.allowed_files,
+        cell_timeout: assignment.settings.cell_timeout || null
       }
     },
-    validationSchema: validationSchema,
+    validationSchema: validationSchema({min_cell_timeout: config?.min_cell_timeout, max_cell_timeout: config?.max_cell_timeout}),
     onSubmit: values => {
       const updatedAssignment: Assignment = {
         ...assignment,
@@ -188,6 +236,8 @@ export const SettingsComponent = () => {
         settings: {
           ...assignment.settings,
           ...values.settings,
+          cell_timeout: values.settings.cell_timeout
+            ? values.settings.cell_timeout : null,
           deadline: values.settings.deadline
             ? new Date(values.settings.deadline).toISOString()
             : null // Convert Date to string or null
@@ -296,7 +346,7 @@ export const SettingsComponent = () => {
             id="max-submissions"
             name="settings.max_submissions"
             placeholder="Submissions"
-            value={formik.values.settings.max_submissions || null}
+            value={formik.values.settings.max_submissions ?? ''}
             slotProps={{ htmlInput: { min: 1 } }}
             onChange={e => {
               formik.setFieldValue('settings.max_submissions', +e.target.value);
@@ -306,8 +356,8 @@ export const SettingsComponent = () => {
               formik.errors.settings?.max_submissions
             }
             error={
-              Boolean(formik.values.settings.max_submissions) &&
-              formik.values.settings.max_submissions < 1
+              formik.touched.settings?.max_submissions &&
+              Boolean(formik.errors.settings?.max_submissions)
             }
           />
 
@@ -329,6 +379,26 @@ export const SettingsComponent = () => {
             <MenuItem value="full_auto">Fully Automatic Grading</MenuItem>
             <MenuItem value="unassisted">No Automatic Grading</MenuItem>
           </TextField>
+
+          <InputLabel id="cell-timeout-label">
+            Cell Timeout
+            <TooltipComponent title="Set a custom timeout for notebook cells in seconds" sx={{ ml: 0.5 }} />
+          </InputLabel>
+          <TextField
+            variant={'outlined'}
+            name={'settings.cell_timeout'}
+            label={'Cell Timeout'}
+            type={'number'}
+            value={formik.values.settings.cell_timeout ?? null}
+            onChange={formik.handleChange}
+            helperText={
+              formik.touched.settings?.cell_timeout &&
+              formik.errors.settings?.cell_timeout
+            }
+            error={
+              Boolean(formik.errors.settings?.cell_timeout) &&
+              formik.touched.settings?.cell_timeout}
+          />
 
           <AllowedFilePatterns
             patterns={formik.values.settings.allowed_files || []}

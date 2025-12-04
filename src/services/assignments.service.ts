@@ -7,7 +7,7 @@
 import { Assignment } from '../model/assignment';
 import { AssignmentDetail } from '../model/assignmentDetail';
 import { Lecture } from '../model/lecture';
-import { request, HTTPMethod } from './request.service';
+import { HTTPMethod, request } from './request.service';
 import { RepoType } from '../components/util/repo-type';
 
 export function createAssignment(
@@ -168,4 +168,12 @@ export function resetAssignment(
     `/api/lectures/${lecture.id}/assignments/${assignment.id}/reset`,
     null
   );
+}
+
+export function getConfig(): Promise<any> {
+  return request<any>(
+    HTTPMethod.GET,
+    '/api/config',
+    null
+  )
 }

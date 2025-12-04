@@ -17,6 +17,7 @@ export interface AssignmentSettings {
     late_submission?: Array<SubmissionPeriod>;
     autograde_type?: AssignmentSettings.AutogradeTypeEnum;
     group?: string;
+    cell_timeout?: number;
 }
 export namespace AssignmentSettings {
     export const AutogradeTypeEnum = {
