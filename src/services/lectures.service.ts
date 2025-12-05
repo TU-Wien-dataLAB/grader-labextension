@@ -8,7 +8,7 @@ import { Lecture } from '../model/lecture';
 import { request, HTTPMethod } from './request.service';
 
 export function getAllLectures(
-  complete: boolean = false,
+  complete?: boolean,
   reload = false
 ): Promise<Lecture[]> {
   let url = 'api/lectures';
