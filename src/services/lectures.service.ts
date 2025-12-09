@@ -6,6 +6,7 @@
 
 import { Lecture } from '../model/lecture';
 import { request, HTTPMethod } from './request.service';
+import { User } from '../model/user';
 
 export function getAllLectures(
   complete?: boolean,
@@ -48,11 +49,11 @@ export function deleteLecture(lectureId: number): Promise<void> {
 export function getUsers(
   lectureId: number,
   reload: boolean = false
-): Promise<{ instructors: string[]; tutors: string[]; students: string[] }> {
+): Promise<{ instructors: User[]; tutors: User[]; students: User[] }> {
   return request<{
-    instructors: string[];
-    tutors: string[];
-    students: string[];
+    instructors: User[];
+    tutors: User[];
+    students: User[];
   }>(HTTPMethod.GET, `/api/lectures/${lectureId}/users`, null, reload);
 }
 
