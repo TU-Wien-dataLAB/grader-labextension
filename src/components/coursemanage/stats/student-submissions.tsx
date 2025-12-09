@@ -9,10 +9,11 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { useTheme } from '@mui/material/styles';
+import { User } from '../../../model/user';
 
 const getData = (
   submissions: Submission[],
-  users: { students: number[]; tutors: number[]; instructors: number[] }
+  users: { students: User[]; tutors: User[]; instructors: User[] }
 ): number => {
   if (users.students.length === 0) {
     return 0;

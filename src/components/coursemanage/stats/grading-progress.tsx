@@ -26,6 +26,7 @@ import { useTheme } from '@mui/material/styles';
 import { AutoStatus } from '../../../model/autoStatus';
 import { ManualStatus } from '../../../model/manualStatus';
 import { FeedbackStatus } from '../../../model/feedbackStatus';
+import { User } from '../../../model/user';
 
 interface GradingProgressData {
   auto: number;
@@ -60,7 +61,7 @@ const GradingProgressTooltip = ({
 
 const getData = (
   submissions: Submission[],
-  users: { students: number[]; tutors: number[]; instructors: number[] }
+  users: { students: User[]; tutors: User[]; instructors: User[] }
 ): GradingProgressData => {
   if (users === null) {
     return { auto: 0, manual: 0, feedback: 0 };
