@@ -20,12 +20,13 @@ import {
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { User } from '../../../model/user';
 
 export const filterUserSubmissions = (
   submissions: Submission[],
-  users: number[]
+  users: User[]
 ): Submission[] => {
-  return submissions.filter((v, i, a) => !users.includes(v.user_id));
+  return submissions.filter((v, i, a) => !users.map(u => u.id).includes(v.user_id));
 };
 
 export interface IStatsSubComponentProps {
@@ -33,7 +34,7 @@ export interface IStatsSubComponentProps {
   assignment: Assignment;
   allSubmissions: Submission[];
   latestSubmissions: Submission[];
-  users: { students: number[]; tutors: number[]; instructors: number[] };
+  users: { students: User[]; tutors: User[]; instructors: User[] };
 }
 
 export const StatsComponent = () => {
