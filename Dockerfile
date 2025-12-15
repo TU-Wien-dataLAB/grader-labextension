@@ -1,29 +1,47 @@
-# Copyright (c) 2022, TU Wien
-# All rights reserved.
-#
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
-
+# =========================
+# Stage 1: Build extension
+# =========================
 ARG REGISTRY=quay.io
 ARG OWNER=jupyter
-ARG BASE_CONTAINER=$REGISTRY/$OWNER/datascience-notebook:latest
+ARG BASE_CONTAINER=$REGISTRY/$OWNER/minimal-notebook:latest
+
+FROM $BASE_CONTAINER AS builder
+
+USER root
+
+# Install build dependencies only
+RUN apt-get update && \
+    apt-get install -yq --no-install-recommends \
+        git \
+        build-essential && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Node is only needed to build the labextension
+RUN mamba install -y nodejs && \
+    mamba clean -a -y
+
+WORKDIR /build
+
+# Copy only what is needed to build
+COPY . /build
+
+# Build & install into a temporary prefix
+RUN python3 -m pip install --no-cache-dir --prefix=/install /build
+
+
+# =========================
+# Stage 2: Runtime image
+# =========================
 FROM $BASE_CONTAINER
 
 USER root
 
-RUN apt-get update &&\
-    apt-get install -yq --no-install-recommends \
-    git
+# Copy only the installed artifacts
+COPY --from=builder /install /usr/local
 
-RUN apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-COPY ./ /grader-labextension
-
-RUN mamba install nodejs
-RUN python3 -m pip install /grader-labextension
-RUN rm -rf /grader-labextension
+# Optional: clean caches
+RUN rm -rf /root/.cache
 
 WORKDIR /home/jovyan
-
 USER jovyan
