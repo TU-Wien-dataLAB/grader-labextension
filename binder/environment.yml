@@ -43,4 +43,4 @@ dependencies:
   - sqlite
   - pip:
       - grader-service==0.5.1
-      - grader-labextension==0.9.0
+      - grader-labextension==0.10.0
