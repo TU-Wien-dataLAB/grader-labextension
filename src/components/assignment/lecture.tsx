@@ -1,8 +1,10 @@
-// Copyright (c) 2022, TU Wien
-// All rights reserved.
-//
-// This source code is licensed under the BSD-style license found in the
-// LICENSE file in the root directory of this source tree.
+/**
+ * Copyright (c) 2022, TU Wien
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -44,6 +46,9 @@ import { useQuery } from '@tanstack/react-query';
 import { getLecture } from '../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../util/breadcrumbs';
 import { RepoType } from '../util/repo-type';
+import { FeedbackStatus } from '../../model/feedbackStatus';
+import { GroupsDropDownMenu } from '../util/groups-drop-down-menu';
+import { useState } from 'react';
 
 /*
  * Buttons for AssignmentTable
@@ -56,7 +61,9 @@ interface IEditProps {
 
 const EditButton = (props: IEditProps) => {
   const [assignmentPulled, setAssignmentPulled] = React.useState(false);
-  const fetchAssignmentHandler = async (repo: RepoType.USER | RepoType.RELEASE) => {
+  const fetchAssignmentHandler = async (
+    repo: RepoType.USER | RepoType.RELEASE
+  ) => {
     await pullAssignment(props.lecture.id, props.assignment.id, repo).then(
       () => {
         enqueueSnackbar('Successfully Pulled Repo', {
@@ -132,6 +139,7 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
   const navigate = useNavigate();
   const headers = [
     { name: 'Name' },
+    { name: 'Group', width: 200 },
     { name: 'Points', width: 100 },
     { name: 'Deadline', width: 200 },
     { name: 'Edit', width: 75 },
@@ -196,6 +204,16 @@ const AssignmentTable = (props: IAssignmentTableProps) => {
                       (complete)
                     </Typography>
                   ) : null}
+                </TableCell>
+                <TableCell align={'left'}>
+                    {row.settings.group !== '' &&
+                      row.settings.group !== null && (
+                        <Chip
+                          label={row.settings.group}
+                          color={'primary'}
+                          variant={'outlined'}
+                        />
+                      )}
                 </TableCell>
                 <TableCell style={{ width: headerWidth(headers, 'Points') }}>
                   {row.points}
@@ -302,8 +320,8 @@ const feedbackAvailable = (submissions: Submission[]): boolean => {
   /* If we have a submission, check if it has feedback */
   for (const submission of submissions) {
     if (
-      submission.feedback_status === 'generated' ||
-      submission.feedback_status === 'feedback_outdated'
+      submission.feedback_status === FeedbackStatus.Generated ||
+      submission.feedback_status === FeedbackStatus.FeedbackOutdated
     ) {
       return true;
     }
@@ -346,6 +364,8 @@ const transformAssignments = (
  */
 export const LectureComponent = () => {
   const { lectureId } = extractIdsFromBreadcrumbs();
+  const allGroupsValue = 'All';
+  const [chosenGroup, setChosenGroup] = useState(allGroupsValue);
 
   const { data: lecture, isLoading: isLoadingLecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
@@ -392,11 +412,24 @@ export const LectureComponent = () => {
           />
         ) : null}
       </Typography>
-      <Stack>
+      <Stack direction={'row'} spacing={2}>
         <Typography variant={'h6'}>Assignments</Typography>
+        <GroupsDropDownMenu
+          assignments={assignments}
+          chosenGroup={chosenGroup}
+          setChosenGroup={setChosenGroup}
+          allGroupsValue={allGroupsValue}
+        />
       </Stack>
 
-      <AssignmentTable lecture={lecture} rows={assignmentsState} />
+      <AssignmentTable
+        lecture={lecture}
+        rows={
+          chosenGroup === allGroupsValue
+            ? assignmentsState
+            : assignmentsState.filter(a => a.settings.group === chosenGroup)
+        }
+      />
     </Stack>
   );
 };

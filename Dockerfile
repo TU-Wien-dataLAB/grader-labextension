@@ -1,29 +1,30 @@
-# Copyright (c) 2022, TU Wien
-# All rights reserved.
-#
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
-
 ARG REGISTRY=quay.io
 ARG OWNER=jupyter
-ARG BASE_CONTAINER=$REGISTRY/$OWNER/datascience-notebook:latest
-FROM $BASE_CONTAINER
+ARG BASE_CONTAINER=$REGISTRY/$OWNER/minimal-notebook:latest
+
+FROM $BASE_CONTAINER AS builder
 
 USER root
 
-RUN apt-get update &&\
+# Install build dependencies only
+RUN apt-get update && \
     apt-get install -yq --no-install-recommends \
-    git
-
-RUN apt-get clean && \
+        git \
+        build-essential && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY ./ /grader-labextension
+# Node is only needed to build the labextension
+RUN mamba install -y nodejs && \
+    mamba clean -a -y
 
-RUN mamba install nodejs
-RUN python3 -m pip install /grader-labextension
-RUN rm -rf /grader-labextension
+WORKDIR /build
+
+# Copy only what is needed to build
+COPY . /build
+
+# Build and install the labextension
+RUN pip install /build && rm -rf /build
 
 WORKDIR /home/jovyan
-
 USER jovyan

@@ -44,7 +44,8 @@ export const CreateSubmission = () => {
     queryKey: ['students', lectureId],
     queryFn: async () => {
       const users = await getUsers(lectureId);
-      return users['students'];
+      const students = users['students'].map(s => s.display_name);
+      return students;
     },
     enabled: !!lectureId
   });

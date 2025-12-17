@@ -44,6 +44,9 @@ import InfoIcon from '@mui/icons-material/Info';
 import { GraderLoadingButton } from '../../util/loading-button';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient } from '../../../widgets/assignmentmanage';
+import { ManualStatus } from '../../../model/manualStatus';
+import { FeedbackStatus } from '../../../model/feedbackStatus';
+import { AutoStatus } from '../../../model/autoStatus';
 
 const style = {
   position: 'absolute' as const,
@@ -230,9 +233,9 @@ export const ManualGrading = () => {
   };
 
   const finishGrading = () => {
-    submission.manual_status = 'manually_graded';
-    if (submission.feedback_status === 'generated') {
-      submission.feedback_status = 'feedback_outdated';
+    submission.manual_status = ManualStatus.ManuallyGraded;
+    if (submission.feedback_status === FeedbackStatus.Generated) {
+      submission.feedback_status = FeedbackStatus.FeedbackOutdated;
     }
     updateSubmission(lecture.id, assignment.id, submission.id, submission).then(
       response => {
@@ -447,7 +450,7 @@ export const ManualGrading = () => {
 
         <Stack direction={'row'} sx={{ ml: 2, mr: 2 }} spacing={2}>
 
-          {submission.auto_status !== 'automatically_graded' ? (
+          {submission.auto_status !== AutoStatus.AutomaticallyGraded ? (
             <Tooltip title="Assinment is not auto-graded. To pull submission and finish manual grading, make sure to first autograde it.">
               <Button
                 variant="outlined"
@@ -460,7 +463,7 @@ export const ManualGrading = () => {
             </Tooltip>
           ) : null}
           <GraderLoadingButton
-            disabled={submission.auto_status !== 'automatically_graded'}
+            disabled={submission.auto_status !== AutoStatus.AutomaticallyGraded}
             color="primary"
             variant="outlined"
             onClick={handlePullSubmission}
@@ -472,7 +475,7 @@ export const ManualGrading = () => {
           <Button
             variant="outlined"
             color="success"
-            disabled={submission.auto_status !== 'automatically_graded'}
+            disabled={submission.auto_status !== AutoStatus.AutomaticallyGraded}
             onClick={openFinishDialog}
             sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
           >
@@ -490,7 +493,7 @@ export const ManualGrading = () => {
             </Button>
           </Tooltip>
           <Box sx={{ flex: '1 1 100%' }}></Box>
-          {submission.auto_status === 'automatically_graded' ? (
+          {submission.auto_status === AutoStatus.AutomaticallyGraded ? (
             <Button
               
               variant="outlined"
@@ -502,7 +505,7 @@ export const ManualGrading = () => {
             </Button>
           ) : null}
 
-          {submission.auto_status === 'automatically_graded' ? (
+          {submission.auto_status === AutoStatus.AutomaticallyGraded ? (
             <Button
               variant="outlined"
               color="primary"

@@ -23,7 +23,7 @@ export const DeadlineWrapper = (props: IDeadlineWrapperProps) => {
 
   React.useEffect(() => {
     if (lecture === null) {
-      getAllLectures().then(response => {
+      getAllLectures(false).then(response => {
         const l = response.find(
           l => l.code === props.notebookPaths[lectureSubPaths]
         );

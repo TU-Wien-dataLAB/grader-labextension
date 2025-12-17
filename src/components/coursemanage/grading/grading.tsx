@@ -32,6 +32,9 @@ import { getLecture } from '../../../services/lectures.service';
 import { extractIdsFromBreadcrumbs } from '../../util/breadcrumbs';
 import { SubmissionLogs } from '../../util/submission-logs';
 import AddIcon from '@mui/icons-material/Add';
+import { ManualStatus } from '../../../model/manualStatus';
+import { AutoStatus } from '../../../model/autoStatus';
+import { FeedbackStatus } from '../../../model/feedbackStatus';
 
 /**
  * Calculates chip color based on submission status.
@@ -40,18 +43,22 @@ import AddIcon from '@mui/icons-material/Add';
  */
 const getColor = (value: string) => {
   if (
-    value === 'not_graded' ||
-    value === 'not_generated' ||
-    value === 'feedback_outdated'
+    value === AutoStatus.NotGraded.valueOf() ||
+    value === ManualStatus.NotGraded.valueOf() ||
+    value === FeedbackStatus.NotGenerated.valueOf() ||
+    value === FeedbackStatus.FeedbackOutdated.valueOf()
   ) {
     return 'warning';
   } else if (
-    value === 'automatically_graded' ||
-    value === 'manually_graded' ||
-    value === 'generated'
+    value === AutoStatus.AutomaticallyGraded.valueOf() ||
+    value === ManualStatus.ManuallyGraded.valueOf() ||
+    value === FeedbackStatus.Generated.valueOf()
   ) {
     return 'success';
-  } else if (value === 'grading_failed' || value === 'generation_failed') {
+  } else if (
+    value === AutoStatus.GradingFailed.valueOf() ||
+    value === FeedbackStatus.GenerationFailed.valueOf()
+  ) {
     return 'error';
   }
   return 'primary';
@@ -145,8 +152,8 @@ const headCells: readonly HeadCell[] = [
     label: 'ID'
   },
   {
-    id: 'username',
-    numeric: false,
+    id: 'user_display_name',
+    numeric: true,
     disablePadding: false,
     label: 'User'
   },
@@ -405,7 +412,7 @@ export default function GradingTable() {
     page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
 
   const submissionString = (s: Submission): string => {
-    return `${s.id} ${s.username} ${utcToLocalFormat(s.submitted_at)} ${s.auto_status.split('_').join(' ')} ${s.manual_status.split('_').join(' ')} ${s.feedback_status.split('_').join(' ')} ${s.score}`.toLowerCase();
+    return `${s.id} ${s.user_display_name} ${utcToLocalFormat(s.submitted_at)} ${s.auto_status.split('_').join(' ')} ${s.manual_status.split('_').join(' ')} ${s.feedback_status.split('_').join(' ')} ${s.score}`.toLowerCase();
   };
 
   const filteredRows = React.useMemo(() => {

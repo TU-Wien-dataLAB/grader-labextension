@@ -23,6 +23,10 @@ import {
   ValueType
 } from 'recharts/types/component/DefaultTooltipContent';
 import { useTheme } from '@mui/material/styles';
+import { AutoStatus } from '../../../model/autoStatus';
+import { ManualStatus } from '../../../model/manualStatus';
+import { FeedbackStatus } from '../../../model/feedbackStatus';
+import { User } from '../../../model/user';
 
 interface GradingProgressData {
   auto: number;
@@ -57,7 +61,7 @@ const GradingProgressTooltip = ({
 
 const getData = (
   submissions: Submission[],
-  users: { students: string[]; tutors: string[]; instructors: string[] }
+  users: { students: User[]; tutors: User[]; instructors: User[] }
 ): GradingProgressData => {
   if (users === null) {
     return { auto: 0, manual: 0, feedback: 0 };
@@ -68,13 +72,13 @@ const getData = (
   );
   const totalCounts = subs.reduce(
     (acc, v) => {
-      if (v.auto_status === 'automatically_graded') {
+      if (v.auto_status === AutoStatus.AutomaticallyGraded) {
         acc.a++;
       }
-      if (v.manual_status === 'manually_graded') {
+      if (v.manual_status === ManualStatus.ManuallyGraded) {
         acc.m++;
       }
-      if (v.feedback_status === 'generated') {
+      if (v.feedback_status === FeedbackStatus.Generated) {
         acc.f++;
       }
       return acc;

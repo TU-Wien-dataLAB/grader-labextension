@@ -15,9 +15,7 @@ import {
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import {
-  getAssignment
-} from '../../../services/assignments.service';
+import { getAssignment, getConfig } from '../../../services/assignments.service';
 import { enqueueSnackbar } from 'notistack';
 import { Lecture } from '../../../model/lecture';
 import * as yup from 'yup';
@@ -37,52 +35,100 @@ import { useQuery } from '@tanstack/react-query';
 import { SaveAssignmentSettingsDialog } from '../../util/dialog';
 import { TooltipComponent } from '../../util/tooltip';
 
-
-
-const gradingBehaviourHelp = 
+const gradingBehaviourHelp = (
   <React.Fragment>
     Specifies the behaviour when a students submits an assignment.
     <br />
     <b>No Automatic Grading</b>: No action is taken on submit.
     <br />
-    <b>Automatic Grading</b>: The assignment is being autograded as soon as the students makes a submission.
+    <b>Automatic Grading</b>: The assignment is being autograded as soon as the
+    students makes a submission.
     <br />
-    <b>Fully Automatic Grading</b>: The assignment is autograded and feedback is generated as soon as the student makes a submission. 
-    (requires all scores to be based on autograde results)
-  </React.Fragment>;
+    <b>Fully Automatic Grading</b>: The assignment is autograded and feedback is
+    generated as soon as the student makes a submission. (requires all scores to
+    be based on autograde results)
+  </React.Fragment>
+);
 
-const validationSchema = yup.object({
-  name: yup
-    .string()
-    .min(4, 'Name should be 4-50 character length')
-    .max(50, 'Name should be 4-50 character length')
-    .required('Name is required'),
-  deadline: yup.date().nullable(),
-  type: yup.mixed().oneOf(['user', 'group']),
-  automatic_grading: yup.mixed().oneOf(['unassisted', 'auto', 'full_auto']),
-  max_submissions: yup
-    .number()
-    .nullable()
-    .min(1, 'Students must be able to at least submit once')
-});
+function determineMaxCellTimeoutMessage(max_cell_timeout: number){
+  const hours = Math.floor(max_cell_timeout / 3600);
+  const minutes = Math.floor((max_cell_timeout % 3600) / 60);
+  const seconds = Math.floor(max_cell_timeout % 60);
+
+  let result = "Cell timeout can't exceed ";
+
+  const maxCellTimeoutValues = {
+      'hour(s)': hours,
+      'minute(s)': minutes,
+  };
+
+  result += Object.entries(maxCellTimeoutValues)
+      .filter(([_, value]) => value > 0)
+      .map(([key, value]) => ` ${value} ${key}`)
+      .join(',');
+
+  if (seconds > 0){
+    if (hours > 0 || minutes > 0){
+      result += ` and ${seconds} second(s)`;
+    } else {
+      result += `${seconds} second(s)`;
+    }
+  }
+
+  return result += '.';
+}
+
+const validationSchema = (props: {
+  min_cell_timeout: number;
+  max_cell_timeout?: number;
+}) =>
+  yup.object({
+    name: yup
+      .string()
+      .min(4, 'Name should be 4-50 characters long')
+      .max(50, 'Name should be 4-50 characters long')
+      .required('Name is required'),
+    settings: yup.object({
+      group: yup.string().nullable().notRequired(),
+      deadline: yup.date().nullable(),
+      autograde_type: yup.mixed().oneOf(['unassisted', 'auto', 'full_auto']),
+      max_submissions: yup
+        .number()
+        .nullable()
+        .min(1, 'Students must be able to at least submit once')
+        .max(100, 'Students can submit up to 100 times'),
+      cell_timeout: yup
+        .number()
+        .nullable()
+        .min(
+          props.min_cell_timeout,
+          `Cell timeout must be at least ${props.min_cell_timeout} seconds`
+        ) //TODO: use a function to determine the message
+        .max(props.max_cell_timeout, determineMaxCellTimeoutMessage(props.max_cell_timeout))
+    })
+  });
 
 export const SettingsComponent = () => {
-  
   const { lectureId, assignmentId } = extractIdsFromBreadcrumbs();
 
   const { data: lecture } = useQuery<Lecture>({
     queryKey: ['lecture', lectureId],
     queryFn: () => getLecture(lectureId),
-    enabled: !!lectureId,
+    enabled: !!lectureId
   });
 
   const { data: assignment } = useQuery<Assignment>({
     queryKey: ['assignment', assignmentId],
     queryFn: () => getAssignment(lectureId, assignmentId),
-    enabled: !!lecture && !!assignmentId,
+    enabled: !!lecture && !!assignmentId
   });
 
-  const [newAssignment, setNewAssignment] = React.useState(null)
+  const { data: config } = useQuery<any>({
+    queryKey: ['config'],
+    queryFn: () => getConfig()
+  });
+
+  const [newAssignment, setNewAssignment] = React.useState(null);
 
   const [checked, setChecked] = React.useState(
     assignment.settings.deadline !== null
@@ -97,18 +143,22 @@ export const SettingsComponent = () => {
     const late_submissions: ILateSubmissionInfo[] = getLateSubmissionInfo(
       values.settings.late_submission
     );
-    const error = { settings: { late_submission: { days: {}, hours: {}, scaling: {} } } };
+    const error = {
+      settings: { late_submission: { days: {}, hours: {}, scaling: {} } }
+    };
     let nErrors = 0;
 
     // Validation logic for late submissions
     for (let i = 0; i < late_submissions.length; i++) {
       const info = late_submissions[i];
       if (!Number.isInteger(info.days)) {
-        error.settings.late_submission.days[i] = 'Days have to be whole numbers';
+        error.settings.late_submission.days[i] =
+          'Days have to be whole numbers';
         nErrors++;
       }
       if (!Number.isInteger(info.hours)) {
-        error.settings.late_submission.hours[i] = 'Hours have to be whole numbers';
+        error.settings.late_submission.hours[i] =
+          'Hours have to be whole numbers';
         nErrors++;
       }
       if (info.days < 0) {
@@ -124,9 +174,7 @@ export const SettingsComponent = () => {
           'Scaling has to be between 0 and 1 exclusive';
         nErrors++;
       }
-      if (
-        parseFloat(info.scaling.toFixed(3)) !== info.scaling
-      ) {
+      if (parseFloat(info.scaling.toFixed(3)) !== info.scaling) {
         error.settings.late_submission.scaling[i] =
           'Scaling can only be specified up to 3 decimal points';
         nErrors++;
@@ -145,8 +193,10 @@ export const SettingsComponent = () => {
           moment.duration({ days: info.days, hours: info.hours }) <=
           moment.duration({ days: prevInfo.days, hours: prevInfo.hours })
         ) {
-          error.settings.late_submission.days[i] = 'Periods have to be increasing';
-          error.settings.late_submission.hours[i] = 'Periods have to be increasing';
+          error.settings.late_submission.days[i] =
+            'Periods have to be increasing';
+          error.settings.late_submission.hours[i] =
+            'Periods have to be increasing';
           nErrors++;
         }
         if (info.scaling >= prevInfo.scaling) {
@@ -163,6 +213,7 @@ export const SettingsComponent = () => {
     initialValues: {
       name: assignment.name,
       settings: {
+        group: assignment.settings.group || '',
         late_submission: assignment.settings.late_submission || [],
         max_submissions: assignment.settings.max_submissions || null,
         autograde_type: assignment.settings.autograde_type,
@@ -174,33 +225,39 @@ export const SettingsComponent = () => {
           assignment.settings.allowed_files === null
             ? []
             : assignment.settings.allowed_files,
-      },
+        cell_timeout: assignment.settings.cell_timeout || null
+      }
     },
-    validationSchema: validationSchema,
-    onSubmit: (values) => {
+    validationSchema: validationSchema({min_cell_timeout: config?.min_cell_timeout, max_cell_timeout: config?.max_cell_timeout}),
+    onSubmit: values => {
       const updatedAssignment: Assignment = {
         ...assignment,
         name: values.name,
         settings: {
           ...assignment.settings,
           ...values.settings,
+          cell_timeout: values.settings.cell_timeout
+            ? values.settings.cell_timeout : null,
           deadline: values.settings.deadline
             ? new Date(values.settings.deadline).toISOString()
-            : null, // Convert Date to string or null
-        },
+            : null // Convert Date to string or null
+        }
       };
-      setNewAssignment(updatedAssignment)
+      setNewAssignment(updatedAssignment);
 
       setSaveDialogDisplay(true);
-
-      
     },
-    validate: validateLateSubmissions,
+    validate: validateLateSubmissions
   });
 
   return (
     <Box sx={{ m: 5, flex: 1, overflow: 'auto' }}>
-      <SaveAssignmentSettingsDialog lecture={lecture} assignment={newAssignment} open={saveDialogDisplay} setOpen={setSaveDialogDisplay}/>
+      <SaveAssignmentSettingsDialog
+        lecture={lecture}
+        assignment={newAssignment}
+        open={saveDialogDisplay}
+        setOpen={setSaveDialogDisplay}
+      />
       <SectionTitle title="Settings" />
       <form onSubmit={formik.handleSubmit}>
         <Stack spacing={2} sx={{ ml: 2, mr: 2 }}>
@@ -216,17 +273,29 @@ export const SettingsComponent = () => {
             helperText={formik.touched.name && formik.errors.name}
           />
 
+          <TextField
+            variant={'outlined'}
+            id={'group'}
+            name={'settings.group'}
+            label={'Group'}
+            value={formik.values.settings.group}
+            onChange={formik.handleChange}
+          />
+
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <FormControlLabel
               control={
                 <Checkbox
                   checked={checked}
-                  onChange={async (e) => {
+                  onChange={async e => {
                     setChecked(e.target.checked);
                     if (!e.target.checked) {
                       await formik.setFieldValue('settings.deadline', null);
                     } else {
-                      await formik.setFieldValue('settings.deadline', new Date());
+                      await formik.setFieldValue(
+                        'settings.deadline',
+                        new Date()
+                      );
                     }
                   }}
                 />
@@ -242,7 +311,7 @@ export const SettingsComponent = () => {
                 formik.setFieldValue('settings.deadline', date);
                 if (new Date(date).getTime() < Date.now()) {
                   enqueueSnackbar('You selected a date in the past!', {
-                    variant: 'warning',
+                    variant: 'warning'
                   });
                 }
               }}
@@ -253,10 +322,13 @@ export const SettingsComponent = () => {
             control={
               <Checkbox
                 checked={checkedLimit}
-                onChange={async (e) => {
+                onChange={async e => {
                   setCheckedLimit(e.target.checked);
                   if (!e.target.checked) {
-                    await formik.setFieldValue('settings.max_submissions', null);
+                    await formik.setFieldValue(
+                      'settings.max_submissions',
+                      null
+                    );
                   } else {
                     await formik.setFieldValue('settings.max_submissions', 1);
                   }
@@ -274,9 +346,9 @@ export const SettingsComponent = () => {
             id="max-submissions"
             name="settings.max_submissions"
             placeholder="Submissions"
-            value={formik.values.settings.max_submissions || null}
-            slotProps={{ htmlInput: { min: 1  } }}
-            onChange={(e) => {
+            value={formik.values.settings.max_submissions ?? ''}
+            slotProps={{ htmlInput: { min: 1 } }}
+            onChange={e => {
               formik.setFieldValue('settings.max_submissions', +e.target.value);
             }}
             helperText={
@@ -284,17 +356,14 @@ export const SettingsComponent = () => {
               formik.errors.settings?.max_submissions
             }
             error={
-              Boolean(formik.values.settings.max_submissions) &&
-              formik.values.settings.max_submissions < 1
+              formik.touched.settings?.max_submissions &&
+              Boolean(formik.errors.settings?.max_submissions)
             }
           />
 
           <InputLabel id="auto-grading-behaviour-label">
             Auto-Grading Behaviour
-            <TooltipComponent 
-           
-            title={gradingBehaviourHelp} 
-             sx={{ ml:0.5 }}/>
+            <TooltipComponent title={gradingBehaviourHelp} sx={{ ml: 0.5 }} />
           </InputLabel>
           <TextField
             select
@@ -302,7 +371,7 @@ export const SettingsComponent = () => {
             value={formik.values.settings.autograde_type}
             label="Auto-Grading Behaviour"
             placeholder="Grading"
-            onChange={(e) => {
+            onChange={e => {
               formik.setFieldValue('settings.autograde_type', e.target.value);
             }}
           >
@@ -311,9 +380,29 @@ export const SettingsComponent = () => {
             <MenuItem value="unassisted">No Automatic Grading</MenuItem>
           </TextField>
 
+          <InputLabel id="cell-timeout-label">
+            Cell Timeout
+            <TooltipComponent title="Set a custom timeout for notebook cells in seconds" sx={{ ml: 0.5 }} />
+          </InputLabel>
+          <TextField
+            variant={'outlined'}
+            name={'settings.cell_timeout'}
+            label={'Cell Timeout'}
+            type={'number'}
+            value={formik.values.settings.cell_timeout ?? null}
+            onChange={formik.handleChange}
+            helperText={
+              formik.touched.settings?.cell_timeout &&
+              formik.errors.settings?.cell_timeout
+            }
+            error={
+              Boolean(formik.errors.settings?.cell_timeout) &&
+              formik.touched.settings?.cell_timeout}
+          />
+
           <AllowedFilePatterns
             patterns={formik.values.settings.allowed_files || []}
-            onChange={(updatedPatterns) =>
+            onChange={updatedPatterns =>
               formik.setFieldValue('settings.allowed_files', updatedPatterns)
             }
           />
@@ -321,20 +410,20 @@ export const SettingsComponent = () => {
           <Stack direction="column" spacing={2}>
             <InputLabel>
               Late Submissions
-              <TooltipComponent 
+              <TooltipComponent
                 title={`Allowing late submission periods enables students to 
                         submit their assignments after the deadline, 
                         subject to a score penalty.`}
-                sx={{ ml:0.5}}
-                />
+                sx={{ ml: 0.5 }}
+              />
             </InputLabel>
             <Stack direction="column" spacing={2} sx={{ pl: 3 }}>
               {formik.values.settings.deadline !== null ? (
                 <LateSubmissionForm formik={formik} />
               ) : (
                 <Typography sx={{ color: red[500] }}>
-                  Deadline not set! To configure late submissions, set a deadline
-                  first!
+                  Deadline not set! To configure late submissions, set a
+                  deadline first!
                 </Typography>
               )}
             </Stack>

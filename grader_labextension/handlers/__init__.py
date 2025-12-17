@@ -7,6 +7,7 @@
 from grader_labextension.handlers import (
     assignment,
     base_handler,
+    config,
     grading,
     lectures,
     permission,
@@ -17,6 +18,7 @@ from grader_labextension.handlers import (
 __all__ = [
     "assignment",
     "grading",
+    "config",
     "lectures",
     "submissions",
     "permission",

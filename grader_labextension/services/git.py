@@ -10,7 +10,7 @@ import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
 from grader_service.handlers import GitRepoType
@@ -53,9 +53,9 @@ class GitService(Configurable):
         lecture_code: str,
         assignment_id: int,
         repo_type: GitRepoType,
-        force_user_repo=False,
-        sub_id=None,
-        username=None,
+        force_user_repo: bool = False,
+        sub_id: Optional[int] = None,
+        username: Optional[str] = None,
         log=logging.getLogger("gitservice"),
         *args,
         **kwargs,
@@ -72,7 +72,9 @@ class GitService(Configurable):
 
         self._initialize_git_logging()
 
-    def _determine_repo_path(self, force_user_repo: bool, sub_id: str, username: str) -> str:
+    def _determine_repo_path(
+        self, force_user_repo: bool, sub_id: Optional[int], username: Optional[str]
+    ) -> str:
         """Determine the path for the git repository based on the type."""
         if self.repo_type == GitRepoType.USER or force_user_repo:
             # For repo type USER, the subdirectory is called `assignments` (for historical reasons).
@@ -121,39 +123,28 @@ class GitService(Configurable):
         self.log.info(f"Pushing to remote {origin} at {self.path}")
         self._run_command(f"git push {origin} main" + (" --force" if force else ""), cwd=self.path)
 
-    def set_remote(self, origin: str, sub_id: str = None):
+    def set_remote(self, origin: str, sub_id: Union[int, str, None] = None):
         """Set or update the remote repository.
 
         Args:
             origin (str): The remote name.
-            sub_id (str): Optional query parameter for feedback pull.
+            sub_id (str | int | None): Optional query parameter for feedback pull.
         """
-
+        if isinstance(sub_id, int):
+            sub_id = str(sub_id)
         url_path = posixpath.join(
             self.git_remote_url, self.lecture_code, str(self.assignment_id), self.repo_type
         )
-        url = self._build_remote_url(url_path, sub_id)
+        url = (
+            f"{self.git_http_scheme}://oauth:{self.git_access_token}@"
+            f"{posixpath.join(url_path, sub_id or '')}"
+        )
         self.log.info(f"Setting remote {origin} for {self.path} to {url}")
         try:
             self._run_command(f"git remote add {origin} {url}", cwd=self.path)
         except GitError:
             self.log.warning(f"Remote {origin} already exists. Updating URL.")
             self._run_command(f"git remote set-url {origin} {url}", cwd=self.path)
-
-    def _build_remote_url(self, base_url: str, sub_id: str = None) -> str:
-        """Build the complete remote URL for the git repository.
-
-        Args:
-            base_url (str): The base URL of the remote repository.
-            sub_id (str): Optional sub_id for the URL.
-
-        Returns:
-            str: The complete remote URL.
-        """
-        return (
-            f"{self.git_http_scheme}://oauth:{self.git_access_token}@"
-            f"{posixpath.join(base_url, sub_id or '')}"
-        )
 
     def switch_branch(self, branch: str):
         """Switch to the specified branch.
@@ -379,12 +370,12 @@ class GitService(Configurable):
 
     def remote_branch_exists(self, origin: str, branch: str) -> bool:
         try:
-            self._run_command(f"git ls-remote --exit-code {origin}  {branch}", cwd=self.path)
+            self._run_command(f"git ls-remote --exit-code {origin} {branch}", cwd=self.path)
         except GitError:
             return False
         return True
 
-    def get_log(self, history_count=10) -> List[Dict[str, str]]:
+    def get_log(self, history_count: int = 10) -> List[Dict[str, str]]:
         """
         Execute git log command & return the result.
         """
@@ -467,5 +458,4 @@ class GitService(Configurable):
             return result.stdout
         except subprocess.CalledProcessError as e:
             error_message = f"Command '{command}' failed with error: {e.stderr}"
-            self.log.error(error_message)
             raise GitError(500, error_message)

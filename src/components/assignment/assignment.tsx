@@ -1,8 +1,10 @@
-// Copyright (c) 2022, TU Wien
-// All rights reserved.
-//
-// This source code is licensed under the BSD-style license found in the
-// LICENSE file in the root directory of this source tree.
+/**
+ * Copyright (c) 2022, TU Wien
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 import * as React from 'react';
 import { Lecture } from '../../model/lecture';
@@ -55,22 +57,30 @@ import { FilesList } from '../util/file-list';
 import { Contents } from '@jupyterlab/services';
 import { GlobalObjects } from '../..';
 import { RepoType } from '../util/repo-type';
+import { FeedbackStatus } from '../../model/feedbackStatus';
+import { AssignmentStatusEnum } from '../util/assignment-status-enum';
 
-const calculateActiveStep = (submissions: Submission[]) => {
+const calculateActiveStep = (
+  submissions: Submission[],
+  isAssignmentFetched: boolean
+) => {
   const hasFeedback = submissions.reduce(
     (accum: boolean, curr: Submission) =>
       accum ||
-      curr.feedback_status === 'generated' ||
-      curr.feedback_status === 'feedback_outdated',
+      curr.feedback_status === FeedbackStatus.Generated ||
+      curr.feedback_status === FeedbackStatus.FeedbackOutdated,
     false
   );
   if (hasFeedback) {
-    return 3;
+    return AssignmentStatusEnum.FEEDBACK_AVAILABLE;
   }
   if (submissions.length > 0) {
-    return 1;
+    return AssignmentStatusEnum.SUBMITTED;
   }
-  return 0;
+  if (isAssignmentFetched) {
+    return AssignmentStatusEnum.PULLED;
+  }
+  return AssignmentStatusEnum.NOT_FETCHED;
 };
 
 interface ISubmissionsLeft {
@@ -113,7 +123,7 @@ export const AssignmentComponent = () => {
   });
 
   const [fileList, setFileList] = React.useState<string[]>([]);
-  const [activeStatus, setActiveStatus] = React.useState(0);
+  const [activeStatus, setActiveStatus] = React.useState(AssignmentStatusEnum.NOT_FETCHED);
   const navigate = useNavigate();
   const reloadPage = () => navigate(0);
 
@@ -145,15 +155,22 @@ export const AssignmentComponent = () => {
     enabled: !!lecture && !!assignment
   });
 
+  const isAssignmentFetched = () => {
+    return files.length > 0;
+  };
+
   React.useEffect(() => {
-    if (lecture && assignment) {
+    if (lecture && assignment && files) {
       getAssignmentProperties(lecture.id, assignment.id).then(properties => {
         const gb = new GradeBook(properties);
         setFileList([
           ...gb.getNotebooks().map(n => n + '.ipynb'),
           ...gb.getExtraFiles()
         ]);
-        const active_step = calculateActiveStep(submissions);
+        const active_step = calculateActiveStep(
+          submissions,
+          isAssignmentFetched()
+        );
         setActiveStatus(active_step);
         refetchSubleft();
       });
@@ -172,8 +189,7 @@ export const AssignmentComponent = () => {
         }
       );
     }
-
-  }, [lecture, assignment, submissions.length]);
+  }, [lecture, assignment, submissions.length, files]);
 
   if (
     isLoadingAssignment ||
@@ -193,7 +209,6 @@ export const AssignmentComponent = () => {
   const path = `${lectureBasePath}${lecture.code}/assignments/${assignment.id}`;
   // Open the assignment in the JupyterLab file browser
   openBrowser(path);
-
 
   const resetAssignmentHandler = async () => {
     showDialog(
@@ -237,7 +252,10 @@ export const AssignmentComponent = () => {
         await submitAssignment(lecture, assignment).then(
           () => {
             refetchSubleft().then(() => {
-              const active_step = calculateActiveStep(submissions);
+              const active_step = calculateActiveStep(
+                submissions,
+                isAssignmentFetched()
+              );
               setActiveStatus(active_step);
             });
             enqueueSnackbar('Successfully Submitted Assignment', {
@@ -258,13 +276,18 @@ export const AssignmentComponent = () => {
    * Pulls from given repository by sending a request to the grader git service.
    * @param repo input which repository should be fetched
    */
-  const fetchAssignmentHandler = async (repo: RepoType.USER | RepoType.RELEASE) => {
+  const fetchAssignmentHandler = async (
+    repo: RepoType.USER | RepoType.RELEASE
+  ) => {
     await pullAssignment(lecture.id, assignment.id, repo).then(
       () => {
         enqueueSnackbar('Successfully Pulled Repo', {
           variant: 'success'
         });
-        refetchFiles();
+        refetchFiles().then(() => {
+          const active_step = calculateActiveStep(submissions, true);
+          setActiveStatus(active_step);
+        });
       },
       error => {
         enqueueSnackbar(error.message, {
@@ -312,9 +335,6 @@ export const AssignmentComponent = () => {
     );
   };
 
-  const isAssignmentFetched = () => {
-    return files.length > 0;
-  };
 
   const hasPermissions = () => {
     const permissions = UserPermissions.getPermissions();
@@ -391,7 +411,8 @@ export const AssignmentComponent = () => {
                     : isLateSubmissionOver() ||
                       isMaxSubmissionReached() ||
                       isAssignmentCompleted() ||
-                      files.length === 0
+                      files.length === 0 ||
+                      isDeadlineOver()
                 }
                 onClick={() => submitAssignmentHandler()}
               >
