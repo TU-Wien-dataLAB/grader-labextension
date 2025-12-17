@@ -5,7 +5,6 @@ import {
 } from './index';
 import { getAllLectures } from './services/lectures.service';
 import { Lecture } from './model/lecture';
-import { getAllAssignments } from './services/assignments.service';
 import { AssignmentDetail } from './model/assignmentDetail';
 import { Menu } from '@lumino/widgets';
 
@@ -14,43 +13,25 @@ export const getLabel = (assignment: AssignmentDetail | null) => {
 };
 
 const getPath = (lecture: Lecture, assignment: AssignmentDetail | null) => {
-  return assignment === null
-    ? `/lecture/${lecture.id}`
-    : `/lecture/${lecture.id}/assignment/${assignment.id}`;
+  return `/lecture/${lecture.id}`;
 };
 
 export const updateMenus = async (reload: boolean = false) => {
   const aMenu = GlobalObjects.assignmentMenu;
   const cmMenu = GlobalObjects.courseManageMenu;
   const lectures = await getAllLectures(false, reload);
-  const lectureAssignments = await Promise.all(
-    lectures.map(async lecture => {
-      const assignments = await getAllAssignments(lecture.id, reload);
-      return { lecture, assignments };
-    })
-  );
 
   aMenu.clearItems();
-  lectureAssignments.forEach(v => {
+  lectures.forEach(v => {
     const subMenu = new Menu({ commands: GlobalObjects.commands });
-    subMenu.title.label = v.lecture.name;
+    subMenu.title.label = v.name;
 
-    let path = getPath(v.lecture, null);
-    let label = getLabel(null);
+    const path = getPath(v, null);
+    const label = getLabel(null);
     subMenu.addItem({
       type: 'command',
       command: AssignmentsCommandIDs.open,
       args: { path, label }
-    });
-
-    v.assignments.forEach(a => {
-      path = getPath(v.lecture, a);
-      label = getLabel(a);
-      subMenu.addItem({
-        type: 'command',
-        command: AssignmentsCommandIDs.open,
-        args: { path, label }
-      });
     });
 
     aMenu.addItem({
@@ -62,26 +43,16 @@ export const updateMenus = async (reload: boolean = false) => {
 
   if (cmMenu) {
     cmMenu.clearItems();
-    lectureAssignments.forEach(v => {
+    lectures.forEach(v => {
       const subMenu = new Menu({ commands: GlobalObjects.commands });
-      subMenu.title.label = v.lecture.name;
+      subMenu.title.label = v.name;
 
-      let path = getPath(v.lecture, null);
-      let label = getLabel(null);
+      const path = getPath(v, null);
+      const label = getLabel(null);
       subMenu.addItem({
         type: 'command',
         command: CourseManageCommandIDs.open,
         args: { path, label }
-      });
-
-      v.assignments.forEach(a => {
-        path = getPath(v.lecture, a);
-        label = getLabel(a);
-        subMenu.addItem({
-          type: 'command',
-          command: CourseManageCommandIDs.open,
-          args: { path, label }
-        });
       });
 
       cmMenu.addItem({
