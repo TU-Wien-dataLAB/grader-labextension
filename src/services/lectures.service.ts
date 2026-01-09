@@ -13,7 +13,7 @@ export function getAllLectures(
   reload = false
 ): Promise<Lecture[]> {
   let url = 'api/lectures';
-  if (complete) {
+  if (complete != null) {
     const searchParams = new URLSearchParams({
       complete: String(complete)
     });
