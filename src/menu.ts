@@ -19,7 +19,8 @@ const getPath = (lecture: Lecture, assignment: AssignmentDetail | null) => {
 export const updateMenus = async (reload: boolean = false) => {
   const aMenu = GlobalObjects.assignmentMenu;
   const cmMenu = GlobalObjects.courseManageMenu;
-  const lectures = await getAllLectures(false, reload);
+  const instructorLectures = await getAllLectures({'complete': false, 'instructor': true}, reload);
+  const lectures = await getAllLectures({'complete': false, 'instructor': false}, reload);
 
   aMenu.clearItems();
   lectures.forEach(v => {
@@ -43,7 +44,7 @@ export const updateMenus = async (reload: boolean = false) => {
 
   if (cmMenu) {
     cmMenu.clearItems();
-    lectures.forEach(v => {
+    instructorLectures.forEach(v => {
       const subMenu = new Menu({ commands: GlobalObjects.commands });
       subMenu.title.label = v.name;
 
