@@ -9,16 +9,18 @@ import { request, HTTPMethod } from './request.service';
 import { User } from '../model/user';
 
 export function getAllLectures(
-  complete?: boolean,
+  filters: {[key: string]: boolean},
   reload = false
 ): Promise<Lecture[]> {
   let url = 'api/lectures';
-  if (complete != null) {
-    const searchParams = new URLSearchParams({
-      complete: String(complete)
-    });
-    url += '?' + searchParams;
+  const params = new URLSearchParams();
+
+  for (let key in filters) {
+    if (filters[key] != null) {
+      params.append(key, String(filters[key]));
+    }
   }
+  url += '?' + params.toString();
   return request<Lecture[]>(HTTPMethod.GET, url, null, reload);
 }
 
