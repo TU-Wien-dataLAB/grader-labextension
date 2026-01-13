@@ -54,7 +54,7 @@ export class GradingModeSwitch extends React.Component<IModeSwitchProps> {
   }
 
   public async componentDidMount() {
-    const lectures = await getAllLectures();
+    const lectures = await getAllLectures({'instructor': true});
     this.lecture = lectures.find(
       l => l.code === this.notebookPaths[lectureSubPaths]
     );

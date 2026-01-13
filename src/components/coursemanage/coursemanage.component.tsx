@@ -86,14 +86,14 @@ export const CourseManageComponent = () => {
   const { data: lectures, isLoading: isLoadingOngoingLectures } = useQuery<
     Lecture[]
   >({
-    queryKey: ['lectures'],
-    queryFn: () => getAllLectures(false)
+    queryKey: ['instructorLectures'],
+    queryFn: () => getAllLectures({'complete': false, 'instructor': true})
   });
 
   const { data: completedLectures, isLoading: isLoadingCompletedLectures } =
     useQuery<Lecture[]>({
-      queryKey: ['completedLectures'],
-      queryFn: () => getAllLectures(true)
+      queryKey: ['instructorCompletedLectures'],
+      queryFn: () => getAllLectures({'complete': true, 'instructor': true})
     });
 
   const [showComplete, setShowComplete] = useState(false);
