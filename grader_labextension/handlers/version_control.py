@@ -508,13 +508,15 @@ class PushHandler(ExtensionBaseHandler):
         except GitError as e:
             self.log.error("git error during commit process: %s", e.error)
             raise HTTPError(e.code, reason=e.error)
-
         try:
             git_service.push(remote, force=True)
         except GitError as e:
             self.log.error("git error during push process: %s", e.error)
             git_service.undo_commit()
-            raise HTTPError(e.code, reason=str(e.error))
+            raise HTTPError(
+                status_code=e.code,
+                reason=json.dumps({"type": "git_push_failed", "message": e.error}),
+            )
 
     async def _submit_assignment(self, git_service, lecture_id, assignment_id):
         self.log.info(f"Submitting assignment {assignment_id}!")
@@ -655,7 +657,7 @@ class NotebookAccessHandler(ExtensionBaseHandler):
                 self.write({"status": "OK"})
             except GitError as e:
                 self.log.error("GitError:\n" + e.error)
-                self.write_error(400)
+                raise HTTPError(HTTPStatus.NOT_FOUND, reason=e.error)
 
         try:
             username = self.current_user["name"]
