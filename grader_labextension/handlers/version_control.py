@@ -507,7 +507,9 @@ class PushHandler(ExtensionBaseHandler):
             git_service.commit(message=commit_message, selected_files=selected_files)
         except GitError as e:
             self.log.error("git error during commit process: %s", e.error)
-            raise HTTPError(e.code, reason=e.error)
+            raise HTTPError(
+                e.code, reason=json.dumps({"type": "git_commit_failed", "message": e.error})
+            )
         try:
             git_service.push(remote, force=True)
         except GitError as e:
