@@ -161,8 +161,10 @@ export const ManualGrading = () => {
       setSubmissionScaling(response.data.score_scaling);
       await refetchGradeBook();
 
-      const manualPath = `${lectureBasePath}${lecture.code}/manualgrade/${assignment.id}/${manualGradeSubmission.id}`;
-      const files = await getFiles(manualPath);
+      const path = manualGradeSubmission.edited
+        ? `${lectureBasePath}${lecture.code}/edit/${assignment.id}/${manualGradeSubmission.id}`
+        : `${lectureBasePath}${lecture.code}/manualgrade/${assignment.id}/${manualGradeSubmission.id}`;
+      const files = await getFiles(path);
       setManualFiles(files);
 
       if (files.length === 0) {
@@ -170,12 +172,12 @@ export const ManualGrading = () => {
           `${lectureBasePath}${lecture.code}/source/${assignment.id}`
         );
       } else {
-        openBrowser(manualPath);
+        openBrowser(path);
       }
     });
 
     
-  }, [manualGradeSubmission.id]);
+  }, [manualGradeSubmission.id, manualGradeSubmission.edited]);
 
   const handleAutogradeSubmission = async () => {
     await autogradeSubmissionsDialog(async () => {
