@@ -31,6 +31,12 @@ def cache(max_age: int):
     return wrapper
 
 
+class APIError(HTTPError):
+    def __init__(self, status_code, message, **kwargs):
+        super().__init__(status_code, **kwargs)
+        self.message = message
+
+
 class HandlerConfig(SingletonConfigurable):
     hub_api_url = Unicode(
         os.environ.get("JUPYTERHUB_API_URL"), help="The url of the hubs api."
