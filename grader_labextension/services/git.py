@@ -142,7 +142,7 @@ class GitService(Configurable):
         self.log.info(f"Setting remote {origin} for {self.path} to {url}")
         try:
             self._run_command(f"git remote add {origin} {url}", cwd=self.path)
-        except GitError:
+        except subprocess.CalledProcessError:
             self.log.warning(f"Remote {origin} already exists. Updating URL.")
             self._run_command(f"git remote set-url {origin} {url}", cwd=self.path)
 
@@ -364,14 +364,14 @@ class GitService(Configurable):
     def local_branch_exists(self, branch: str) -> bool:
         try:
             self._run_command(f"git rev-parse --quiet --verify {branch}", cwd=self.path)
-        except GitError:
+        except subprocess.CalledProcessError:
             return False
         return True
 
     def remote_branch_exists(self, origin: str, branch: str) -> bool:
         try:
             self._run_command(f"git ls-remote --exit-code {origin} {branch}", cwd=self.path)
-        except GitError:
+        except subprocess.CalledProcessError:
             return False
         return True
 
@@ -418,7 +418,7 @@ class GitService(Configurable):
         if self._git_version is None:
             try:
                 version = self._run_command("git --version", cwd=self.path)
-            except GitError:
+            except subprocess.CalledProcessError:
                 return tuple()
             version = version.split(" ")[2]
             self._git_version = tuple([int(v) for v in version.split(".")])
@@ -446,16 +446,13 @@ class GitService(Configurable):
         Args:
             command (str): The command to run.
             cwd (str): The working directory for the command.
-
+        # TODO: rewrite the comment
         Raises:
             GitError: If the command fails.
         """
-        try:
-            self.log.debug(f"Executing command: {command} in {cwd}")
-            result = subprocess.run(
-                command, shell=True, check=True, cwd=cwd, text=True, capture_output=True
-            )
-            return result.stdout
-        except subprocess.CalledProcessError as e:
-            error_message = f"Command '{command}' failed with error: {e.stderr}"
-            raise GitError(500, error_message)
+
+        self.log.debug(f"Executing command: {command} in {cwd}")
+        result = subprocess.run(
+            command, shell=True, check=True, cwd=cwd, text=True, capture_output=True
+        )
+        return result.stdout
