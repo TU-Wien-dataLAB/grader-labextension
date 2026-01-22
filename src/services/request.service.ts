@@ -64,7 +64,7 @@ export function request<T, B = any | null>(
       
         try {
           const errorData = JSON.parse(errorText);
-          errorMessage = errorData['reason'] || errorMessage;
+          errorMessage = errorData['reason'] || errorData['message'] || errorMessage;
         } catch (e) {
           errorMessage = errorText; // fallback to raw error text if not JSON
         }
