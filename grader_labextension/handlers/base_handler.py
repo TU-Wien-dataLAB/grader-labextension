@@ -4,6 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import functools
+import json
 import os
 from typing import Awaitable, Optional
 
@@ -65,6 +66,21 @@ class ExtensionBaseHandler(APIHandler):
     """
     BaseHandler for all server-extension handler
     """
+
+    def write_error(self, status_code, **kwargs):
+        exc = kwargs.get("exc_info", (None, None, None))[1]
+
+        if isinstance(exc, APIError):
+            self.set_header("Content-Type", "application/json")
+
+            reply = {"status": status_code, "message": exc.message}
+
+            if exc.reason is not None:
+                reply["error"] = exc.reason
+
+            self.finish(json.dumps(reply))
+        else:
+            super().write_error(status_code, exc_info=exc)
 
     def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
         pass
