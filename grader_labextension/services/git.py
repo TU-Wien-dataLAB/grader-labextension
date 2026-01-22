@@ -446,9 +446,6 @@ class GitService(Configurable):
         Args:
             command (str): The command to run.
             cwd (str): The working directory for the command.
-        # TODO: rewrite the comment
-        Raises:
-            GitError: If the command fails.
         """
 
         self.log.debug(f"Executing command: {command} in {cwd}")
