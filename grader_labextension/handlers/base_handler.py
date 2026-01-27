@@ -33,7 +33,7 @@ def cache(max_age: int):
 
 
 class APIError(HTTPError):
-    def __init__(self, status_code, message, **kwargs):
+    def __init__(self, status_code: int, message: str, **kwargs):
         super().__init__(status_code, **kwargs)
         self.message = message
 
