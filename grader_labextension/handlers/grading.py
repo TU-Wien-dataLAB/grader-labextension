@@ -14,7 +14,7 @@ from tornado.web import HTTPError, authenticated
 
 from grader_labextension.handlers.base_handler import APIError, ExtensionBaseHandler
 from grader_labextension.registry import register_handler
-from grader_labextension.services.git import GitService
+from grader_labextension.services.git import GitError, GitService
 from grader_labextension.services.request import RequestService, RequestServiceError
 
 
@@ -172,6 +172,9 @@ class GradingManualHandler(ExtensionBaseHandler):
         except subprocess.CalledProcessError as e:
             self.log.error(f"Git error: {e.stderr}")
             raise APIError(e.returncode, reason="git process failed", message=e.stderr)
+        except GitError as e:
+            self.log.error(f"Git error: {e}")
+            raise APIError(e.code, message=e.error)
 
 
 @register_handler(
