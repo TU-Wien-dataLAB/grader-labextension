@@ -121,8 +121,7 @@ class GitRemoteFileStatusHandler(ExtensionBaseHandler):
             self.log.info(f"File {file_path} status: {status}")
         except subprocess.CalledProcessError as e:
             self.log.error(e)
-            # TODO: rewrite reason
-            raise APIError(501, reason="File not found", message=str(e.stderr))
+            raise APIError(502, message=str(e.stderr))
         response = json.dumps({"status": status.name})
         self.write(response)
 
