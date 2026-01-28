@@ -22,7 +22,7 @@ from grader_labextension.services.request import RequestServiceError
 
 from ..api.models.submission import Submission
 from ..registry import register_handler
-from ..services.git import GitError, GitService
+from ..services.git import GitService
 from .base_handler import APIError, ExtensionBaseHandler
 
 
@@ -160,9 +160,9 @@ class GitRemoteStatusHandler(ExtensionBaseHandler):
             git_service.set_remote(f"grader_{repo}")
             git_service.fetch_all()
             status = git_service.check_remote_status(f"grader_{repo}", "main")
-        except GitError as e:
+        except subprocess.CalledProcessError as e:
             self.log.error(e)
-            raise HTTPError(e.code, reason=e.error)
+            raise APIError(e.code, message=e.error)
         response = json.dumps({"status": status.name})
         self.write(response)
 
@@ -275,7 +275,7 @@ class PullHandler(ExtensionBaseHandler):
             git_service.pull(f"grader_{repo}", force=True)
             self.write({"status": "OK"})
         except subprocess.CalledProcessError as e:
-            self.log.error("GitError:\n" + e.stderr)
+            self.log.error("Git error:\n" + e.stderr)
             raise APIError(e.returncode, reason="git pull failed", message=e.stderr)
 
 
@@ -599,7 +599,7 @@ class RestoreHandler(ExtensionBaseHandler):
             git_service.push(f"grader_{GitRepoType.USER}")
             self.write({"status": "OK"})
         except subprocess.CalledProcessError as e:
-            self.log.error("GitError:\n" + e.stderr)
+            self.log.error("Git error:\n" + e.stderr)
             raise APIError(e.returncode, reason="git reset repo failed", message=e.stderr)
 
 
@@ -654,7 +654,7 @@ class NotebookAccessHandler(ExtensionBaseHandler):
                 git_service.pull(f"grader_{GitRepoType.RELEASE}", force=True)
                 self.write({"status": "OK"})
             except subprocess.CalledProcessError as e:
-                self.log.error("GitError:\n" + e.stderr)
+                self.log.error("Git error:\n" + e.stderr)
                 raise APIError(HTTPStatus.NOT_FOUND, reason="git command failed", message=e.stderr)
 
         try:
