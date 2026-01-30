@@ -65,14 +65,14 @@ class GenerateHandler(ExtensionBaseHandler):
             os.mkdir(output_dir)
         except Exception as e:
             self.log.error(e)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
+            raise APIError(HTTPStatus.INTERNAL_SERVER_ERROR, message=str(e))
 
         self.log.info("Starting GenerateAssignment converter")
         try:
             generator.start()
         except Exception as e:
             self.log.error(e)
-            raise HTTPError(HTTPStatus.CONFLICT, reason=str(e))
+            raise APIError(HTTPStatus.CONFLICT, message=str(e))
 
         gradebook_path = os.path.join(generator._output_directory, "gradebook.json")
         try:
@@ -121,7 +121,7 @@ class GitRemoteFileStatusHandler(ExtensionBaseHandler):
             self.log.info(f"File {file_path} status: {status}")
         except subprocess.CalledProcessError as e:
             self.log.error(e)
-            raise APIError(502, message=str(e.stderr))
+            raise APIError(502, message=e.stderr)
         response = json.dumps({"status": status.name})
         self.write(response)
 
@@ -162,7 +162,7 @@ class GitRemoteStatusHandler(ExtensionBaseHandler):
             status = git_service.check_remote_status(f"grader_{repo}", "main")
         except subprocess.CalledProcessError as e:
             self.log.error(e)
-            raise APIError(e.code, message=e.error)
+            raise APIError(502, reason="error fetching remote files", message=e.stderr)
         response = json.dumps({"status": status.name})
         self.write(response)
 
@@ -215,7 +215,7 @@ class GitLogHandler(ExtensionBaseHandler):
                 logs = []
         except subprocess.CalledProcessError as e:
             self.log.error(e)
-            raise APIError(e.returncode, reason="fetch git logs failed", message=str(e.stderr))
+            raise APIError(502, reason="fetch git logs failed", message=str(e.stderr))
 
         self.write(json.dumps(logs))
 
@@ -276,7 +276,7 @@ class PullHandler(ExtensionBaseHandler):
             self.write({"status": "OK"})
         except subprocess.CalledProcessError as e:
             self.log.error("Git error:\n" + e.stderr)
-            raise APIError(e.returncode, reason="git pull failed", message=e.stderr)
+            raise APIError(502, reason="git pull failed", message=e.stderr)
 
 
 @register_handler(
@@ -453,7 +453,7 @@ class PushHandler(ExtensionBaseHandler):
             os.mkdir(output_path)
         except Exception as e:
             self.log.error(e)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
+            raise APIError(HTTPStatus.INTERNAL_SERVER_ERROR, message=str(e))
 
         self.log.info("Starting GenerateAssignment converter")
         try:
@@ -461,7 +461,7 @@ class PushHandler(ExtensionBaseHandler):
             self.log.info("GenerateAssignment conversion done")
         except GraderConvertException as e:
             self.log.error("Converting failed: Error converting notebook!", exc_info=True)
-            raise HTTPError(HTTPStatus.CONFLICT, reason=str(e))
+            raise APIError(HTTPStatus.CONFLICT, message=str(e))
 
     async def _update_assignment_properties(self, gradebook_path, lecture_id, assignment_id):
         try:
@@ -502,19 +502,19 @@ class PushHandler(ExtensionBaseHandler):
             git_service.set_remote(remote, sub_id)
         except subprocess.CalledProcessError as e:
             self.log.error("git error during git initiation process: %s", e.stderr)
-            raise APIError(e.returncode, reason="git repo initialization failed", message=e.stderr)
+            raise APIError(502, reason="git repo initialization failed", message=e.stderr)
 
         try:
             git_service.commit(message=commit_message, selected_files=selected_files)
         except subprocess.CalledProcessError as e:
             self.log.error("git error during commit process: %s", e.stderr)
-            raise APIError(e.returncode, reason="git commit failed", message=e.stderr)
+            raise APIError(502, reason="git commit failed", message=e.stderr)
         try:
             git_service.push(remote, force=True)
         except subprocess.CalledProcessError as e:
             self.log.error("git error during push process: %s", e.output)
             git_service.undo_commit()
-            raise APIError(status_code=500, reason="git push failed", message=e.stderr)
+            raise APIError(502, reason="git push failed", message=e.stderr)
 
     async def _submit_assignment(self, git_service, lecture_id, assignment_id):
         self.log.info(f"Submitting assignment {assignment_id}!")
@@ -522,7 +522,7 @@ class PushHandler(ExtensionBaseHandler):
             latest_commit_hash = git_service.get_log(history_count=1)[0]["commit"]
         except (KeyError, IndexError) as e:
             self.log.error(e)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
+            raise APIError(HTTPStatus.INTERNAL_SERVER_ERROR, message=str(e))
 
         try:
             response = await self.request_service.request(
@@ -534,7 +534,7 @@ class PushHandler(ExtensionBaseHandler):
             )
         except RequestServiceError as e:
             self.log.error(e)
-            raise HTTPError(e.code, reason=e.message)
+            raise APIError(e.code, message=e.message)
 
         self.write(json.dumps(response))
 
@@ -565,7 +565,7 @@ class ResetHandler(ExtensionBaseHandler):
             )
         except RequestServiceError as e:
             self.log.error(e)
-            raise HTTPError(e.code, reason=e.message)
+            raise APIError(e.code, message=e.message)
         self.write({"status": "OK"})
 
 
@@ -600,7 +600,7 @@ class RestoreHandler(ExtensionBaseHandler):
             self.write({"status": "OK"})
         except subprocess.CalledProcessError as e:
             self.log.error("Git error:\n" + e.stderr)
-            raise APIError(e.returncode, reason="git reset repo failed", message=e.stderr)
+            raise APIError(502, reason="git reset repo failed", message=e.stderr)
 
 
 @register_handler(path=r"\/(?P<lecture_id>\d*)\/(?P<assignment_id>\d*)\/(?P<notebook_name>.*)")
@@ -661,7 +661,7 @@ class NotebookAccessHandler(ExtensionBaseHandler):
             username = self.current_user["name"]
         except TypeError as e:
             self.log.error(e)
-            raise HTTPError(HTTPStatus.INTERNAL_SERVER_ERROR, reason=str(e))
+            raise APIError(HTTPStatus.INTERNAL_SERVER_ERROR, message=str(e))
 
         url = (
             f"/user/{username}/lab/tree/{lecture['code']}/{assignment['id']}/{quote(notebook_name)}"
