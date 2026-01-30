@@ -18,13 +18,6 @@ from traitlets.config.configurable import Configurable
 from traitlets.traitlets import Unicode
 
 
-class GitError(Exception):
-    def __init__(self, code: int = 500, error: str = "Unknown Error"):
-        self.code = code
-        self.error = error
-        super().__init__(error)
-
-
 class RemoteFileStatus(enum.Enum):
     UP_TO_DATE = 1
     PULL_NEEDED = 2
@@ -170,12 +163,8 @@ class GitService(Configurable):
             force (bool): Whether to force the pull. Defaults to False.
         """
         self.log.info(f"Pulling from {origin}/{branch} at {self.path}")
-        if not self.remote_branch_exists(origin=origin, branch=branch):
-            raise GitError(
-                404,
-                "Remote repository not found. Please ensure your assignment is pushed "
-                "to the repository before proceeding.",
-            )
+        self._run_command(f"git ls-remote --exit-code {origin} {branch}", cwd=self.path)
+
         if force:
             # clean local changes
             command = "git clean -fd"
