@@ -4,6 +4,7 @@ import os
 from typing import Callable, Dict, Optional, Union
 from urllib.parse import ParseResultBytes, quote_plus, urlencode, urlparse
 
+from grader_service.errors import APIError
 from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest, HTTPResponse
 from traitlets import TraitError, Unicode, validate
 from traitlets.config import SingletonConfigurable
@@ -167,6 +168,13 @@ class RequestService(SingletonConfigurable):
             self.log.error(f"Unexpected error: {e}")
             raise RequestServiceError(
                 500, "Internal Server Error", f"An unexpected error occurred: {str(e)}"
+            )
+        except APIError as e:
+            self.log.error(f"API error occurred: {e.message}")
+            raise RequestServiceError(
+                e.status_code,
+                "API Error",
+                e.message or "An API error occurred in the upstream service.",
             )
 
     def prepare_headers(self, header: Dict[str, str] = None) -> Dict[str, str]:
