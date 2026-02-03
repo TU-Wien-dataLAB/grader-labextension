@@ -270,20 +270,17 @@ function EnhancedTableHead(props: EnhancedTableProps) {
 export default function GradingTable() {
   const navigate = useNavigate();
 
-  const {
-    lecture,
-    assignment,
-    rows,
-    setRows,
-    setManualGradeSubmission
-  } = useOutletContext() as {
-    lecture: Lecture;
-    assignment: Assignment;
-    rows: Submission[];
-    setRows: React.Dispatch<React.SetStateAction<Submission[]>>;
-    manualGradeSubmission: Submission;
-    setManualGradeSubmission: React.Dispatch<React.SetStateAction<Submission>>;
-  };
+  const { lecture, assignment, rows, setRows, setManualGradeSubmission } =
+    useOutletContext() as {
+      lecture: Lecture;
+      assignment: Assignment;
+      rows: Submission[];
+      setRows: React.Dispatch<React.SetStateAction<Submission[]>>;
+      manualGradeSubmission: Submission;
+      setManualGradeSubmission: React.Dispatch<
+        React.SetStateAction<Submission>
+      >;
+    };
 
   const [order, setOrder] = React.useState<Order>(() => {
     const savedOrder = loadString('order');
@@ -416,8 +413,7 @@ export default function GradingTable() {
   };
 
   const filteredRows = React.useMemo(() => {
-    const regexp = new RegExp(`.*${search}.*`);
-    return rows.filter(r => regexp.test(submissionString(r)));
+    return rows.filter(r => submissionString(r).includes(search));
   }, [search, rows]);
 
   const visibleRows = React.useMemo(
