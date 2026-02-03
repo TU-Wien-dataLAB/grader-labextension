@@ -4,13 +4,12 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import functools
-import json
 import os
 from typing import Awaitable, Optional
 
+from grader_service.handlers.base_handler import GraderErrorMixin
 from jupyter_server.base.handlers import APIHandler
-from tornado.httpclient import HTTPResponse
-from tornado.web import HTTPError
+from tornado.httpclient import HTTPError, HTTPResponse
 from traitlets.config.configurable import SingletonConfigurable
 from traitlets.traitlets import Unicode
 
@@ -30,12 +29,6 @@ def cache(max_age: int):
         return request_handler_wrapper
 
     return wrapper
-
-
-class APIError(HTTPError):
-    def __init__(self, status_code: int, message: str, **kwargs):
-        super().__init__(status_code, **kwargs)
-        self.message = message
 
 
 class HandlerConfig(SingletonConfigurable):
@@ -62,25 +55,10 @@ class HandlerConfig(SingletonConfigurable):
     ).tag(config=True)
 
 
-class ExtensionBaseHandler(APIHandler):
+class ExtensionBaseHandler(GraderErrorMixin, APIHandler):
     """
     BaseHandler for all server-extension handler
     """
-
-    def write_error(self, status_code, **kwargs):
-        exc = kwargs.get("exc_info", (None, None, None))[1]
-
-        if isinstance(exc, APIError):
-            self.set_header("Content-Type", "application/json")
-
-            reply = {"status": status_code, "message": exc.message}
-
-            if exc.reason is not None:
-                reply["error"] = exc.reason
-
-            self.finish(json.dumps(reply))
-        else:
-            super().write_error(status_code, exc_info=exc)
 
     def data_received(self, chunk: bytes) -> Optional[Awaitable[None]]:
         pass
