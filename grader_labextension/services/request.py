@@ -164,17 +164,19 @@ class RequestService(SingletonConfigurable):
             raise RequestServiceError(
                 502, "Bad Gateway", "Unable to connect to the upstream service."
             )
-        except Exception as e:
-            self.log.error(f"Unexpected error: {e}")
-            raise RequestServiceError(
-                500, "Internal Server Error", f"An unexpected error occurred: {str(e)}"
-            )
+
         except APIError as e:
             self.log.error(f"API error occurred: {e.message}")
             raise RequestServiceError(
                 e.status_code,
                 "API Error",
                 e.message or "An API error occurred in the upstream service.",
+            )
+
+        except Exception as e:
+            self.log.error(f"Unexpected error: {e}")
+            raise RequestServiceError(
+                500, "Internal Server Error", f"An unexpected error occurred: {str(e)}"
             )
 
     def prepare_headers(self, header: Dict[str, str] = None) -> Dict[str, str]:
