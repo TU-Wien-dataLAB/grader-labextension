@@ -110,7 +110,7 @@ class GradingManualHandler(ExtensionBaseHandler):
 
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
-        """Generates a local git repository and pulls autograded files of a submission in the user directory
+        """Generates a local git repository and pulls autograded or original files of a submission in the user directory
 
         :param lecture_id: id of the lecture
         :type lecture_id: int
@@ -138,16 +138,31 @@ class GradingManualHandler(ExtensionBaseHandler):
                 f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{sub_id}",
                 header=self.grader_authentication_header,
             )
+
+            submission_user = await self.request_service.request(
+                "GET",
+                f"{self.service_base_url}api/users/{submission['user_id']}",
+                header=self.grader_authentication_header,
+            )
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
+
+        autograding_type = assignment["settings"]["autograde_type"]
+        repo_type = None
+
+        if autograding_type in ["auto", "full_auto"]:
+            repo_type = GitRepoType.AUTOGRADE
+        elif autograding_type == "unassisted":
+            repo_type = GitRepoType.USER
 
         git_service = GitService(
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type=GitRepoType.AUTOGRADE,
+            repo_type=repo_type,
             config=self.config,
+            username=submission_user["name"],
         )
         git_service.path = os.path.join(
             git_service.git_root_dir,
@@ -164,10 +179,15 @@ class GradingManualHandler(ExtensionBaseHandler):
         try:
             if not git_service.is_git():
                 git_service.init()
-            git_service.set_remote(GitRepoType.AUTOGRADE, sub_id=sub_id)
-            git_service.pull(
-                GitRepoType.AUTOGRADE, branch=f"submission_{submission['commit_hash']}"
-            )
+            git_service.set_remote(GitRepoType(repo_type), additional_path=submission_user["name"])
+            if repo_type == GitRepoType.AUTOGRADE:
+                git_service.pull(
+                    GitRepoType.AUTOGRADE, branch=f"submission_{submission['commit_hash']}"
+                )
+            elif repo_type == GitRepoType.USER:
+                git_service.pull(GitRepoType.USER)
+                git_service.go_to_commit(submission["commit_hash"])
+                self.log.info(f"Pulled USER repo for submission {submission['id']}")
         except GitError as e:
             self.log.error(f"Git error: {e.error}")
             raise HTTPError(e.code, reason=e.error)
@@ -268,7 +288,9 @@ class PullFeedbackHandler(ExtensionBaseHandler):
 
         if not git_service.is_git():
             git_service.init()
-        git_service.set_remote(GitRepoType.FEEDBACK, sub_id=sub_id)
+        git_service.set_remote(
+            GitRepoType.FEEDBACK, additional_path=sub_id if sub_id is not None else ""
+        )
         git_service.pull(
             GitRepoType.FEEDBACK, branch=f"feedback_{submission['commit_hash']}", force=True
         )
