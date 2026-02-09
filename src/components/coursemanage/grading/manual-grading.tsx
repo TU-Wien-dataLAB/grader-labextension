@@ -47,6 +47,7 @@ import { queryClient } from '../../../widgets/assignmentmanage';
 import { ManualStatus } from '../../../model/manualStatus';
 import { FeedbackStatus } from '../../../model/feedbackStatus';
 import { AutoStatus } from '../../../model/autoStatus';
+import { AssignmentSettings } from '../../../model/assignmentSettings';
 
 const style = {
   position: 'absolute' as const,
@@ -176,6 +177,13 @@ export const ManualGrading = () => {
 
     
   }, [manualGradeSubmission.id]);
+
+  const isAutogradingDisabled = () => {
+    return assignment.settings?.autograde_type === AssignmentSettings.AutogradeTypeEnum.Unassisted ? false :
+      submission.auto_status === AutoStatus.AutomaticallyGraded
+        ? false
+        : true;
+  }
 
   const handleAutogradeSubmission = async () => {
     await autogradeSubmissionsDialog(async () => {
@@ -463,7 +471,7 @@ export const ManualGrading = () => {
             </Tooltip>
           ) : null}
           <GraderLoadingButton
-            disabled={submission.auto_status !== AutoStatus.AutomaticallyGraded}
+            disabled={isAutogradingDisabled()}
             color="primary"
             variant="outlined"
             onClick={handlePullSubmission}
@@ -475,7 +483,7 @@ export const ManualGrading = () => {
           <Button
             variant="outlined"
             color="success"
-            disabled={submission.auto_status !== AutoStatus.AutomaticallyGraded}
+            disabled={isAutogradingDisabled()}
             onClick={openFinishDialog}
             sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
           >
