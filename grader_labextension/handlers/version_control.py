@@ -23,7 +23,7 @@ from grader_labextension.services.request import RequestServiceError
 
 from ..api.models.submission import Submission
 from ..registry import register_handler
-from ..services.git import GitService
+from ..services.git import GitError, GitService
 from .base_handler import ExtensionBaseHandler
 
 
@@ -277,7 +277,10 @@ class PullHandler(ExtensionBaseHandler):
             self.write({"status": "OK"})
         except subprocess.CalledProcessError as e:
             self.log.error("Git error:\n" + e.stderr)
-            raise APIError(502, reason="git pull failed", message=e.stderr)
+            raise APIError(502, reason="git command failed", message=e.stderr)
+        except GitError as e:
+            self.log.error("Git error:\n" + e.error)
+            raise APIError(e.code, message=e.error)
 
 
 @register_handler(
@@ -602,6 +605,9 @@ class RestoreHandler(ExtensionBaseHandler):
         except subprocess.CalledProcessError as e:
             self.log.error("Git error:\n" + e.stderr)
             raise APIError(502, reason="git reset repo failed", message=e.stderr)
+        except GitError as e:
+            self.log.error("Git error:\n" + e.error)
+            raise APIError(e.code, message=e.error)
 
 
 @register_handler(path=r"\/(?P<lecture_id>\d*)\/(?P<assignment_id>\d*)\/(?P<notebook_name>.*)")
@@ -657,6 +663,9 @@ class NotebookAccessHandler(ExtensionBaseHandler):
             except subprocess.CalledProcessError as e:
                 self.log.error("Git error:\n" + e.stderr)
                 raise APIError(HTTPStatus.NOT_FOUND, reason="git command failed", message=e.stderr)
+            except GitError as e:
+                self.log.error("Git error:\n" + e.error)
+                raise APIError(e.code, message=e.error)
 
         try:
             username = self.current_user["name"]
