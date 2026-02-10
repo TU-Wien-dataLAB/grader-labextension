@@ -142,7 +142,7 @@ class GitService(Configurable):
         self.log.info(f"Setting remote {origin} for {self.path} to {url}")
         try:
             self._run_command(f"git remote add {origin} {url}", cwd=self.path)
-        except subprocess.CalledProcessError:
+        except GitError:
             self.log.warning(f"Remote {origin} already exists. Updating URL.")
             self._run_command(f"git remote set-url {origin} {url}", cwd=self.path)
 
@@ -365,14 +365,14 @@ class GitService(Configurable):
     def local_branch_exists(self, branch: str) -> bool:
         try:
             self._run_command(f"git rev-parse --quiet --verify {branch}", cwd=self.path)
-        except subprocess.CalledProcessError:
+        except GitError:
             return False
         return True
 
     def remote_branch_exists(self, origin: str, branch: str) -> bool:
         try:
             self._run_command(f"git ls-remote --exit-code {origin} {branch}", cwd=self.path)
-        except subprocess.CalledProcessError:
+        except GitError:
             return False
         return True
 
@@ -419,7 +419,7 @@ class GitService(Configurable):
         if self._git_version is None:
             try:
                 version = self._run_command("git --version", cwd=self.path)
-            except subprocess.CalledProcessError:
+            except GitError:
                 return tuple()
             version = version.split(" ")[2]
             self._git_version = tuple([int(v) for v in version.split(".")])
@@ -450,7 +450,11 @@ class GitService(Configurable):
         """
 
         self.log.debug(f"Executing command: {command} in {cwd}")
-        result = subprocess.run(
-            command, shell=True, check=True, cwd=cwd, text=True, capture_output=True
-        )
-        return result.stdout
+        try:
+            result = subprocess.run(
+                command, shell=True, check=True, cwd=cwd, text=True, capture_output=True
+            )
+            return result.stdout
+        except subprocess.CalledProcessError as e:
+            self.log.error(f"Command failed with error: {e.stderr}")
+            raise GitError(code=e.returncode, error=e.stderr)

@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 import os
 import shutil
-import subprocess
 import urllib.parse
 
 from grader_service.errors import APIError
@@ -15,7 +14,7 @@ from tornado.web import HTTPError, authenticated
 
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler
 from grader_labextension.registry import register_handler
-from grader_labextension.services.git import GitService
+from grader_labextension.services.git import GitError, GitService
 from grader_labextension.services.request import RequestService, RequestServiceError
 
 
@@ -170,9 +169,9 @@ class GradingManualHandler(ExtensionBaseHandler):
             git_service.pull(
                 GitRepoType.AUTOGRADE, branch=f"submission_{submission['commit_hash']}"
             )
-        except subprocess.CalledProcessError as e:
-            self.log.error(f"Git error: {e.stderr}")
-            raise APIError(502, reason="git process failed", message=e.stderr)
+        except GitError as e:
+            self.log.error(f"Git error: {e.error}")
+            raise APIError(502, reason="git process failed", message=e.error)
 
 
 @register_handler(

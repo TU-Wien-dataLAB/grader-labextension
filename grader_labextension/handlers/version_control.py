@@ -7,7 +7,6 @@
 import json
 import os
 import shutil
-import subprocess
 from http import HTTPStatus
 from typing import List, Optional
 from urllib.parse import quote, unquote
@@ -120,9 +119,9 @@ class GitRemoteFileStatusHandler(ExtensionBaseHandler):
             git_service.fetch_all()
             status = git_service.check_remote_file_status(file_path)
             self.log.info(f"File {file_path} status: {status}")
-        except subprocess.CalledProcessError as e:
+        except GitError as e:
             self.log.error(e)
-            raise APIError(502, message=e.stderr)
+            raise APIError(502, message=e.error)
         response = json.dumps({"status": status.name})
         self.write(response)
 
@@ -161,9 +160,9 @@ class GitRemoteStatusHandler(ExtensionBaseHandler):
             git_service.set_remote(f"grader_{repo}")
             git_service.fetch_all()
             status = git_service.check_remote_status(f"grader_{repo}", "main")
-        except subprocess.CalledProcessError as e:
+        except GitError as e:
             self.log.error(e)
-            raise APIError(502, reason="error fetching remote files", message=e.stderr)
+            raise APIError(502, reason="error fetching remote files", message=e.error)
         response = json.dumps({"status": status.name})
         self.write(response)
 
@@ -214,9 +213,9 @@ class GitLogHandler(ExtensionBaseHandler):
                 logs = git_service.get_log(n_history)
             else:
                 logs = []
-        except subprocess.CalledProcessError as e:
+        except GitError as e:
             self.log.error(e)
-            raise APIError(502, reason="fetch git logs failed", message=str(e.stderr))
+            raise APIError(502, message=e.error)
 
         self.write(json.dumps(logs))
 
@@ -275,12 +274,9 @@ class PullHandler(ExtensionBaseHandler):
             git_service.set_remote(f"grader_{repo}", sub_id=sub_id)
             git_service.pull(f"grader_{repo}", force=True)
             self.write({"status": "OK"})
-        except subprocess.CalledProcessError as e:
-            self.log.error("Git error:\n" + e.stderr)
-            raise APIError(502, reason="git command failed", message=e.stderr)
         except GitError as e:
             self.log.error("Git error:\n" + e.error)
-            raise APIError(e.code, message=e.error)
+            raise APIError(502, message=e.error)
 
 
 @register_handler(
@@ -504,21 +500,21 @@ class PushHandler(ExtensionBaseHandler):
                 git_service.init()
                 git_service.set_author(author=self.user_name)
             git_service.set_remote(remote, sub_id)
-        except subprocess.CalledProcessError as e:
-            self.log.error("git error during git initiation process: %s", e.stderr)
-            raise APIError(502, reason="git repo initialization failed", message=e.stderr)
+        except GitError as e:
+            self.log.error("git error during git initiation process: %s", e.error)
+            raise APIError(502, message=e.error)
 
         try:
             git_service.commit(message=commit_message, selected_files=selected_files)
-        except subprocess.CalledProcessError as e:
-            self.log.error("git error during commit process: %s", e.stderr)
-            raise APIError(502, reason="git commit failed", message=e.stderr)
+        except GitError as e:
+            self.log.error("git error during commit process: %s", e.error)
+            raise APIError(502, reason="git commit failed", message=e.error)
         try:
             git_service.push(remote, force=True)
-        except subprocess.CalledProcessError as e:
-            self.log.error("git error during push process: %s", e.output)
+        except GitError as e:
+            self.log.error("git error during push process: %s", e.error)
             git_service.undo_commit()
-            raise APIError(502, reason="git push failed", message=e.stderr)
+            raise APIError(502, reason="git push failed", message=e.error)
 
     async def _submit_assignment(self, git_service, lecture_id, assignment_id):
         self.log.info(f"Submitting assignment {assignment_id}!")
@@ -602,12 +598,9 @@ class RestoreHandler(ExtensionBaseHandler):
             git_service.revert(commit_hash=commit_hash)
             git_service.push(f"grader_{GitRepoType.USER}")
             self.write({"status": "OK"})
-        except subprocess.CalledProcessError as e:
-            self.log.error("Git error:\n" + e.stderr)
-            raise APIError(502, reason="git reset repo failed", message=e.stderr)
         except GitError as e:
             self.log.error("Git error:\n" + e.error)
-            raise APIError(e.code, message=e.error)
+            raise APIError(502, message=e.error)
 
 
 @register_handler(path=r"\/(?P<lecture_id>\d*)\/(?P<assignment_id>\d*)\/(?P<notebook_name>.*)")
@@ -660,12 +653,9 @@ class NotebookAccessHandler(ExtensionBaseHandler):
                 git_service.set_remote(f"grader_{GitRepoType.RELEASE}")
                 git_service.pull(f"grader_{GitRepoType.RELEASE}", force=True)
                 self.write({"status": "OK"})
-            except subprocess.CalledProcessError as e:
-                self.log.error("Git error:\n" + e.stderr)
-                raise APIError(HTTPStatus.NOT_FOUND, reason="git command failed", message=e.stderr)
             except GitError as e:
                 self.log.error("Git error:\n" + e.error)
-                raise APIError(e.code, message=e.error)
+                raise APIError(502, message=e.error)
 
         try:
             username = self.current_user["name"]
