@@ -7,6 +7,7 @@ import os
 import shutil
 import urllib.parse
 
+from grader_service.errors import APIError
 from grader_service.handlers import GitRepoType
 from tornado.httpclient import HTTPResponse
 from tornado.web import HTTPError, authenticated
@@ -170,7 +171,7 @@ class GradingManualHandler(ExtensionBaseHandler):
             )
         except GitError as e:
             self.log.error(f"Git error: {e.error}")
-            raise HTTPError(e.code, reason=e.error)
+            raise APIError(502, reason="git process failed", message=e.error)
 
 
 @register_handler(

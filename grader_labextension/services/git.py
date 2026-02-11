@@ -170,12 +170,13 @@ class GitService(Configurable):
             force (bool): Whether to force the pull. Defaults to False.
         """
         self.log.info(f"Pulling from {origin}/{branch} at {self.path}")
-        if not self.remote_branch_exists(origin=origin, branch=branch):
+        if not self.remote_branch_exists(origin, branch):
             raise GitError(
-                404,
-                "Remote repository not found. Please ensure your assignment is pushed "
+                code=404,
+                error="Remote repository not found. Please ensure your assignment is pushed "
                 "to the repository before proceeding.",
             )
+
         if force:
             # clean local changes
             command = "git clean -fd"
@@ -446,16 +447,14 @@ class GitService(Configurable):
         Args:
             command (str): The command to run.
             cwd (str): The working directory for the command.
-
-        Raises:
-            GitError: If the command fails.
         """
+
+        self.log.debug(f"Executing command: {command} in {cwd}")
         try:
-            self.log.debug(f"Executing command: {command} in {cwd}")
             result = subprocess.run(
                 command, shell=True, check=True, cwd=cwd, text=True, capture_output=True
             )
             return result.stdout
         except subprocess.CalledProcessError as e:
-            error_message = f"Command '{command}' failed with error: {e.stderr}"
-            raise GitError(500, error_message)
+            self.log.error(f"Command failed with error: {e.stderr}")
+            raise GitError(code=e.returncode, error=e.stderr)

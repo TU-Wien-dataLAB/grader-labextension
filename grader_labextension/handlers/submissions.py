@@ -6,6 +6,7 @@
 
 import json
 
+from grader_service.errors import APIError
 from tornado.web import HTTPError, authenticated
 
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler
@@ -285,7 +286,7 @@ class LtiSyncHandler(ExtensionBaseHandler):
             )
         except RequestServiceError as e:
             self.log.error(e)
-            raise HTTPError(e.code, reason=e.message)
+            raise APIError(e.code, message=e.message)
 
         self.write(json.dumps(response))
 
