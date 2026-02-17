@@ -151,7 +151,7 @@ class GradingManualHandler(ExtensionBaseHandler):
             repo_type = GitRepoType.AUTOGRADE
         elif autograding_type == "unassisted":
             repo_type = GitRepoType.USER
-            # retrive user whose repo we want to pull from
+            # retrieve user whose repo we want to pull from
             submission_user = await self.request_service.request(
                 "GET",
                 f"{self.service_base_url}api/users/{submission['user_id']}{query_params}",
@@ -181,7 +181,7 @@ class GradingManualHandler(ExtensionBaseHandler):
             if not git_service.is_git():
                 git_service.init()
             if repo_type == GitRepoType.AUTOGRADE:
-                git_service.set_remote(GitRepoType.AUTOGRADE, additional_path=sub_id)
+                git_service.set_remote(GitRepoType.AUTOGRADE, additional_path=str(sub_id))
                 git_service.pull(
                     GitRepoType.AUTOGRADE, branch=f"submission_{submission['commit_hash']}"
                 )
@@ -291,9 +291,7 @@ class PullFeedbackHandler(ExtensionBaseHandler):
 
         if not git_service.is_git():
             git_service.init()
-        git_service.set_remote(
-            GitRepoType.FEEDBACK, additional_path=sub_id if sub_id is not None else ""
-        )
+        git_service.set_remote(GitRepoType.FEEDBACK, additional_path=str(sub_id))
         git_service.pull(
             GitRepoType.FEEDBACK, branch=f"feedback_{submission['commit_hash']}", force=True
         )
