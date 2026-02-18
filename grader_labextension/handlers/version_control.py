@@ -271,7 +271,9 @@ class PullHandler(ExtensionBaseHandler):
             if not git_service.is_git():
                 git_service.init()
                 git_service.set_author(author=self.user_name)
-            git_service.set_remote(f"grader_{repo}", sub_id=sub_id)
+            git_service.set_remote(
+                f"grader_{repo}", additional_path=sub_id if sub_id is not None else ""
+            )
             git_service.pull(f"grader_{repo}", force=True)
             self.write({"status": "OK"})
         except GitError as e:
@@ -499,7 +501,9 @@ class PushHandler(ExtensionBaseHandler):
             if not git_service.is_git():
                 git_service.init()
                 git_service.set_author(author=self.user_name)
-            git_service.set_remote(remote, sub_id)
+            git_service.set_remote(
+                remote, additional_path=str(sub_id) if sub_id is not None else ""
+            )
         except GitError as e:
             self.log.error("git error during git initiation process: %s", e.error)
             raise APIError(502, message=e.error)

@@ -123,21 +123,19 @@ class GitService(Configurable):
         self.log.info(f"Pushing to remote {origin} at {self.path}")
         self._run_command(f"git push {origin} main" + (" --force" if force else ""), cwd=self.path)
 
-    def set_remote(self, origin: str, sub_id: Union[int, str, None] = None):
+    def set_remote(self, origin: str, additional_path: str = ""):
         """Set or update the remote repository.
 
         Args:
             origin (str): The remote name.
-            sub_id (str | int | None): Optional query parameter for feedback pull.
+            additional_path (str): Optional additional path for the remote.
         """
-        if isinstance(sub_id, int):
-            sub_id = str(sub_id)
         url_path = posixpath.join(
             self.git_remote_url, self.lecture_code, str(self.assignment_id), self.repo_type
         )
         url = (
             f"{self.git_http_scheme}://oauth:{self.git_access_token}@"
-            f"{posixpath.join(url_path, sub_id or '')}"
+            f"{posixpath.join(url_path, additional_path)}"
         )
         self.log.info(f"Setting remote {origin} for {self.path} to {url}")
         try:
