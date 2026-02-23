@@ -81,7 +81,7 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
   const numSelected = selected.length;
 
   const [searchTerm, setSearchTerm] = React.useState(
-    () => loadString('grader-search') || ''
+    () => loadString(`grader-search-${assignment.id}`) || ''
   );
   const searchTimeout = React.useRef(null);
 
@@ -93,14 +93,14 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
       clearTimeout(searchTimeout.current);
     }
     searchTimeout.current = setTimeout(() => {
-      storeString('grader-search', value.toLowerCase());
+      storeString(`grader-search-${assignment.id}`, value.toLowerCase());
       setSearch(value.toLowerCase());
     }, 250);
   };
 
   const handleClear = () => {
     setSearchTerm('');
-    storeString('grader-search', '');
+    storeString(`grader-search-${assignment.id}`, '');
     setSearch('');
   };
 

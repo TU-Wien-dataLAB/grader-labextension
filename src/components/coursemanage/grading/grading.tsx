@@ -301,12 +301,12 @@ export default function GradingTable() {
       | 'best'
   );
 
-  const [search, setSearch] = React.useState(loadString('grader-search') || '');
+  const [search, setSearch] = React.useState(loadString(`grader-search-${assignment.id}`) || '');
 
   const tableContainerRef = React.useRef<HTMLDivElement>(null); // track the table container
 
   React.useEffect(() => {
-    storeString('grader-search', search);
+    storeString(`grader-search-${assignment.id}`, search);
     updateSubmissions(shownSubmissions);
     if (tableContainerRef.current) {
       tableContainerRef.current.scrollTop =
