@@ -634,16 +634,8 @@ class NotebookAccessHandler(ExtensionBaseHandler):
         notebook_name = unquote(notebook_name)
 
         try:
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
-            assignment = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
-                header=self.grader_authentication_header,
-            )
+            lecture = await self.get_lecture(lecture_id)
+            assignment = await self.get_assignment(lecture_id, assignment_id)
         except RequestServiceError as e:
             self.set_status(e.code)
             self.write_error(e.code)
