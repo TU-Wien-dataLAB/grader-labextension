@@ -44,17 +44,11 @@ export const CreateSubmission = () => {
     enabled: !!lectureId
   });
 
-  const { data: students, isLoading: isLoadingStudents } = useQuery<
-    Record<string, string>
-  >({
+  const { data: students, isLoading: isLoadingStudents } = useQuery({
     queryKey: ['students', lectureId],
     queryFn: async () => {
       const users = await getUsers(lectureId);
-      const students_dict = {};
-      users['students'].forEach(s => {
-        students_dict[s.display_name] = s.name;
-      });
-      return students_dict;
+      return users['students'].map(s => s.name);
     },
     enabled: !!lectureId
   });
@@ -63,7 +57,7 @@ export const CreateSubmission = () => {
 
   const path =
     lecture && assignment && userDir
-      ? `${lectureBasePath}${lecture.code}/create/${assignment.id}/${students[userDir]}`
+      ? `${lectureBasePath}${lecture.code}/create/${assignment.id}/${userDir}`
       : null;
   openBrowser(path);
 
@@ -76,7 +70,7 @@ export const CreateSubmission = () => {
   const createSubmissionMutation = useMutation({
     mutationFn: async () => {
       if (lecture && assignment && userDir) {
-        return createSubmissionFiles(lecture, assignment, students[userDir]);
+        return createSubmissionFiles(lecture, assignment, userDir);
       }
     },
     onError: (error: any) => {
@@ -155,7 +149,7 @@ export const CreateSubmission = () => {
 
         <Typography sx={{ m: 2, mb: 0 }}>Select a student</Typography>
         <Autocomplete
-          options={Object.keys(students)}
+          options={students}
           autoHighlight
           value={userDir}
           onChange={(event, newUserDir) => setUserDir(newUserDir)}
