@@ -1001,25 +1001,33 @@ export const SyncSubmissionGradesDialog = ({
   const [filter, setFilter] = React.useState<'latest' | 'best'>('best');
   const [loading, setLoading] = React.useState(false);
 
+  const notifyLtiSyncResult = (
+    syncedPlatforms: Array<{
+      platform: string;
+      syncable_users: number;
+      synced_user: number;
+    }>
+  ) => {
+    if (!syncedPlatforms.length) {
+      enqueueSnackbar('No connected learning platform was available for grade sync', {
+        variant: 'info'
+      });
+      return;
+    }
+
+    syncedPlatforms.forEach(platformResult => {
+      enqueueSnackbar(
+        `${platformResult.platform}: Synced ${platformResult.synced_user}/${platformResult.syncable_users} users`,
+        { variant: 'success' }
+      );
+    });
+  };
+
   const handleSyncSubmission = async () => {
     setLoading(true);
     try {
-      await ltiSyncSubmissions(lecture.id, assignment.id, filter).then(
-        response => {
-          enqueueSnackbar(
-            'Successfully matched ' +
-              response.syncable_users +
-              ' submissions with learning platform',
-            { variant: 'success' }
-          );
-          enqueueSnackbar(
-            'Successfully synced latest submissions with feedback of ' +
-              response.synced_user +
-              ' users',
-            { variant: 'success' }
-          );
-        }
-      );
+      const response = await ltiSyncSubmissions(lecture.id, assignment.id, filter);
+      notifyLtiSyncResult(response.synced_platforms);
     } catch (error: any) {
       enqueueSnackbar(
         'Error while trying to sync submissions: ' + error.message,
