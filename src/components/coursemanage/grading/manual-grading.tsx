@@ -83,18 +83,14 @@ const InfoModal = () => {
             If you want to manually grade an assignment, please follow these
             steps: <br />
             <br />
-            1. &ensp; To grade a submission manually, it must first be
-            auto-graded. This step sets the necessary metadata for manual
-            grading. We are working on enabling direct manual grading without
-            auto-grading in the future.
+            1. &ensp; If the auto-grading behavior is set to automatic or fully automatic,
+            the submission has to be auto-graded first and then pulled. If the autograding behavior is set to
+            "No Automatic Grading", the submission can be pulled immediately.
             <br />
-            2. &ensp; Once the metadata has been set for the submission, you can
-            pull the submission.
-            <br />
-            3. &ensp; Access the submission files from the file list and grade
+            2. &ensp; Access the submission files from the file list and grade
             them manually.
             <br />
-            4. &ensp; After you've completed the grading of the submission and
+            3. &ensp; After you've completed the grading of the submission and
             saved revised notebook, click button "FINISH MANUAL GRADING". This
             action will save the grading and determine the points that the
             student receives for their submission.
