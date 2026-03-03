@@ -148,7 +148,10 @@ class GradingManualHandler(ExtensionBaseHandler):
         repo_type = None
         submission_user = None
 
-        if autograding_type == "unassisted" and submission["auto_status"] == "not_graded":
+        if autograding_type == "unassisted" and (
+            submission["auto_status"] == "not_graded"
+            or submission["auto_status"] == "grading_failed"
+        ):
             repo_type = GitRepoType.USER
             # retrieve user whose repo we want to pull from
             submission_user = await self.request_service.request(
