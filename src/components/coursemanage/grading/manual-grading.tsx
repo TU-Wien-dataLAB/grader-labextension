@@ -47,7 +47,6 @@ import { queryClient } from '../../../widgets/assignmentmanage';
 import { ManualStatus } from '../../../model/manualStatus';
 import { FeedbackStatus } from '../../../model/feedbackStatus';
 import { AutoStatus } from '../../../model/autoStatus';
-import { AssignmentSettings } from '../../../model/assignmentSettings';
 
 const style = {
   position: 'absolute' as const,
@@ -80,12 +79,10 @@ const InfoModal = () => {
           <h2>Manual Grading Information</h2>
           <Alert severity="info" sx={{ m: 2 }}>
             <AlertTitle>Info</AlertTitle>
-            If you want to manually grade an assignment, please follow these
+            If you want to manually grade a submission, please follow these
             steps: <br />
             <br />
-            1. &ensp; If the auto-grading behavior is set to automatic or fully automatic,
-            the submission has to be auto-graded first and then pulled. If the autograding behavior is set to
-            "No Automatic Grading", the submission can be pulled immediately.
+            1. &ensp; Pull the submission.
             <br />
             2. &ensp; Access the submission files from the file list and grade
             them manually.
@@ -172,27 +169,11 @@ export const ManualGrading = () => {
     });
   }, [manualGradeSubmission.id]);
 
-  const isAutogradingDisabled = () => {
-    return assignment.settings?.autograde_type ===
-      AssignmentSettings.AutogradeTypeEnum.Unassisted
-      ? false
-      : submission.auto_status !== AutoStatus.AutomaticallyGraded;
-  };
-
   const showFeedbackButton = () => {
-    if (
-      assignment.settings?.autograde_type ===
-      AssignmentSettings.AutogradeTypeEnum.Unassisted
-    ) {
       // show the button if the submission has either been
       // manually or automatically graded
-      return (
-        submission.manual_status === ManualStatus.ManuallyGraded ||
-        submission.auto_status === AutoStatus.AutomaticallyGraded
-      );
-    } else {
-      return submission.auto_status === AutoStatus.AutomaticallyGraded;
-    }
+      return submission.manual_status === ManualStatus.ManuallyGraded ||
+        submission.auto_status === AutoStatus.AutomaticallyGraded;
   };
   const handleAutogradeSubmission = async () => {
     await autogradeSubmissionsDialog(async () => {
@@ -479,7 +460,6 @@ export const ManualGrading = () => {
             </Tooltip>
           ) : null}
           <GraderLoadingButton
-            disabled={isAutogradingDisabled()}
             color="primary"
             variant="outlined"
             onClick={handlePullSubmission}
@@ -491,7 +471,7 @@ export const ManualGrading = () => {
           <Button
             variant="outlined"
             color="success"
-            disabled={isAutogradingDisabled()}
+            disabled={manualFiles.length == 0}
             onClick={openFinishDialog}
             sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
           >
