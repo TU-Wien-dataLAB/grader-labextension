@@ -144,11 +144,11 @@ class GradingManualHandler(ExtensionBaseHandler):
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
 
-        autograding_type = assignment["settings"]["autograde_type"]
         repo_type = None
         submission_user = None
-
-        if autograding_type == "unassisted" and (
+        # only pull from user repo if the submission hasn't been autograded (happens when autograde_type is unassisted)
+        # or when autograding has failed (we still want to allow manual grading in that case)
+        if (
             submission["auto_status"] == "not_graded"
             or submission["auto_status"] == "grading_failed"
         ):
