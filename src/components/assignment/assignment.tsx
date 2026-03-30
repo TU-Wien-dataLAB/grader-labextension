@@ -408,11 +408,10 @@ export const AssignmentComponent = () => {
                 disabled={
                   hasPermissions()
                     ? false
-                    : isLateSubmissionOver() ||
+                    : (isDeadlineOver() && isLateSubmissionOver()) ||
                       isMaxSubmissionReached() ||
                       isAssignmentCompleted() ||
-                      files.length === 0 ||
-                      isDeadlineOver()
+                      files.length === 0
                 }
                 onClick={() => submitAssignmentHandler()}
               >
