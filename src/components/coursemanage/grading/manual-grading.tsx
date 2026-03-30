@@ -79,21 +79,15 @@ const InfoModal = () => {
           <h2>Manual Grading Information</h2>
           <Alert severity="info" sx={{ m: 2 }}>
             <AlertTitle>Info</AlertTitle>
-            If you want to manually grade an assignment, please follow these
+            If you want to manually grade a submission, please follow these
             steps: <br />
             <br />
-            1. &ensp; To grade a submission manually, it must first be
-            auto-graded. This step sets the necessary metadata for manual
-            grading. We are working on enabling direct manual grading without
-            auto-grading in the future.
+            1. &ensp; Pull the submission.
             <br />
-            2. &ensp; Once the metadata has been set for the submission, you can
-            pull the submission.
-            <br />
-            3. &ensp; Access the submission files from the file list and grade
+            2. &ensp; Access the submission files from the file list and grade
             them manually.
             <br />
-            4. &ensp; After you've completed the grading of the submission and
+            3. &ensp; After you've completed the grading of the submission and
             saved revised notebook, click button "FINISH MANUAL GRADING". This
             action will save the grading and determine the points that the
             student receives for their submission.
@@ -123,7 +117,7 @@ export const ManualGrading = () => {
   };
 
   const rowIdx = rows.findIndex(s => s.id === manualGradeSubmission.id);
-  const submissionsLink = `/lecture/${lecture.id}/assignment/${assignment.id}/submissions`;  
+  const submissionsLink = `/lecture/${lecture.id}/assignment/${assignment.id}/submissions`;
 
   const {
     data: submission = manualGradeSubmission,
@@ -173,10 +167,14 @@ export const ManualGrading = () => {
         openBrowser(manualPath);
       }
     });
-
-    
   }, [manualGradeSubmission.id]);
 
+  const showFeedbackButton = () => {
+      // show the button if the submission has either been
+      // manually or automatically graded
+      return submission.manual_status === ManualStatus.ManuallyGraded ||
+        submission.auto_status === AutoStatus.AutomaticallyGraded;
+  };
   const handleAutogradeSubmission = async () => {
     await autogradeSubmissionsDialog(async () => {
       try {
@@ -367,10 +365,10 @@ export const ManualGrading = () => {
                 {gradeBook?.getExtraCredits()}
               </Typography>
               <Typography
-                    color="text.primary"
-                    sx={{ display: 'inline-block', fontSize: 16, height: 35 }}
-                  >
-                    {submission.score}
+                color="text.primary"
+                sx={{ display: 'inline-block', fontSize: 16, height: 35 }}
+              >
+                {submission.score}
               </Typography>
               <Box sx={{ height: 75 }}>
                 <form
@@ -398,7 +396,7 @@ export const ManualGrading = () => {
                       value={submissionScaling}
                       size={'small'}
                       type={'number'}
-                      slotProps={{ 
+                      slotProps={{
                         htmlInput: {
                           maxLength: 4,
                           step: '0.01',
@@ -437,19 +435,18 @@ export const ManualGrading = () => {
 
         <Stack direction={'row'} justifyContent={'space-between'}>
           <Typography sx={{ m: 2, mb: 0 }}>Submission Files</Typography>
-            <InfoModal />
-          </Stack>
+          <InfoModal />
+        </Stack>
 
-          <FilesList
-            files={manualFiles}
-            sx={{ m: 2 }}
-            lecture={lecture}
-            assignment={assignment}
-            checkboxes={false}
-          />
+        <FilesList
+          files={manualFiles}
+          sx={{ m: 2 }}
+          lecture={lecture}
+          assignment={assignment}
+          checkboxes={false}
+        />
 
         <Stack direction={'row'} sx={{ ml: 2, mr: 2 }} spacing={2}>
-
           {submission.auto_status !== AutoStatus.AutomaticallyGraded ? (
             <Tooltip title="Assinment is not auto-graded. To pull submission and finish manual grading, make sure to first autograde it.">
               <Button
@@ -463,7 +460,6 @@ export const ManualGrading = () => {
             </Tooltip>
           ) : null}
           <GraderLoadingButton
-            disabled={submission.auto_status !== AutoStatus.AutomaticallyGraded}
             color="primary"
             variant="outlined"
             onClick={handlePullSubmission}
@@ -475,14 +471,14 @@ export const ManualGrading = () => {
           <Button
             variant="outlined"
             color="success"
-            disabled={submission.auto_status !== AutoStatus.AutomaticallyGraded}
+            disabled={manualFiles.length == 0}
             onClick={openFinishDialog}
             sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
           >
             Finish Manual Grading
           </Button>
           <Tooltip title="Edit Submission allows you to revise a student's submission. This may be useful if the student made a minor mistake that significantly affected their score or caused autograding to fail.">
-            <Button        
+            <Button
               variant="outlined"
               color="success"
               component={Link as any}
@@ -495,7 +491,6 @@ export const ManualGrading = () => {
           <Box sx={{ flex: '1 1 100%' }}></Box>
           {submission.auto_status === AutoStatus.AutomaticallyGraded ? (
             <Button
-              
               variant="outlined"
               color="primary"
               onClick={handleAutogradeSubmission}
@@ -505,7 +500,7 @@ export const ManualGrading = () => {
             </Button>
           ) : null}
 
-          {submission.auto_status === AutoStatus.AutomaticallyGraded ? (
+          {showFeedbackButton() ? (
             <Button
               variant="outlined"
               color="primary"

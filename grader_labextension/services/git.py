@@ -123,21 +123,19 @@ class GitService(Configurable):
         self.log.info(f"Pushing to remote {origin} at {self.path}")
         self._run_command(f"git push {origin} main" + (" --force" if force else ""), cwd=self.path)
 
-    def set_remote(self, origin: str, sub_id: Union[int, str, None] = None):
+    def set_remote(self, origin: str, additional_path: str = ""):
         """Set or update the remote repository.
 
         Args:
             origin (str): The remote name.
-            sub_id (str | int | None): Optional query parameter for feedback pull.
+            additional_path (str): Optional additional path for the remote.
         """
-        if isinstance(sub_id, int):
-            sub_id = str(sub_id)
         url_path = posixpath.join(
             self.git_remote_url, self.lecture_code, str(self.assignment_id), self.repo_type
         )
         url = (
             f"{self.git_http_scheme}://oauth:{self.git_access_token}@"
-            f"{posixpath.join(url_path, sub_id or '')}"
+            f"{posixpath.join(url_path, additional_path)}"
         )
         self.log.info(f"Setting remote {origin} for {self.path} to {url}")
         try:
@@ -170,12 +168,13 @@ class GitService(Configurable):
             force (bool): Whether to force the pull. Defaults to False.
         """
         self.log.info(f"Pulling from {origin}/{branch} at {self.path}")
-        if not self.remote_branch_exists(origin=origin, branch=branch):
+        if not self.remote_branch_exists(origin, branch):
             raise GitError(
-                404,
-                "Remote repository not found. Please ensure your assignment is pushed "
+                code=404,
+                error="Remote repository not found. Please ensure your assignment is pushed "
                 "to the repository before proceeding.",
             )
+
         if force:
             # clean local changes
             command = "git clean -fd"
@@ -446,16 +445,14 @@ class GitService(Configurable):
         Args:
             command (str): The command to run.
             cwd (str): The working directory for the command.
-
-        Raises:
-            GitError: If the command fails.
         """
+
+        self.log.debug(f"Executing command: {command} in {cwd}")
         try:
-            self.log.debug(f"Executing command: {command} in {cwd}")
             result = subprocess.run(
                 command, shell=True, check=True, cwd=cwd, text=True, capture_output=True
             )
             return result.stdout
         except subprocess.CalledProcessError as e:
-            error_message = f"Command '{command}' failed with error: {e.stderr}"
-            raise GitError(500, error_message)
+            self.log.error(f"Command failed with error: {e.stderr}")
+            raise GitError(code=e.returncode, error=e.stderr)

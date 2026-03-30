@@ -8,6 +8,7 @@ import json
 import os
 
 import tornado
+from grader_service.errors import APIError
 from tornado.web import HTTPError, authenticated
 
 from grader_labextension.handlers.base_handler import ExtensionBaseHandler
@@ -99,7 +100,7 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
             )
         except RequestServiceError as e:
             self.log.error(e)
-            raise HTTPError(e.code, reason=e.message)
+            raise APIError(e.code, message=e.message)
         # if we did not get an error when creating the assignment (i.e. the user is authorized
         # etc.) then we can create the directory structure if it does not exist yet
         os.makedirs(

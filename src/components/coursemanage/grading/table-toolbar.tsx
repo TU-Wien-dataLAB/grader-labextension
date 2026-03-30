@@ -81,7 +81,7 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
   const numSelected = selected.length;
 
   const [searchTerm, setSearchTerm] = React.useState(
-    () => loadString('grader-search') || ''
+    () => loadString(`grader-search-${assignment.id}`) || ''
   );
   const searchTimeout = React.useRef(null);
 
@@ -93,14 +93,14 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
       clearTimeout(searchTimeout.current);
     }
     searchTimeout.current = setTimeout(() => {
-      storeString('grader-search', value.toLowerCase());
+      storeString(`grader-search-${assignment.id}`, value.toLowerCase());
       setSearch(value.toLowerCase());
     }, 250);
   };
 
   const handleClear = () => {
     setSearchTerm('');
-    storeString('grader-search', '');
+    storeString(`grader-search-${assignment.id}`, '');
     setSearch('');
   };
 
@@ -184,17 +184,39 @@ export function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
       clearSelection();
     });
   };
+
+  const notifyLtiSyncResult = (
+    syncedPlatforms: Array<{
+      platform: string;
+      syncable_users: number;
+      synced_user: number;
+    }>
+  ) => {
+    if (!syncedPlatforms.length) {
+      enqueueSnackbar('No connected learning platform was available for grade sync', {
+        variant: 'info'
+      });
+      return;
+    }
+
+    syncedPlatforms.forEach(platformResult => {
+      enqueueSnackbar(
+        `${platformResult.platform}: Synced ${platformResult.synced_user}/${platformResult.syncable_users} users`,
+        { variant: 'success' }
+      );
+    });
+  };
   
   const handleLTISyncGrades = () => {
     ltiSyncSubmissions(lecture.id, assignment.id, 'selection', [...selected]).then(
       response => {
-        enqueueSnackbar('Successfully Synced Selected Grades', { variant: 'success' })
+        notifyLtiSyncResult(response.synced_platforms);
       },
-      error => {
-        enqueueSnackbar('Error Syncing Grades',{ variant: 'error' })
-    }
-    )
-  }
+      () => {
+        enqueueSnackbar('Error Syncing Grades', { variant: 'error' });
+      }
+    );
+  };
 
   const checkAutogradeStatus = () => {
     let available = true;

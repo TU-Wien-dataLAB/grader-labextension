@@ -131,3 +131,5 @@ dmypy.json
 .yarn/
 
 .idea
+
+home_dir

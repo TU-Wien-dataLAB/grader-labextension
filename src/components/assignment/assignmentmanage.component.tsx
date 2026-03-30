@@ -90,14 +90,14 @@ export const AssignmentManageComponent = () => {
   const { data: lectures, isLoading: isLoadingOngoingLectures } = useQuery<
     Lecture[]
   >({
-    queryKey: ['lectures'],
-    queryFn: () => getAllLectures(false)
+    queryKey: ['allLectures'],
+    queryFn: () => getAllLectures({'complete': false, 'instructor': false})
   });
 
   const { data: completedLectures, isLoading: isLoadingCompletedLectures } =
     useQuery<Lecture[]>({
       queryKey: ['completedLectures'],
-      queryFn: () => getAllLectures(true)
+      queryFn: () => getAllLectures({'complete': true, 'instructor': false})
     });
 
   const [showComplete, setShowComplete] = useState(false);

@@ -7,9 +7,9 @@ import functools
 import os
 from typing import Awaitable, Optional
 
+from grader_service.handlers.base_handler import GraderErrorMixin
 from jupyter_server.base.handlers import APIHandler
-from tornado.httpclient import HTTPResponse
-from tornado.web import HTTPError
+from tornado.httpclient import HTTPError, HTTPResponse
 from traitlets.config.configurable import SingletonConfigurable
 from traitlets.traitlets import Unicode
 
@@ -55,7 +55,7 @@ class HandlerConfig(SingletonConfigurable):
     ).tag(config=True)
 
 
-class ExtensionBaseHandler(APIHandler):
+class ExtensionBaseHandler(GraderErrorMixin, APIHandler):
     """
     BaseHandler for all server-extension handler
     """

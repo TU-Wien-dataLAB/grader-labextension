@@ -26,7 +26,10 @@ class LectureBaseHandler(ExtensionBaseHandler):
     async def get(self):
         """Sends a GET-request to the grader service and returns the autorized lectures"""
         query_params = RequestService.get_query_string(
-            {"complete": self.get_argument("complete", None)}
+            {
+                "complete": self.get_argument("complete", None),
+                "instructor": self.get_argument("instructor", None),
+            }
         )
         try:
             response = await self.request_service.request(

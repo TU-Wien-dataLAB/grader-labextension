@@ -190,16 +190,28 @@ export function ltiSyncSubmissions(
   assignmentId: number,
   option: string,
   submissionIds: number[] = []
-): Promise<{ syncable_users: number; synced_user: number }> {
+): Promise<{
+  synced_platforms: Array<{
+    platform: string;
+    syncable_users: number;
+    synced_user: number;
+  }>;
+}> {
   let url = `/api/lectures/${lectureId}/assignments/${assignmentId}/submissions/lti`;
   const searchParams = new URLSearchParams({
     option: option
   });
   url += '?' + searchParams;
-  return request<{ syncable_users: number; synced_user: number }>(
+  return request<{
+    synced_platforms: Array<{
+      platform: string;
+      syncable_users: number;
+      synced_user: number;
+    }>;
+  }>(
     HTTPMethod.PUT,
     url,
-    {"submission_ids": submissionIds}
+    { submission_ids: submissionIds }
   );
 }
 

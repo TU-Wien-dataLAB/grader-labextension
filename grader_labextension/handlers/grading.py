@@ -7,6 +7,7 @@ import os
 import shutil
 import urllib.parse
 
+from grader_service.errors import APIError
 from grader_service.handlers import GitRepoType
 from tornado.httpclient import HTTPResponse
 from tornado.web import HTTPError, authenticated
@@ -110,7 +111,7 @@ class GradingManualHandler(ExtensionBaseHandler):
 
     @authenticated
     async def get(self, lecture_id: int, assignment_id: int, sub_id: int):
-        """Generates a local git repository and pulls autograded files of a submission in the user directory
+        """Generates a local git repository and pulls autograded or original files of a submission in the user directory
 
         :param lecture_id: id of the lecture
         :type lecture_id: int
@@ -119,7 +120,7 @@ class GradingManualHandler(ExtensionBaseHandler):
         :param sub_id: id of the submission
         :type sub_id: int
         """
-
+        query_params = RequestService.get_query_string({"lecture_id": lecture_id})
         try:
             lecture = await self.request_service.request(
                 "GET",
@@ -138,15 +139,34 @@ class GradingManualHandler(ExtensionBaseHandler):
                 f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{sub_id}",
                 header=self.grader_authentication_header,
             )
+
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
+
+        repo_type = None
+        submission_user = None
+        # only pull from user repo if the submission hasn't been autograded (happens when autograde_type is unassisted)
+        # or when autograding has failed (we still want to allow manual grading in that case)
+        if (
+            submission["auto_status"] == "not_graded"
+            or submission["auto_status"] == "grading_failed"
+        ):
+            repo_type = GitRepoType.USER
+            # retrieve user whose repo we want to pull from
+            submission_user = await self.request_service.request(
+                "GET",
+                f"{self.service_base_url}api/users/{submission['user_id']}{query_params}",
+                header=self.grader_authentication_header,
+            )
+        else:
+            repo_type = GitRepoType.AUTOGRADE
 
         git_service = GitService(
             server_root_dir=self.root_dir,
             lecture_code=lecture["code"],
             assignment_id=assignment["id"],
-            repo_type=GitRepoType.AUTOGRADE,
+            repo_type=repo_type,
             config=self.config,
         )
         git_service.path = os.path.join(
@@ -164,13 +184,20 @@ class GradingManualHandler(ExtensionBaseHandler):
         try:
             if not git_service.is_git():
                 git_service.init()
-            git_service.set_remote(GitRepoType.AUTOGRADE, sub_id=sub_id)
-            git_service.pull(
-                GitRepoType.AUTOGRADE, branch=f"submission_{submission['commit_hash']}"
-            )
+            if repo_type == GitRepoType.AUTOGRADE:
+                git_service.set_remote(GitRepoType.AUTOGRADE, additional_path=str(sub_id))
+                git_service.pull(
+                    GitRepoType.AUTOGRADE, branch=f"submission_{submission['commit_hash']}"
+                )
+                self.log.info(f"Pulled AUTOGRADE repo for submission {submission['id']}")
+            elif repo_type == GitRepoType.USER:
+                git_service.set_remote(GitRepoType.USER, additional_path=submission_user["name"])
+                git_service.pull(GitRepoType.USER)
+                git_service.go_to_commit(submission["commit_hash"])
+                self.log.info(f"Pulled USER repo for submission {submission['id']}")
         except GitError as e:
             self.log.error(f"Git error: {e.error}")
-            raise HTTPError(e.code, reason=e.error)
+            raise APIError(502, reason="git process failed", message=e.error)
 
 
 @register_handler(
@@ -268,7 +295,7 @@ class PullFeedbackHandler(ExtensionBaseHandler):
 
         if not git_service.is_git():
             git_service.init()
-        git_service.set_remote(GitRepoType.FEEDBACK, sub_id=sub_id)
+        git_service.set_remote(GitRepoType.FEEDBACK, additional_path=str(sub_id))
         git_service.pull(
             GitRepoType.FEEDBACK, branch=f"feedback_{submission['commit_hash']}", force=True
         )
