@@ -306,15 +306,12 @@ export const AssignmentComponent = () => {
   };
 
   const isLateSubmissionOver = () => {
-    if (!assignment.settings.deadline) {
-      return false;
-    }
     const late_submission = assignment.settings.late_submission || [
       { period: 'P0D', scaling: undefined }
     ];
-    // no late_submission entry found
+    // no late_submission entry found - check if deadline is over
     if (late_submission.length === 0) {
-      return false;
+      return isDeadlineOver();
     }
 
     const late = moment(assignment.settings.deadline)
