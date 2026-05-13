@@ -14,6 +14,7 @@ import FileItem from './file-item';
 import FolderItem from './folder-item';
 import { Assignment } from '../../model/assignment';
 import { Lecture } from '../../model/lecture';
+import picomatch from 'picomatch';
 
 interface IFileListProps {
   files: File[];
@@ -36,22 +37,37 @@ export const FilesList = (props: IFileListProps) => {
   };
 
   const generateItems = (files: File[], handleFileSelectChange) => {
-    const filePaths = files.flatMap(file =>
+    const filePaths: string[] = files.flatMap(file =>
       extractRelativePaths(file, 'assignments')
     );
 
     const missingFiles =
-      props.shouldContain?.filter(f => !filePaths.includes(f)).map(missingFile => ({
-        name:
-          missingFile.substring(missingFile.lastIndexOf('/') + 1) ||
-          missingFile,
+      props.shouldContain
+        ?.filter(f => !filePaths.includes(f))
+        .map(missingFile => ({
+          name:
+            missingFile.substring(missingFile.lastIndexOf('/') + 1) ||
+            missingFile,
+          path:
+            `${lectureBasePath}${props.lecture.code}/assignments/${props.assignment.id}/` +
+            missingFile,
+          type: 'file',
+          content: []
+        })) || [];
+    const extraFiles = filePaths
+      .filter(
+        f =>
+          !props.shouldContain?.includes(f) &&
+          !picomatch.isMatch(f, props.assignment?.settings?.allowed_files)
+      )
+      .map(extraFile => ({
+        name: extraFile.substring(extraFile.lastIndexOf('/') + 1) || extraFile,
         path:
           `${lectureBasePath}${props.lecture.code}/assignments/${props.assignment.id}/` +
-          missingFile,
+          extraFile,
         type: 'file',
         content: []
-      })) || [];
-
+      }));
     const topLevelMissing = missingFiles.filter(missingFile => {
       const relativePath = getRelativePath(missingFile.path, 'assignments');
       return !relativePath.includes('/');
@@ -67,6 +83,7 @@ export const FilesList = (props: IFileListProps) => {
           lecture={props.lecture}
           assigment={props.assignment}
           missingFiles={missingFiles}
+          extraFiles={extraFiles}
           inContained={inContained}
           openFile={openFile}
           checkboxes={props.checkboxes}
@@ -80,6 +97,7 @@ export const FilesList = (props: IFileListProps) => {
           lecture={props.lecture}
           assignment={props.assignment}
           missingFiles={missingFiles}
+          extraFiles={extraFiles}
           inContained={inContained}
           openFile={openFile}
           checkboxes={props.checkboxes}

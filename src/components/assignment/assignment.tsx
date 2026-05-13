@@ -123,7 +123,9 @@ export const AssignmentComponent = () => {
   });
 
   const [fileList, setFileList] = React.useState<string[]>([]);
-  const [activeStatus, setActiveStatus] = React.useState(AssignmentStatusEnum.NOT_FETCHED);
+  const [activeStatus, setActiveStatus] = React.useState(
+    AssignmentStatusEnum.NOT_FETCHED
+  );
   const navigate = useNavigate();
   const reloadPage = () => navigate(0);
 
@@ -159,6 +161,8 @@ export const AssignmentComponent = () => {
     return files.length > 0;
   };
 
+  const path = `${lectureBasePath}${lecture?.code}/assignments/${assignment?.id}`;
+
   React.useEffect(() => {
     if (lecture && assignment && files) {
       getAssignmentProperties(lecture.id, assignment.id).then(properties => {
@@ -190,7 +194,6 @@ export const AssignmentComponent = () => {
       );
     }
   }, [lecture, assignment, submissions.length, files]);
-
   if (
     isLoadingAssignment ||
     isLoadingLecture ||
@@ -205,8 +208,6 @@ export const AssignmentComponent = () => {
       </div>
     );
   }
-
-  const path = `${lectureBasePath}${lecture.code}/assignments/${assignment.id}`;
   // Open the assignment in the JupyterLab file browser
   openBrowser(path);
 
@@ -306,15 +307,12 @@ export const AssignmentComponent = () => {
   };
 
   const isLateSubmissionOver = () => {
-    if (!assignment.settings.deadline) {
-      return false;
-    }
     const late_submission = assignment.settings.late_submission || [
       { period: 'P0D', scaling: undefined }
     ];
-    // no late_submission entry found
+    // no late_submission entry found - check if deadline is over
     if (late_submission.length === 0) {
-      return false;
+      return isDeadlineOver();
     }
 
     const late = moment(assignment.settings.deadline)
@@ -334,7 +332,6 @@ export const AssignmentComponent = () => {
       assignment.settings.max_submissions <= submissions.length
     );
   };
-
 
   const hasPermissions = () => {
     const permissions = UserPermissions.getPermissions();
@@ -408,11 +405,10 @@ export const AssignmentComponent = () => {
                 disabled={
                   hasPermissions()
                     ? false
-                    : isLateSubmissionOver() ||
+                    : (isDeadlineOver() && isLateSubmissionOver()) ||
                       isMaxSubmissionReached() ||
                       isAssignmentCompleted() ||
-                      files.length === 0 ||
-                      isDeadlineOver()
+                      files.length === 0
                 }
                 onClick={() => submitAssignmentHandler()}
               >
