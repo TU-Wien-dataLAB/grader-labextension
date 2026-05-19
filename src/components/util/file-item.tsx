@@ -26,6 +26,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
 import { UseQueryOptions, useQuery } from '@tanstack/react-query';
 import { RemoteFileStatus } from '../../model/remoteFileStatus';
+import WarningIcon from '@mui/icons-material/Warning';
 
 interface IFileItemProps {
   file: File;
@@ -33,6 +34,7 @@ interface IFileItemProps {
   assignment?: Assignment;
   inContained: (file: string) => boolean;
   missingFiles?: File[];
+  extraFiles?: File[];
   openFile: (path: string) => void;
   checkboxes: boolean;
   onFileSelectChange?: (filePath: string, isSelected: boolean) => void;
@@ -45,12 +47,17 @@ const FileItem = ({
   assignment,
   openFile,
   missingFiles,
+  extraFiles,
   checkboxes,
   onFileSelectChange,
   checkStatus = false // Default is false if not provided
 }: IFileItemProps) => {
   const inMissing = (filePath: string) => {
     return missingFiles?.some(missingFile => missingFile.path === filePath);
+  };
+
+  const inExtra = (filePath: string) => {
+    return extraFiles?.some(extraFile => extraFile.path === filePath);
   };
 
   const [isSelected, setIsSelected] = React.useState(true);
@@ -148,6 +155,9 @@ const FileItem = ({
   const missingFileHelp =
     'This file should be part of your assignment! Did you delete it?';
 
+  const extraFileHelp =
+    "This file is not part of your assignment and therefore won't be graded.";
+
   return (
     <ListItem disablePadding>
       {checkboxes && (
@@ -163,7 +173,19 @@ const FileItem = ({
           <InsertDriveFileRoundedIcon />
         </ListItemIcon>
         <ListItemText
-          primary={<Typography>{file.name}</Typography>}
+          primary={
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography>{file.name}</Typography>
+              {inExtra(file.path) && (
+                <Tooltip title={extraFileHelp}>
+                  <Chip
+                    label={'Extra File'}
+                    icon={<WarningIcon sx={{ color: 'yellow' }} />}
+                  />
+                </Tooltip>
+              )}
+            </Stack>
+          }
           secondary={
             <Stack direction={'row'} spacing={2}>
               {checkboxes && checkStatus && fileRemoteStatus && (
