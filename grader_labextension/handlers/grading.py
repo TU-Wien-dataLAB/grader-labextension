@@ -131,18 +131,18 @@ class GradingManualHandler(ExtensionBaseHandler):
                 f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{sub_id}",
                 header=self.grader_authentication_header,
             )
-
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
 
-        autograding_type = assignment["settings"]["autograde_type"]
         repo_type = None
         submission_user = None
-
-        if autograding_type in ["auto", "full_auto"]:
-            repo_type = GitRepoType.AUTOGRADE
-        elif autograding_type == "unassisted":
+        # only pull from user repo if the submission hasn't been autograded (happens when autograde_type is unassisted)
+        # or when autograding has failed (we still want to allow manual grading in that case)
+        if (
+            submission["auto_status"] == "not_graded"
+            or submission["auto_status"] == "grading_failed"
+        ):
             repo_type = GitRepoType.USER
             # retrieve user whose repo we want to pull from
             submission_user = await self.request_service.request(
@@ -150,6 +150,8 @@ class GradingManualHandler(ExtensionBaseHandler):
                 f"{self.service_base_url}api/users/{submission['user_id']}{query_params}",
                 header=self.grader_authentication_header,
             )
+        else:
+            repo_type = GitRepoType.AUTOGRADE
 
         git_service = GitService(
             server_root_dir=self.root_dir,

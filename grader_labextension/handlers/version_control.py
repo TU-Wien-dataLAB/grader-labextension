@@ -478,18 +478,19 @@ class PushHandler(ExtensionBaseHandler):
             with open(gradebook_path, "r") as f:
                 gradebook_json = json.load(f)
 
-            response = await self.request_service.request(
-                "PUT",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
-                f"properties",
-                header=self.grader_authentication_header,
-                body=gradebook_json,
-                decode_response=False,
-            )
-            if response.code == 200:
-                self.log.info("Properties set for assignment")
-            else:
-                self.log.error(f"Could not set assignment properties! Error code {response.code}")
+            try:
+                # update assignment properties in grader service with the generated gradebook.json
+                await self.request_service.request(
+                    "PUT",
+                    f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+                    f"properties",
+                    header=self.grader_authentication_header,
+                    body=gradebook_json,
+                    decode_response=False,
+                )
+            except RequestServiceError as e:
+                self.log.error(e)
+                raise APIError(e.code, message=e.message)
         except FileNotFoundError:
             self.log.error(f"Cannot find gradebook file: {gradebook_path}")
             raise HTTPError(

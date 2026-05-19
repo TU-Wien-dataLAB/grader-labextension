@@ -13,7 +13,11 @@ import * as React from 'react';
 import { Lecture } from '../../../model/lecture';
 import { Assignment } from '../../../model/assignment';
 import { FilesList } from '../../util/file-list';
-import { lectureBasePath, getFiles, makeDirs } from '../../../services/file.service';
+import {
+  lectureBasePath,
+  getFiles,
+  makeDirs
+} from '../../../services/file.service';
 import { Link, useOutletContext } from 'react-router-dom';
 import { showDialog } from '../../util/dialog-provider';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -40,12 +44,11 @@ export const CreateSubmission = () => {
     enabled: !!lectureId
   });
 
-  const { data: students = [], isLoading: isLoadingStudents } = useQuery<string[]>({
+  const { data: students, isLoading: isLoadingStudents } = useQuery({
     queryKey: ['students', lectureId],
     queryFn: async () => {
       const users = await getUsers(lectureId);
-      const students = users['students'].map(s => s.display_name);
-      return students;
+      return users['students'].map(s => s.name);
     },
     enabled: !!lectureId
   });
@@ -74,21 +77,22 @@ export const CreateSubmission = () => {
       enqueueSnackbar('Error: ' + error.message, { variant: 'error' });
     },
     onSuccess: () => {
-      enqueueSnackbar(`Successfully Created Submission for user: ${userDir}`, { variant: 'success' });
+      enqueueSnackbar(`Successfully Created Submission for user: ${userDir}`, {
+        variant: 'success'
+      });
       refetchFiles();
     }
   });
 
   React.useEffect(() => {
     if (path) {
-       makeDirs(`${lectureBasePath}${lecture.code}`, [
+      makeDirs(`${lectureBasePath}${lecture.code}`, [
         'create',
         `${assignment.id}`,
         userDir
       ]).then(() => {
         openBrowser(path);
       });
-      
 
       // Watch for file changes in the JupyterLab file browser
       GlobalObjects.docManager.services.contents.fileChanged.connect(
@@ -103,7 +107,6 @@ export const CreateSubmission = () => {
           refetchFiles();
         }
       );
-      
     }
   }, [userDir]);
 
@@ -116,9 +119,13 @@ export const CreateSubmission = () => {
   }
 
   const createSubmission = () => {
-    showDialog('Manual Submission', 'Do you want to push new submission?', async () => {
-      createSubmissionMutation.mutate();
-    });
+    showDialog(
+      'Manual Submission',
+      'Do you want to push new submission?',
+      async () => {
+        createSubmissionMutation.mutate();
+      }
+    );
   };
 
   const submissionsLink = `/lecture/${lecture.id}/assignment/${assignment.id}/submissions`;
@@ -147,7 +154,9 @@ export const CreateSubmission = () => {
           value={userDir}
           onChange={(event, newUserDir) => setUserDir(newUserDir)}
           sx={{ m: 2 }}
-          renderInput={(params) => <TextField {...params} label="Select Student" />}
+          renderInput={params => (
+            <TextField {...params} label="Select Student" />
+          )}
         />
 
         <Typography sx={{ ml: 2 }}>Submission Files</Typography>
@@ -171,7 +180,11 @@ export const CreateSubmission = () => {
         </Stack>
 
         <Stack sx={{ ml: 2, mt: 3, mb: 5 }} direction="row">
-          <Button variant="outlined" component={Link as any} to={submissionsLink}>
+          <Button
+            variant="outlined"
+            component={Link as any}
+            to={submissionsLink}
+          >
             Back
           </Button>
         </Stack>
