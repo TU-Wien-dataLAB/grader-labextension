@@ -37,11 +37,7 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
                 response_callback=self.set_service_headers,
             )
 
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
+            lecture = await self.get_lecture(lecture_id)
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
@@ -93,11 +89,7 @@ class AssignmentBaseHandler(ExtensionBaseHandler):
                 header=self.grader_authentication_header,
             )
 
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
+            lecture = await self.get_lecture(lecture_id)
         except RequestServiceError as e:
             self.log.error(e)
             raise APIError(e.code, message=e.message)
@@ -170,11 +162,7 @@ class AssignmentObjectHandler(ExtensionBaseHandler):
                 header=self.grader_authentication_header,
                 response_callback=self.set_service_headers,
             )
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
+            lecture = await self.get_lecture(lecture_id)
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)

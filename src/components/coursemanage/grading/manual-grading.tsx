@@ -47,6 +47,7 @@ import { queryClient } from '../../../widgets/assignmentmanage';
 import { ManualStatus } from '../../../model/manualStatus';
 import { FeedbackStatus } from '../../../model/feedbackStatus';
 import { AutoStatus } from '../../../model/autoStatus';
+import { AssignmentSettings } from '../../../model/assignmentSettings';
 
 const style = {
   position: 'absolute' as const,
@@ -167,13 +168,31 @@ export const ManualGrading = () => {
         openBrowser(manualPath);
       }
     });
+
+    
   }, [manualGradeSubmission.id]);
 
+  const isAutogradingDisabled = () => {
+    return assignment.settings?.autograde_type ===
+      AssignmentSettings.AutogradeTypeEnum.Unassisted
+      ? false
+      : submission.auto_status !== AutoStatus.AutomaticallyGraded;
+  };
+
   const showFeedbackButton = () => {
+    if (
+      assignment.settings?.autograde_type ===
+      AssignmentSettings.AutogradeTypeEnum.Unassisted
+    ) {
       // show the button if the submission has either been
       // manually or automatically graded
-      return submission.manual_status === ManualStatus.ManuallyGraded ||
-        submission.auto_status === AutoStatus.AutomaticallyGraded;
+      return (
+        submission.manual_status === ManualStatus.ManuallyGraded ||
+        submission.auto_status === AutoStatus.AutomaticallyGraded
+      );
+    } else {
+      return submission.auto_status === AutoStatus.AutomaticallyGraded;
+    }
   };
   const handleAutogradeSubmission = async () => {
     await autogradeSubmissionsDialog(async () => {
@@ -460,6 +479,7 @@ export const ManualGrading = () => {
             </Tooltip>
           ) : null}
           <GraderLoadingButton
+            disabled={isAutogradingDisabled()}
             color="primary"
             variant="outlined"
             onClick={handlePullSubmission}
@@ -471,7 +491,7 @@ export const ManualGrading = () => {
           <Button
             variant="outlined"
             color="success"
-            disabled={manualFiles.length == 0}
+            disabled={isAutogradingDisabled()}
             onClick={openFinishDialog}
             sx={{ whiteSpace: 'nowrap', minWidth: 'auto' }}
           >

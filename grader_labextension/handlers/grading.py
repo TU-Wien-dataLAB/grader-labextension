@@ -122,24 +122,15 @@ class GradingManualHandler(ExtensionBaseHandler):
         """
         query_params = RequestService.get_query_string({"lecture_id": lecture_id})
         try:
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
+            lecture = await self.get_lecture(lecture_id)
 
-            assignment = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
-                header=self.grader_authentication_header,
-            )
+            assignment = await self.get_assignment(lecture_id, assignment_id)
 
             submission = await self.request_service.request(
                 "GET",
                 f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/submissions/{sub_id}",
                 header=self.grader_authentication_header,
             )
-
         except RequestServiceError as e:
             self.log.error(e)
             raise HTTPError(e.code, reason=e.message)
@@ -254,17 +245,9 @@ class PullFeedbackHandler(ExtensionBaseHandler):
         :type sub_id: int
         """
         try:
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
+            lecture = await self.get_lecture(lecture_id)
 
-            assignment = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
-                header=self.grader_authentication_header,
-            )
+            assignment = await self.get_assignment(lecture_id, assignment_id)
 
             submission = await self.request_service.request(
                 "GET",
