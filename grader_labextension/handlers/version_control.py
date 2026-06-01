@@ -381,14 +381,18 @@ class PushHandler(ExtensionBaseHandler):
         if username is None:
             self.log.error("Username has to be provided when creating a submission")
             raise HTTPError(HTTPStatus.BAD_REQUEST, reason="Missing 'for_user' value in request")
-
-        response = await self.request_service.request(
-            "POST",
-            f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
-            f"submissions",
-            body={"commit_hash": "0" * 40, "username": username},
-            header=self.grader_authentication_header,
-        )
+        response = None
+        try:
+            response = await self.request_service.request(
+                "POST",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+                f"submissions",
+                body={"commit_hash": "0" * 40, "username": username},
+                header=self.grader_authentication_header,
+            )
+        except RequestServiceError as e:
+            self.log.error(f"Error creating submission for user {username}")
+            raise HTTPError(e.code, reason=e.message)
         submission = Submission.from_dict(response)
         submission.submitted_at = response["submitted_at"]
         submission.edited = True
@@ -396,13 +400,17 @@ class PushHandler(ExtensionBaseHandler):
         self.log.info(
             "Created submission %s for user %s and pushing to edit repo...", submission.id, username
         )
-        await self.request_service.request(
-            "PUT",
-            f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
-            f"submissions/{submission.id}",
-            body=submission.to_dict(),
-            header=self.grader_authentication_header,
-        )
+        try:
+            await self.request_service.request(
+                "PUT",
+                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}/"
+                f"submissions/{submission.id}",
+                body=submission.to_dict(),
+                header=self.grader_authentication_header,
+            )
+        except RequestServiceError as e:
+            self.log.error(f"Error updating submission {submission.id}")
+            raise HTTPError(e.code, reason=e.message)
         return submission.id
 
     async def _handle_release_repo(
@@ -627,16 +635,8 @@ class NotebookAccessHandler(ExtensionBaseHandler):
         notebook_name = unquote(notebook_name)
 
         try:
-            lecture = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}",
-                header=self.grader_authentication_header,
-            )
-            assignment = await self.request_service.request(
-                "GET",
-                f"{self.service_base_url}api/lectures/{lecture_id}/assignments/{assignment_id}",
-                header=self.grader_authentication_header,
-            )
+            lecture = await self.get_lecture(lecture_id)
+            assignment = await self.get_assignment(lecture_id, assignment_id)
         except RequestServiceError as e:
             self.set_status(e.code)
             self.write_error(e.code)

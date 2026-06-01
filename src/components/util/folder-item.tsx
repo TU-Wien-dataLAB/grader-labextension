@@ -19,6 +19,7 @@ const FolderItem = ({
   lecture,
   assigment,
   missingFiles,
+  extraFiles,
   inContained,
   openFile,
   checkboxes,
@@ -79,6 +80,7 @@ const FolderItem = ({
                   lecture={lecture}
                   assigment={assigment}
                   missingFiles={missingFiles || []}
+                  extraFiles={extraFiles || []}
                   inContained={inContained}
                   openFile={openFile}
                   checkboxes={checkboxes}
